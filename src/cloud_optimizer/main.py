@@ -38,6 +38,8 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan handler for startup/shutdown."""
+    from cloud_optimizer.services.intelligence_builder import get_ib_service
+
     settings = get_settings()
 
     # Startup
@@ -48,15 +50,31 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         enabled_domains=settings.enabled_domains,
     )
 
-    # TODO: Initialize Intelligence-Builder client
-    # app.state.ib_client = await get_ib_client()
+    # Initialize Intelligence-Builder service
+    ib_service = get_ib_service()
+    try:
+        if ib_service.is_available and settings.ib_api_key:
+            await ib_service.connect()
+            app.state.ib_service = ib_service
+            logger.info("ib_service_connected", platform_url=settings.ib_platform_url)
+        else:
+            logger.warning(
+                "ib_service_not_connected",
+                sdk_available=ib_service.is_available,
+                api_key_set=bool(settings.ib_api_key),
+            )
+            app.state.ib_service = None
+    except Exception as e:
+        logger.error("ib_service_connection_failed", error=str(e))
+        app.state.ib_service = None
 
     yield
 
     # Shutdown
     logger.info("shutting_down_cloud_optimizer")
-    # TODO: Close Intelligence-Builder client
-    # await app.state.ib_client.close()
+    if hasattr(app.state, "ib_service") and app.state.ib_service:
+        await app.state.ib_service.disconnect()
+        logger.info("ib_service_disconnected")
 
 
 def create_app() -> FastAPI:
@@ -97,10 +115,27 @@ def create_app() -> FastAPI:
         return {"status": "healthy", "version": settings.app_version}
 
     @app.get("/ready")
-    async def readiness_check() -> dict[str, str]:
+    async def readiness_check() -> dict[str, any]:
         """Readiness check - verifies dependencies are available."""
-        # TODO: Check IB platform connectivity
-        return {"status": "ready"}
+        ib_status = "not_configured"
+        if hasattr(app.state, "ib_service") and app.state.ib_service:
+            if app.state.ib_service.is_connected:
+                ib_status = "connected"
+            else:
+                ib_status = "disconnected"
+
+        return {
+            "status": "ready",
+            "intelligence_builder": ib_status,
+        }
+
+    # Register security analysis router
+    from cloud_optimizer.api.routers import security
+    app.include_router(
+        security.router,
+        prefix="/api/v1/security",
+        tags=["Security Analysis"],
+    )
 
     return app
 
