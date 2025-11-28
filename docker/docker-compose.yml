@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  cloud-optimizer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - LOG_LEVEL=INFO
+      - IB_PLATFORM_URL=http://intelligence-builder:8000
+      - IB_TENANT_ID=${IB_TENANT_ID:-default}
+    env_file:
+      - ../.env
+    depends_on:
+      - intelligence-builder
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  intelligence-builder:
+    image: intelligence-builder:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    # Add IB configuration as needed

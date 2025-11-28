@@ -1,0 +1,61 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-case-conflict
+
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-comprehensions
+        args: ['--max-line-length=88', '--extend-ignore=E203,E501']
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=2.5.0
+          - types-requests
+        args: ['--ignore-missing-imports']
+        exclude: ^tests/
+
+  - repo: local
+    hooks:
+      - id: check-file-size
+        name: Check file size (max 500 lines)
+        entry: bash -c 'for f in "$@"; do lines=$(wc -l < "$f"); if [ "$lines" -gt 500 ]; then echo "ERROR: $f has $lines lines (max 500)"; exit 1; fi; done' --
+        language: system
+        files: \.py$
+        exclude: ^tests/
+
+      - id: pytest-check
+        name: Run pytest
+        entry: pytest tests/unit/ -x --tb=short -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [push]

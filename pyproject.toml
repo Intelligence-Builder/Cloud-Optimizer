@@ -1,0 +1,168 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloud-optimizer"
+version = "2.0.0"
+description = "Cloud cost optimization and Well-Architected Framework analysis - built on Intelligence-Builder platform"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Intelligence-Builder Team"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["cloud", "optimization", "aws", "graphrag", "knowledge-graph"]
+
+dependencies = [
+    # Web Framework
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+
+    # Intelligence-Builder SDK (placeholder - will be published)
+    # "intelligence-builder-sdk>=1.0.0",
+
+    # HTTP Client
+    "httpx>=0.25.0",
+
+    # AWS Integration
+    "boto3>=1.33.0",
+    "botocore>=1.33.0",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "structlog>=23.2.0",
+    "tenacity>=8.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "httpx>=0.25.0",  # for TestClient
+
+    # Code Quality
+    "black>=23.11.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.7.0",
+    "pre-commit>=3.6.0",
+
+    # Type Stubs
+    "boto3-stubs[essential]>=1.33.0",
+    "types-requests>=2.31.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Intelligence-Builder/Cloud-Optimizer"
+Documentation = "https://github.com/Intelligence-Builder/Cloud-Optimizer#readme"
+Repository = "https://github.com/Intelligence-Builder/Cloud-Optimizer"
+Issues = "https://github.com/Intelligence-Builder/Cloud-Optimizer/issues"
+
+[project.scripts]
+cloud-optimizer = "cloud_optimizer.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 88
+skip_gitignore = true
+known_first_party = ["cloud_optimizer"]
+
+# pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+    "-v",
+    "--strict-markers",
+    "-ra",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "slow: Slow-running tests",
+]
+
+# mypy configuration
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "silent"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src/cloud_optimizer"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+fail_under = 80
+show_missing = true
