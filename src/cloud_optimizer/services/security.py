@@ -3,8 +3,12 @@
 import logging
 from typing import Any, Dict, List, Optional
 
+from cloud_optimizer.integrations.aws.cost import CostExplorerScanner
 from cloud_optimizer.integrations.aws.encryption import EncryptionScanner
 from cloud_optimizer.integrations.aws.iam import IAMScanner
+from cloud_optimizer.integrations.aws.operations import SystemsManagerScanner
+from cloud_optimizer.integrations.aws.performance import CloudWatchScanner
+from cloud_optimizer.integrations.aws.reliability import ReliabilityScanner
 from cloud_optimizer.integrations.aws.security_groups import SecurityGroupScanner
 from cloud_optimizer.services.intelligence_builder import IntelligenceBuilderService
 
@@ -35,7 +39,7 @@ class SecurityService:
         Get or create a scanner instance.
 
         Args:
-            scan_type: Type of scan (security_groups, iam, encryption)
+            scan_type: Type of scan (security_groups, iam, encryption, cost, performance, reliability, operations)
             region: AWS region
 
         Returns:
@@ -49,6 +53,14 @@ class SecurityService:
                 self._scanners[cache_key] = IAMScanner(region=region)
             elif scan_type == "encryption":
                 self._scanners[cache_key] = EncryptionScanner(region=region)
+            elif scan_type == "cost":
+                self._scanners[cache_key] = CostExplorerScanner(region=region)
+            elif scan_type == "performance":
+                self._scanners[cache_key] = CloudWatchScanner(region=region)
+            elif scan_type == "reliability":
+                self._scanners[cache_key] = ReliabilityScanner(region=region)
+            elif scan_type == "operations":
+                self._scanners[cache_key] = SystemsManagerScanner(region=region)
             else:
                 raise ValueError(f"Unknown scan type: {scan_type}")
 
