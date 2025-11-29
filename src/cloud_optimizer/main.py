@@ -115,7 +115,7 @@ def create_app() -> FastAPI:
         return {"status": "healthy", "version": settings.app_version}
 
     @app.get("/ready")
-    async def readiness_check() -> dict[str, any]:
+    async def readiness_check() -> dict[str, str]:
         """Readiness check - verifies dependencies are available."""
         ib_status = "not_configured"
         if hasattr(app.state, "ib_service") and app.state.ib_service:
