@@ -1,0 +1,36 @@
+{
+  "seeding_session_id": "seed_1764393004",
+  "project_name": "Cloud-Optimizer",
+  "project_path": "/Users/robertstanley/Desktop/Cloud-Optimizer",
+  "timestamp": "2025-11-29T05:11:29.987094",
+  "duration_seconds": null,
+  "statistics": {
+    "github_items": 26,
+    "documents": 37,
+    "code_components": 436,
+    "entities_created": 505,
+    "relationships_created": 504,
+    "errors": 0,
+    "start_time": "2025-11-29 05:10:04.542800",
+    "end_time": null
+  },
+  "github_data_summary": {
+    "repository_info": true,
+    "issues_count": 21,
+    "pull_requests_count": 0,
+    "commits_count": 5
+  },
+  "documentation_summary": {
+    "files_processed": 37,
+    "file_types": [
+      "",
+      ".md",
+      ".yml"
+    ]
+  },
+  "codebase_summary": {
+    "components_found": 436,
+    "apis_identified": 0,
+    "patterns_detected": 4
+  }
+}
