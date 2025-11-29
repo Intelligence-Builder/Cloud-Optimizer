@@ -108,7 +108,7 @@ extend-exclude = '''
 profile = "black"
 line_length = 88
 skip_gitignore = true
-known_first_party = ["cloud_optimizer"]
+known_first_party = ["cloud_optimizer", "platform"]
 
 # pytest configuration
 [tool.pytest.ini_options]

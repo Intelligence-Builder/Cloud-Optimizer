@@ -1,0 +1,52 @@
+version: '3.8'
+
+# Test infrastructure for integration tests
+# Usage: docker-compose -f docker/docker-compose.test.yml up -d
+
+services:
+  # PostgreSQL for graph backend tests
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: co-test-postgres
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test_intelligence
+    ports:
+      - "5434:5432"  # Use 5434 to avoid conflict with other postgres containers
+    volumes:
+      - ./init-test-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test_intelligence"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Memgraph for graph backend tests
+  memgraph-test:
+    image: memgraph/memgraph:latest
+    container_name: co-test-memgraph
+    ports:
+      - "7688:7687"  # Use 7688 to avoid conflict with local memgraph
+    entrypoint: ["/usr/lib/memgraph/memgraph", "--log-level=WARNING"]
+    healthcheck:
+      test: ["CMD", "echo", "ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # LocalStack for AWS integration tests
+  localstack:
+    image: localstack/localstack:latest
+    container_name: co-test-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: ec2,iam,s3,cloudwatch,rds
+      DEBUG: 0
+      DATA_DIR: /tmp/localstack/data
+    volumes:
+      - localstack-data:/tmp/localstack
+
+volumes:
+  localstack-data:
