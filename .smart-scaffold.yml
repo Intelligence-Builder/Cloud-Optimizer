@@ -1,0 +1,90 @@
+agents:
+  assignment_threshold: 0.8  # Higher threshold for production-grade code
+  max_concurrent: 2
+description: Cloud-Optimizer V2 - Clean AWS optimization application using Intelligence-Builder platform
+labels:
+  priority:
+  - critical
+  - high
+  - medium
+  - low
+  status:
+  - ready
+  - in-progress
+  - blocked
+  - review
+  - done
+  type:
+  - security
+  - bug
+  - feature
+  - enhancement
+  - refactor
+  - documentation
+  - aws
+  - cost
+  - performance
+quality_gates:
+  required_coverage: 80  # Target 80% test coverage
+  required_docs: true    # Documentation required
+  required_tests: true   # Tests required
+  max_file_lines: 500    # No file over 500 lines
+tier: enterprise
+workflow:
+  automation_triggers:
+    auto_assign: true
+    auto_epic: true      # Create epics for major work
+    auto_label: true
+  status_values:
+  - Backlog
+  - Ready
+  - In Progress
+  - Review
+  - Testing
+  - Done
+project:
+  name: Cloud-Optimizer
+  repository: Intelligence-Builder/Cloud-Optimizer
+  main_branch: main
+epics:
+  - name: Security Domain Implementation
+    description: Implement security analysis using Intelligence-Builder pattern detection
+    priority: critical
+    labels: [security, critical]
+  - name: AWS Integration
+    description: AWS resource scanning and Well-Architected Framework assessment
+    priority: high
+    labels: [aws, integration, high]
+  - name: Cost Optimization
+    description: Cost analysis, trend detection, and savings recommendations
+    priority: high
+    labels: [cost, optimization, high]
+  - name: Performance & Reliability
+    description: Performance pillar and reliability analysis features
+    priority: medium
+    labels: [performance, reliability, medium]
+  - name: Operational Excellence
+    description: Operational excellence pillar implementation
+    priority: medium
+    labels: [operations, medium]
+documentation:
+  primary_docs:
+  - README.md
+  - docs/platform/PROJECT_GOALS.md
+  - docs/platform/STRATEGIC_DESIGN.md
+  - docs/platform/TECHNICAL_DESIGN.md
+  architecture_docs:
+  - docs/platform/STRATEGIC_DESIGN.md
+  - docs/platform/TECHNICAL_DESIGN.md
+  integration_docs:
+  - docs/smart-scaffold/SMART_SCAFFOLD_INTEGRATION.md
+  - docs/smart-scaffold/SMART_SCAFFOLD_PROCESS_EXAMPLE.md
+knowledge_graph:
+  enable_ukg: true
+  auto_reference: true
+  contexts:
+  - security_implementation
+  - aws_integration
+  - cost_optimization
+  - performance_analysis
+  - platform_integration

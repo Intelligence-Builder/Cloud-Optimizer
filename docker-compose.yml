@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: smart_scaffold
+      POSTGRES_USER: smart_scaffold
+      POSTGRES_PASSWORD: scaffold_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6-alpine
+    command: redis-server --requirepass smart_scaffold_redis_pass
+    ports:
+      - "6386:6379"
+    environment:
+      - REDIS_PASSWORD=smart_scaffold_redis_pass
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

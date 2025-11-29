@@ -1,0 +1,53 @@
+# Smart Scaffold Configuration for Cloud-Optimizer V2
+version: "1.0.0"
+
+repository:
+  name: "Cloud-Optimizer"
+  path: "/Users/robertstanley/Desktop/Cloud-Optimizer"
+  owner: "Intelligence-Builder"
+  installed_at: "2025-11-28T19:27:00Z"
+
+features:
+  github_integration: true
+  context_manifest: true
+  qa_analysis: true
+  workflow_automation: true
+  knowledge_graph: true
+
+agents:
+  max_concurrent: 5
+  timeout_seconds: 300
+
+quality_gates:
+  required_coverage: 80
+  required_tests: true
+  required_docs: true
+  max_file_lines: 500
+
+# Connection to Smart-Scaffold services (running in smart-scaffold directory)
+services:
+  postgres:
+    host: localhost
+    port: 5433
+    database: smart_scaffold
+    user: test_user
+  redis:
+    host: localhost
+    port: 6386
+  memgraph:
+    host: localhost
+    port: 7687
+
+# Project-specific settings
+project:
+  type: "python"
+  framework: "fastapi"
+  platform_integration: "intelligence-builder"
+
+installation:
+  script_version: "1.0.0"
+  installation_method: "cli"
+  components_installed:
+    - "github_workflow"
+    - "smart_scaffold_config"
+    - "quality_gates"

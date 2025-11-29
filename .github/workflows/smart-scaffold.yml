@@ -1,0 +1,38 @@
+name: Smart Scaffold Integration
+
+on:
+  issues:
+    types: [labeled, assigned]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  smart-scaffold:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'smart-scaffold') || github.event_name == 'pull_request'
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Smart Scaffold
+      run: |
+        pip install smart-scaffold
+
+    - name: Process Issue
+      if: github.event_name == 'issues'
+      run: |
+        smart-scaffold github start --issue=${{ github.event.issue.number }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Run QA Analysis
+      if: github.event_name == 'pull_request'
+      run: |
+        smart-scaffold github qa --pr=${{ github.event.number }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
