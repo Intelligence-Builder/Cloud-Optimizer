@@ -1,12 +1,12 @@
 """Tests for domain registry."""
 
 import asyncio
-from platform.domains.base import (
+from ib_platform.domains.base import (
     BaseDomain,
     EntityTypeDefinition,
     RelationshipTypeDefinition,
 )
-from platform.domains.registry import DomainRegistry
+from ib_platform.domains.registry import DomainRegistry
 
 import pytest
 

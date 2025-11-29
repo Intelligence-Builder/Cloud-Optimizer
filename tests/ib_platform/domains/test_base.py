@@ -1,6 +1,6 @@
 """Tests for base domain classes and definitions."""
 
-from platform.domains.base import (
+from ib_platform.domains.base import (
     BaseDomain,
     EntityTypeDefinition,
     RelationshipTypeDefinition,
@@ -248,12 +248,12 @@ class TestBaseDomain:
         errors = domain.validate_relationship("member_of", "user", "group")
         assert len(errors) == 0
 
-        # Invalid source type
-        errors = domain.validate_relationship("member_of", "group", "user")
+        # Invalid source type (keep target valid)
+        errors = domain.validate_relationship("member_of", "group", "group")
         assert len(errors) == 1
         assert "Invalid source type" in errors[0]
 
-        # Invalid target type
+        # Invalid target type (keep source valid)
         errors = domain.validate_relationship("member_of", "user", "user")
         assert len(errors) == 1
         assert "Invalid target type" in errors[0]

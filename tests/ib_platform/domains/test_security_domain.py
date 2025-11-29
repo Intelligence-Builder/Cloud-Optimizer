@@ -1,6 +1,6 @@
 """Tests for SecurityDomain implementation."""
 
-from platform.domains.security.domain import SecurityDomain
+from ib_platform.domains.security.domain import SecurityDomain
 
 import pytest
 

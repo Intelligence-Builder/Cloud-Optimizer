@@ -8,7 +8,7 @@ import pytest
 # Add src directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
 
-from platform.domains.security.domain import SecurityDomain
+from ib_platform.domains.security.domain import SecurityDomain
 
 
 @pytest.fixture

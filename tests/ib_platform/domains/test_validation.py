@@ -1,12 +1,12 @@
 """Tests for domain validation utilities."""
 
-from platform.domains.base import (
+from ib_platform.domains.base import (
     BaseDomain,
     EntityTypeDefinition,
     RelationshipTypeDefinition,
 )
-from platform.domains.security.domain import SecurityDomain
-from platform.domains.validation import (
+from ib_platform.domains.security.domain import SecurityDomain
+from ib_platform.domains.validation import (
     validate_domain_definition,
     validate_entity_data,
     validate_relationship_data,
