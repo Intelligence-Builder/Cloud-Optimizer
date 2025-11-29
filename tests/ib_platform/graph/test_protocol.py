@@ -4,15 +4,16 @@ Tests for graph protocol data classes.
 Tests the GraphNode, GraphEdge, GraphPath, and TraversalParams dataclasses.
 """
 
-import pytest
 from uuid import uuid4
 
+import pytest
+
 from src.ib_platform.graph.protocol import (
-    GraphNode,
     GraphEdge,
+    GraphNode,
     GraphPath,
-    TraversalParams,
     TraversalDirection,
+    TraversalParams,
 )
 
 

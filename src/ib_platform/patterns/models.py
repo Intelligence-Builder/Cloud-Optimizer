@@ -185,9 +185,7 @@ class ConfidenceFactor:
     def __post_init__(self) -> None:
         """Validate weight and max_adjustment bounds."""
         if not 0.0 <= abs(self.weight) <= 1.0:
-            raise ValueError(
-                f"weight must be between 0.0 and 1.0, got {self.weight}"
-            )
+            raise ValueError(f"weight must be between 0.0 and 1.0, got {self.weight}")
         if not 0.0 <= self.max_adjustment <= 1.0:
             raise ValueError(
                 f"max_adjustment must be between 0.0 and 1.0, "

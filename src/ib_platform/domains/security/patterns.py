@@ -11,7 +11,6 @@ from uuid import uuid4
 
 from ...patterns.models import PatternCategory, PatternDefinition, PatternPriority
 
-
 SECURITY_PATTERNS: List[PatternDefinition] = [
     # --- ENTITY PATTERNS ---
     PatternDefinition(

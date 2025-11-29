@@ -9,7 +9,6 @@ from typing import List
 
 from ...patterns.models import ConfidenceFactor, PatternCategory
 
-
 SECURITY_CONFIDENCE_FACTORS: List[ConfidenceFactor] = [
     ConfidenceFactor(
         name="severity_context",

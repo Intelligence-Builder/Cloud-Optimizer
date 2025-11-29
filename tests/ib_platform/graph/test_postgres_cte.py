@@ -19,16 +19,16 @@ import pytest_asyncio
 
 from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
 from src.ib_platform.graph.protocol import (
-    GraphNode,
     GraphEdge,
+    GraphNode,
     TraversalDirection,
     TraversalParams,
 )
 
-
 # ============================================================================
 # Node Operations Tests
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.postgres
@@ -53,7 +53,9 @@ class TestPostgresNodeOperations:
         assert node.properties["name"] == "John Doe"
 
     @pytest.mark.asyncio
-    async def test_create_node_with_custom_id(self, postgres_backend: PostgresCTEBackend):
+    async def test_create_node_with_custom_id(
+        self, postgres_backend: PostgresCTEBackend
+    ):
         """Create a node with a specified UUID."""
         custom_id = uuid4()
         node = await postgres_backend.create_node(
@@ -165,6 +167,7 @@ class TestPostgresNodeOperations:
 # ============================================================================
 # Edge Operations Tests
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.postgres
@@ -280,6 +283,7 @@ class TestPostgresEdgeOperations:
 # Batch Operations Tests
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.postgres
 class TestPostgresBatchOperations:
@@ -317,10 +321,9 @@ class TestPostgresBatchOperations:
     async def test_batch_create_edges(self, postgres_backend: PostgresCTEBackend):
         """Batch create edges between nodes."""
         # Create nodes first
-        nodes = await postgres_backend.batch_create_nodes([
-            {"labels": ["Node"], "properties": {"name": f"N{i}"}}
-            for i in range(10)
-        ])
+        nodes = await postgres_backend.batch_create_nodes(
+            [{"labels": ["Node"], "properties": {"name": f"N{i}"}} for i in range(10)]
+        )
 
         # Create edges
         edge_specs = [
@@ -343,13 +346,16 @@ class TestPostgresBatchOperations:
 # Traversal Tests
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.postgres
 class TestPostgresTraversal:
     """Test graph traversal against real PostgreSQL with CTE queries."""
 
     @pytest.mark.asyncio
-    async def test_traverse_outgoing(self, populated_postgres_backend: PostgresCTEBackend):
+    async def test_traverse_outgoing(
+        self, populated_postgres_backend: PostgresCTEBackend
+    ):
         """Traverse outgoing edges from start node."""
         nodes = populated_postgres_backend._test_nodes
         start_node = nodes[0]
@@ -369,7 +375,9 @@ class TestPostgresTraversal:
         assert nodes[1].id in result_ids or len(result_ids) > 0
 
     @pytest.mark.asyncio
-    async def test_traverse_incoming(self, populated_postgres_backend: PostgresCTEBackend):
+    async def test_traverse_incoming(
+        self, populated_postgres_backend: PostgresCTEBackend
+    ):
         """Traverse incoming edges to a node."""
         nodes = populated_postgres_backend._test_nodes
         end_node = nodes[5]
@@ -421,7 +429,9 @@ class TestPostgresTraversal:
             assert nodes[5].id in result_ids
 
     @pytest.mark.asyncio
-    async def test_traverse_with_limit(self, populated_postgres_backend: PostgresCTEBackend):
+    async def test_traverse_with_limit(
+        self, populated_postgres_backend: PostgresCTEBackend
+    ):
         """Traverse with result limit."""
         nodes = populated_postgres_backend._test_nodes
 
@@ -470,13 +480,16 @@ class TestPostgresTraversal:
 # Path Finding Tests
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.postgres
 class TestPostgresPathFinding:
     """Test path finding algorithms against real PostgreSQL."""
 
     @pytest.mark.asyncio
-    async def test_find_shortest_path(self, populated_postgres_backend: PostgresCTEBackend):
+    async def test_find_shortest_path(
+        self, populated_postgres_backend: PostgresCTEBackend
+    ):
         """Find shortest path between two nodes."""
         nodes = populated_postgres_backend._test_nodes
 
@@ -493,7 +506,9 @@ class TestPostgresPathFinding:
             assert path.nodes[-1].id == nodes[5].id
 
     @pytest.mark.asyncio
-    async def test_find_shortest_path_no_path(self, postgres_backend: PostgresCTEBackend):
+    async def test_find_shortest_path_no_path(
+        self, postgres_backend: PostgresCTEBackend
+    ):
         """Handle case where no path exists."""
         # Create two disconnected nodes
         node1 = await postgres_backend.create_node(
@@ -533,13 +548,16 @@ class TestPostgresPathFinding:
 # Neighbor Operations Tests
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.postgres
 class TestPostgresNeighbors:
     """Test neighbor retrieval against real PostgreSQL."""
 
     @pytest.mark.asyncio
-    async def test_get_neighbors_outgoing(self, populated_postgres_backend: PostgresCTEBackend):
+    async def test_get_neighbors_outgoing(
+        self, populated_postgres_backend: PostgresCTEBackend
+    ):
         """Get outgoing neighbors of a node."""
         nodes = populated_postgres_backend._test_nodes
 
@@ -575,6 +593,7 @@ class TestPostgresNeighbors:
 # ============================================================================
 # Query Operations Tests
 # ============================================================================
+
 
 @pytest.mark.integration
 @pytest.mark.postgres
@@ -667,6 +686,7 @@ class TestPostgresQueryOperations:
 # Performance Tests
 # ============================================================================
 
+
 @pytest.mark.integration
 @pytest.mark.postgres
 @pytest.mark.slow
@@ -674,7 +694,9 @@ class TestPostgresPerformance:
     """Performance benchmarks against real PostgreSQL."""
 
     @pytest.mark.asyncio
-    async def test_traversal_performance(self, populated_postgres_backend: PostgresCTEBackend):
+    async def test_traversal_performance(
+        self, populated_postgres_backend: PostgresCTEBackend
+    ):
         """Traversal should complete in < 100ms for small graph."""
         nodes = populated_postgres_backend._test_nodes
 
@@ -688,7 +710,9 @@ class TestPostgresPerformance:
         print(f"Traversal time: {elapsed:.2f}ms, nodes found: {len(result)}")
 
     @pytest.mark.asyncio
-    async def test_path_finding_performance(self, populated_postgres_backend: PostgresCTEBackend):
+    async def test_path_finding_performance(
+        self, populated_postgres_backend: PostgresCTEBackend
+    ):
         """Path finding should complete in < 50ms."""
         nodes = populated_postgres_backend._test_nodes
 

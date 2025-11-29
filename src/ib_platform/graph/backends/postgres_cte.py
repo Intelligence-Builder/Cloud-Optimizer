@@ -212,7 +212,9 @@ class PostgresCTEBackend:
 
         # Extract standard fields
         name = new_props.pop("name", current.properties.get("name"))
-        description = new_props.pop("description", current.properties.get("description"))
+        description = new_props.pop(
+            "description", current.properties.get("description")
+        )
 
         query = f"""
             UPDATE {self._entities_table}
@@ -308,8 +310,9 @@ class PostgresCTEBackend:
                     f"(${param_idx}, ${param_idx+1}, ${param_idx+2}, "
                     f"${param_idx+3}, ${param_idx+4}, ${param_idx+5})"
                 )
-                params.extend([node_id, entity_type, name, description,
-                               json.dumps(props), labels])  # Serialize props to JSON
+                params.extend(
+                    [node_id, entity_type, name, description, json.dumps(props), labels]
+                )  # Serialize props to JSON
                 param_idx += 6
 
             query = f"""
@@ -548,8 +551,15 @@ class PostgresCTEBackend:
                     f"${param_idx+3}, ${param_idx+4}, ${param_idx+5}, ${param_idx+6})"
                 )
                 params.extend(
-                    [edge_id, source_id, target_id, edge_type, weight, confidence,
-                     json.dumps(props)]  # Serialize to JSON for JSONB column
+                    [
+                        edge_id,
+                        source_id,
+                        target_id,
+                        edge_type,
+                        weight,
+                        confidence,
+                        json.dumps(props),
+                    ]  # Serialize to JSON for JSONB column
                 )
                 param_idx += 7
 
@@ -696,9 +706,7 @@ class PostgresCTEBackend:
         query_params: List[Any] = [start_node_id, end_node_id, max_depth]
 
         if edge_types:
-            placeholders = ", ".join(
-                [f"${i}" for i in range(4, 4 + len(edge_types))]
-            )
+            placeholders = ", ".join([f"${i}" for i in range(4, 4 + len(edge_types))])
             type_filter = f"AND r.relationship_type IN ({placeholders})"
             query_params.extend(edge_types)
 
@@ -803,7 +811,9 @@ class PostgresCTEBackend:
         """
 
         async with self._pool.acquire() as conn:
-            records = await conn.fetch(query, start_node_id, end_node_id, max_depth, limit)
+            records = await conn.fetch(
+                query, start_node_id, end_node_id, max_depth, limit
+            )
 
         paths = []
         for record in records:
@@ -819,9 +829,7 @@ class PostgresCTEBackend:
                 )
             )
 
-        logger.debug(
-            f"Found {len(paths)} paths from {start_node_id} to {end_node_id}"
-        )
+        logger.debug(f"Found {len(paths)} paths from {start_node_id} to {end_node_id}")
         return paths
 
     async def get_neighbors(
@@ -855,9 +863,7 @@ class PostgresCTEBackend:
         query_params: List[Any] = [node_id]
 
         if edge_types:
-            placeholders = ", ".join(
-                [f"${i}" for i in range(2, 2 + len(edge_types))]
-            )
+            placeholders = ", ".join([f"${i}" for i in range(2, 2 + len(edge_types))])
             type_filter = f"AND r.relationship_type IN ({placeholders})"
             query_params.extend(edge_types)
 
@@ -958,7 +964,9 @@ class PostgresCTEBackend:
 
         if labels:
             # Check if tags array contains any of the labels
-            placeholders = ", ".join([f"${i}" for i in range(param_idx, param_idx + len(labels))])
+            placeholders = ", ".join(
+                [f"${i}" for i in range(param_idx, param_idx + len(labels))]
+            )
             conditions.append(f"tags && ARRAY[{placeholders}]")
             query_params.extend(labels)
             param_idx += len(labels)
@@ -1114,7 +1122,9 @@ class PostgresCTEBackend:
             async with self._pool.acquire() as conn:
                 count = await conn.fetchval(query)
 
-        logger.debug(f"Counted {count} nodes" + (f" with labels {labels}" if labels else ""))
+        logger.debug(
+            f"Counted {count} nodes" + (f" with labels {labels}" if labels else "")
+        )
         return count
 
     async def count_edges(
@@ -1144,7 +1154,8 @@ class PostgresCTEBackend:
                 count = await conn.fetchval(query)
 
         logger.debug(
-            f"Counted {count} edges" + (f" with types {edge_types}" if edge_types else "")
+            f"Counted {count} edges"
+            + (f" with types {edge_types}" if edge_types else "")
         )
         return count
 

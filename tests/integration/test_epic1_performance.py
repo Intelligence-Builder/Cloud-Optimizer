@@ -23,9 +23,9 @@ from uuid import uuid4
 
 import pytest
 
-from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
 from src.ib_platform.graph.backends.memgraph import MemgraphBackend
-from src.ib_platform.graph.protocol import TraversalParams, TraversalDirection
+from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
+from src.ib_platform.graph.protocol import TraversalDirection, TraversalParams
 from src.ib_platform.patterns.detector import PatternDetector
 
 
@@ -316,16 +316,17 @@ class TestPatternPerformance:
     """Performance benchmarks for pattern detection."""
 
     @pytest.mark.integration
-    def test_pattern_match_1kb(
-        self, pattern_detector: PatternDetector
-    ):
+    def test_pattern_match_1kb(self, pattern_detector: PatternDetector):
         """Pattern matching 1KB < 20ms."""
         # Generate 1KB of text
-        text_1kb = """
+        text_1kb = (
+            """
         Security Assessment Report - CVE-2023-44487 Critical vulnerability.
         Cost impact: $50,000 estimated. Timeline: Patch within 24 hours.
         Compliance: SOC 2 85% compliant. Additional findings below.
-        """ * 10  # ~1KB
+        """
+            * 10
+        )  # ~1KB
 
         # Warm up
         pattern_detector.detect_patterns(text_1kb, min_confidence=0.5)
@@ -353,15 +354,21 @@ class TestPatternPerformance:
 
         # Measure
         start = time.perf_counter()
-        results = pattern_detector.detect_patterns(test_document_10kb, min_confidence=0.5)
+        results = pattern_detector.detect_patterns(
+            test_document_10kb, min_confidence=0.5
+        )
         elapsed = time.perf_counter() - start
 
         elapsed_ms = elapsed * 1000
 
         assert len(results) > 0
-        assert elapsed_ms < 200, f"Pattern match took {elapsed_ms:.1f}ms (> 200ms target)"
+        assert (
+            elapsed_ms < 200
+        ), f"Pattern match took {elapsed_ms:.1f}ms (> 200ms target)"
 
-        print(f"\nPattern match 10KB: {elapsed_ms:.1f}ms, found {len(results)} patterns")
+        print(
+            f"\nPattern match 10KB: {elapsed_ms:.1f}ms, found {len(results)} patterns"
+        )
 
     @pytest.mark.slow
     @pytest.mark.integration
@@ -455,10 +462,12 @@ class TestBackendParityPerformance:
 
         # Log the performance difference for documentation
         faster_backend = "Memgraph" if mg_avg < pg_avg else "PostgreSQL"
-        print(f"\nPerformance parity - PG: {pg_avg*1000:.1f}ms, MG: {mg_avg*1000:.1f}ms")
+        print(
+            f"\nPerformance parity - PG: {pg_avg*1000:.1f}ms, MG: {mg_avg*1000:.1f}ms"
+        )
         print(f"  {faster_backend} is {ratio:.1f}x faster for traversal")
 
         # Allow up to 5x difference (native graph vs SQL with CTEs)
-        assert ratio < 5.0, (
-            f"Performance difference > 5x: PG={pg_avg*1000:.1f}ms, MG={mg_avg*1000:.1f}ms"
-        )
+        assert (
+            ratio < 5.0
+        ), f"Performance difference > 5x: PG={pg_avg*1000:.1f}ms, MG={mg_avg*1000:.1f}ms"

@@ -16,11 +16,11 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 
-from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
 from src.ib_platform.graph.backends.memgraph import MemgraphBackend
+from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
 from src.ib_platform.graph.protocol import (
-    GraphNode,
     GraphEdge,
+    GraphNode,
     TraversalDirection,
     TraversalParams,
 )
@@ -44,6 +44,7 @@ MEMGRAPH_TEST_CONFIG = {
 # ============================================================================
 # Sample Data Fixtures (no mocks - real data structures)
 # ============================================================================
+
 
 @pytest.fixture
 def sample_node_data():
@@ -118,6 +119,7 @@ def traversal_params():
 # ============================================================================
 # Real Database Connection Fixtures
 # ============================================================================
+
 
 @pytest_asyncio.fixture(scope="function")
 async def asyncpg_pool():
@@ -200,8 +202,11 @@ async def memgraph_backend() -> AsyncGenerator[MemgraphBackend, None]:
 # Pre-populated Database Fixtures
 # ============================================================================
 
+
 @pytest_asyncio.fixture(scope="function")
-async def populated_postgres_backend(postgres_backend) -> AsyncGenerator[PostgresCTEBackend, None]:
+async def populated_postgres_backend(
+    postgres_backend,
+) -> AsyncGenerator[PostgresCTEBackend, None]:
     """
     PostgresCTE backend pre-populated with test graph data.
 
@@ -257,7 +262,9 @@ async def populated_postgres_backend(postgres_backend) -> AsyncGenerator[Postgre
 
 
 @pytest_asyncio.fixture(scope="function")
-async def populated_memgraph_backend(memgraph_backend) -> AsyncGenerator[MemgraphBackend, None]:
+async def populated_memgraph_backend(
+    memgraph_backend,
+) -> AsyncGenerator[MemgraphBackend, None]:
     """
     Memgraph backend pre-populated with test graph data.
 
@@ -310,6 +317,7 @@ async def populated_memgraph_backend(memgraph_backend) -> AsyncGenerator[Memgrap
 # Batch Data Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def batch_nodes_100():
     """Generate 100 node specifications for batch testing."""
@@ -346,20 +354,15 @@ def batch_nodes_1000():
 # Pytest Configuration
 # ============================================================================
 
+
 def pytest_configure(config):
     """Configure custom markers."""
     config.addinivalue_line(
         "markers", "integration: mark test as integration test (requires database)"
     )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow (performance tests)"
-    )
-    config.addinivalue_line(
-        "markers", "postgres: mark test as PostgreSQL-specific"
-    )
-    config.addinivalue_line(
-        "markers", "memgraph: mark test as Memgraph-specific"
-    )
+    config.addinivalue_line("markers", "slow: mark test as slow (performance tests)")
+    config.addinivalue_line("markers", "postgres: mark test as PostgreSQL-specific")
+    config.addinivalue_line("markers", "memgraph: mark test as Memgraph-specific")
 
 
 def pytest_collection_modifyitems(config, items):

@@ -41,7 +41,9 @@ router = APIRouter()
 class AnalyzeTextRequest(BaseModel):
     """Request for text analysis."""
 
-    text: str = Field(..., min_length=10, description="Text to analyze for security patterns")
+    text: str = Field(
+        ..., min_length=10, description="Text to analyze for security patterns"
+    )
     source_type: Optional[str] = Field(
         None,
         description="Type of source (e.g., 'vulnerability_report', 'security_scan')",
@@ -61,7 +63,9 @@ class AnalyzeTextResponse(BaseModel):
 class VulnerabilityReportRequest(BaseModel):
     """Request for vulnerability report analysis."""
 
-    report_text: str = Field(..., min_length=50, description="Full vulnerability report text")
+    report_text: str = Field(
+        ..., min_length=50, description="Full vulnerability report text"
+    )
     report_source: str = Field(
         default="security_scan",
         description="Source of the report",
@@ -85,7 +89,9 @@ class VulnerabilityReportResponse(BaseModel):
 class VulnerabilityContextRequest(BaseModel):
     """Request for vulnerability context lookup."""
 
-    cve_id: str = Field(..., pattern=r"^CVE-\d{4}-\d{4,7}$", description="CVE identifier")
+    cve_id: str = Field(
+        ..., pattern=r"^CVE-\d{4}-\d{4,7}$", description="CVE identifier"
+    )
     depth: int = Field(default=2, ge=1, le=5, description="Traversal depth")
 
 
@@ -207,7 +213,9 @@ async def analyze_vulnerability_report(
     return VulnerabilityReportResponse(**analysis)
 
 
-@router.get("/vulnerability/{cve_id}/context", response_model=VulnerabilityContextResponse)
+@router.get(
+    "/vulnerability/{cve_id}/context", response_model=VulnerabilityContextResponse
+)
 async def get_vulnerability_context(
     cve_id: str,
     depth: int = 2,
@@ -224,6 +232,7 @@ async def get_vulnerability_context(
     """
     # Validate CVE format
     import re
+
     if not re.match(r"^CVE-\d{4}-\d{4,7}$", cve_id):
         raise HTTPException(
             status_code=400,
@@ -382,8 +391,12 @@ async def list_vulnerabilities(
             description=entity.get("description", "No description available"),
             affected_systems=entity.get("affected_systems", []),
             remediation=entity.get("remediation"),
-            created_at=datetime.fromisoformat(entity.get("created_at", datetime.now(timezone.utc).isoformat())),
-            updated_at=datetime.fromisoformat(entity["updated_at"]) if entity.get("updated_at") else None,
+            created_at=datetime.fromisoformat(
+                entity.get("created_at", datetime.now(timezone.utc).isoformat())
+            ),
+            updated_at=datetime.fromisoformat(entity["updated_at"])
+            if entity.get("updated_at")
+            else None,
         )
         for entity in query_result.get("entities", [])
     ]
@@ -414,8 +427,12 @@ async def get_vulnerability(
         description=entity.get("description", "No description available"),
         affected_systems=entity.get("affected_systems", []),
         remediation=entity.get("remediation"),
-        created_at=datetime.fromisoformat(entity.get("created_at", datetime.now(timezone.utc).isoformat())),
-        updated_at=datetime.fromisoformat(entity["updated_at"]) if entity.get("updated_at") else None,
+        created_at=datetime.fromisoformat(
+            entity.get("created_at", datetime.now(timezone.utc).isoformat())
+        ),
+        updated_at=datetime.fromisoformat(entity["updated_at"])
+        if entity.get("updated_at")
+        else None,
     )
 
 
@@ -486,10 +503,16 @@ async def list_controls(
             control_id=entity.get("control_id"),
             description=entity.get("description", "No description available"),
             category=entity.get("category", "general"),
-            implementation_status=entity.get("implementation_status", "not_implemented"),
+            implementation_status=entity.get(
+                "implementation_status", "not_implemented"
+            ),
             framework=entity.get("framework"),
-            created_at=datetime.fromisoformat(entity.get("created_at", datetime.now(timezone.utc).isoformat())),
-            updated_at=datetime.fromisoformat(entity["updated_at"]) if entity.get("updated_at") else None,
+            created_at=datetime.fromisoformat(
+                entity.get("created_at", datetime.now(timezone.utc).isoformat())
+            ),
+            updated_at=datetime.fromisoformat(entity["updated_at"])
+            if entity.get("updated_at")
+            else None,
         )
         for entity in query_result.get("entities", [])
     ]
@@ -629,9 +652,13 @@ async def check_compliance(
 
     recommendations = []
     if gaps > 0:
-        recommendations.append(f"Address {gaps} compliance gap(s) in {request.framework.upper()}")
+        recommendations.append(
+            f"Address {gaps} compliance gap(s) in {request.framework.upper()}"
+        )
     if partial > 0:
-        recommendations.append(f"Complete {partial} partially implemented requirement(s)")
+        recommendations.append(
+            f"Complete {partial} partially implemented requirement(s)"
+        )
     if coverage_percentage < 100:
         recommendations.append("Implement continuous compliance monitoring")
         recommendations.append("Schedule regular compliance assessments")
@@ -691,7 +718,9 @@ async def list_findings(
             recommendations=entity.get("recommendations", []),
             confidence_score=entity.get("confidence_score", 0.8),
             status=entity.get("status", "open"),
-            created_at=datetime.fromisoformat(entity.get("created_at", datetime.now(timezone.utc).isoformat())),
+            created_at=datetime.fromisoformat(
+                entity.get("created_at", datetime.now(timezone.utc).isoformat())
+            ),
         )
         for entity in query_result.get("entities", [])
     ]

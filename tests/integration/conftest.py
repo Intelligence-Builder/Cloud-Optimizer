@@ -18,27 +18,26 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 
+from src.ib_platform.domains.loader import DomainLoader
+from src.ib_platform.domains.registry import DomainRegistry
+from src.ib_platform.graph.backends.memgraph import MemgraphBackend
+from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
+from src.ib_platform.graph.factory import GraphBackendFactory
+from src.ib_platform.graph.protocol import GraphEdge, GraphNode
+from src.ib_platform.patterns.detector import PatternDetector
+from src.ib_platform.patterns.matcher import PatternMatcher
+from src.ib_platform.patterns.models import PatternCategory, PatternDefinition
+from src.ib_platform.patterns.registry import PatternRegistry
+from src.ib_platform.patterns.scorer import ConfidenceScorer
+
 # Import from graph test conftest for backend fixtures
 from tests.ib_platform.graph.conftest import (
-    POSTGRES_TEST_CONFIG,
     MEMGRAPH_TEST_CONFIG,
-    postgres_backend,
-    memgraph_backend,
+    POSTGRES_TEST_CONFIG,
     asyncpg_pool,
+    memgraph_backend,
+    postgres_backend,
 )
-
-from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
-from src.ib_platform.graph.backends.memgraph import MemgraphBackend
-from src.ib_platform.graph.factory import GraphBackendFactory
-from src.ib_platform.graph.protocol import GraphNode, GraphEdge
-from src.ib_platform.patterns.detector import PatternDetector
-from src.ib_platform.patterns.registry import PatternRegistry
-from src.ib_platform.patterns.matcher import PatternMatcher
-from src.ib_platform.patterns.scorer import ConfidenceScorer
-from src.ib_platform.patterns.models import PatternDefinition, PatternCategory
-from src.ib_platform.domains.registry import DomainRegistry
-from src.ib_platform.domains.loader import DomainLoader
-
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"
 
@@ -66,23 +65,28 @@ def sample_edges_200(sample_nodes_100) -> List[dict]:
     edges = []
     # Create chain edges (0->1->2->...->99) = 99 edges
     for i in range(99):
-        edges.append({
-            "source_index": i,
-            "target_index": i + 1,
-            "edge_type": "NEXT",
-            "properties": {"order": i},
-        })
+        edges.append(
+            {
+                "source_index": i,
+                "target_index": i + 1,
+                "edge_type": "NEXT",
+                "properties": {"order": i},
+            }
+        )
     # Create cross-links for interesting paths = 9 edges (0->10, 10->20, ..., 80->90)
     for i in range(0, 90, 10):
-        edges.append({
-            "source_index": i,
-            "target_index": i + 10,
-            "edge_type": "SHORTCUT",
-            "properties": {"skip": 10},
-        })
+        edges.append(
+            {
+                "source_index": i,
+                "target_index": i + 10,
+                "edge_type": "SHORTCUT",
+                "properties": {"skip": 10},
+            }
+        )
     # Add deterministic connections to reach exactly 200
     # We have 99 + 9 = 108 edges, need 92 more
     import random
+
     random.seed(42)  # Reproducible
     added = set()
     while len(edges) < 200:
@@ -91,12 +95,14 @@ def sample_edges_200(sample_nodes_100) -> List[dict]:
         key = (source, target)
         if source != target and key not in added:
             added.add(key)
-            edges.append({
-                "source_index": source,
-                "target_index": target,
-                "edge_type": "RELATED_TO",
-                "properties": {"random": True},
-            })
+            edges.append(
+                {
+                    "source_index": source,
+                    "target_index": target,
+                    "edge_type": "RELATED_TO",
+                    "properties": {"random": True},
+                }
+            )
     return edges
 
 
@@ -107,13 +113,16 @@ def test_document_10kb() -> str:
     if doc_path.exists():
         return doc_path.read_text()
     # Fallback: generate sample text
-    return """
+    return (
+        """
     Security Assessment Report
     CVE-2023-44487 Critical vulnerability detected.
     Cost impact: $50,000 estimated.
     Timeline: Patch within 24 hours.
     Compliance: SOC 2 85% compliant.
-    """ * 100
+    """
+        * 100
+    )
 
 
 @pytest.fixture

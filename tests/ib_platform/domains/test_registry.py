@@ -1,14 +1,15 @@
 """Tests for domain registry."""
 
 import asyncio
+
+import pytest
+
 from ib_platform.domains.base import (
     BaseDomain,
     EntityTypeDefinition,
     RelationshipTypeDefinition,
 )
 from ib_platform.domains.registry import DomainRegistry
-
-import pytest
 
 
 class SimpleDomain(BaseDomain):

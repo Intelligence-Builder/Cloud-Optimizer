@@ -17,11 +17,10 @@ from fastapi.testclient import TestClient
 from cloud_optimizer.api.routers.security import router
 from cloud_optimizer.api.schemas.security import (
     ComplianceCheckRequest,
+    SecurityControlCreate,
     SecurityScanRequest,
     VulnerabilityCreate,
-    SecurityControlCreate,
 )
-
 
 # ============================================================================
 # Test Fixtures

@@ -5,10 +5,7 @@ from uuid import uuid4
 import pytest
 
 from ib_platform.patterns.detector import PatternDetector
-from ib_platform.patterns.models import (
-    PatternCategory,
-    PatternDefinition,
-)
+from ib_platform.patterns.models import PatternCategory, PatternDefinition
 from ib_platform.patterns.registry import PatternRegistry
 from ib_platform.patterns.scorer import ConfidenceScorer
 
@@ -107,9 +104,7 @@ class TestPatternDetector:
         )
 
         assert len(relationships) > 0
-        assert all(
-            r.category == PatternCategory.RELATIONSHIP for r in relationships
-        )
+        assert all(r.category == PatternCategory.RELATIONSHIP for r in relationships)
 
     def test_process_document(
         self,
@@ -283,9 +278,7 @@ class TestPatternDetector:
         import time
 
         # Generate larger text
-        text = (
-            "Security report with CVE-2021-44228 and IAM policy issues. " * 100
-        )
+        text = "Security report with CVE-2021-44228 and IAM policy issues. " * 100
 
         start = time.perf_counter()
         matches = detector.detect_patterns(

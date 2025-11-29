@@ -1,9 +1,10 @@
 """Tests for domain loader."""
 
 from pathlib import Path
-from ib_platform.domains.loader import DomainLoader
 
 import pytest
+
+from ib_platform.domains.loader import DomainLoader
 
 
 class TestDomainLoader:

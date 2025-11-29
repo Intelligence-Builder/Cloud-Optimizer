@@ -1,5 +1,7 @@
 """Tests for domain validation utilities."""
 
+import pytest
+
 from ib_platform.domains.base import (
     BaseDomain,
     EntityTypeDefinition,
@@ -11,8 +13,6 @@ from ib_platform.domains.validation import (
     validate_entity_data,
     validate_relationship_data,
 )
-
-import pytest
 
 
 class TestValidateDomainDefinition:

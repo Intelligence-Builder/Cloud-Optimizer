@@ -1,8 +1,8 @@
 {
     "compatible": true,
     "score": 90,
-    "issues": [""]
-    "warnings": ["Existing .github directory found - may need integration"]
-    "recommendations": [""]
+    "issues": [""],
+    "warnings": ["Existing .github directory found - may need integration"],
+    "recommendations": [""],
     "assessment_date": "2025-11-28T19:23:30Z"
 }

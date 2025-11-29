@@ -21,16 +21,20 @@ from uuid import uuid4
 
 import pytest
 
-from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
-from src.ib_platform.graph.backends.memgraph import MemgraphBackend
-from src.ib_platform.graph.factory import GraphBackendFactory
-from src.ib_platform.graph.protocol import GraphNode, TraversalParams, TraversalDirection
-from src.ib_platform.patterns.detector import PatternDetector
-from src.ib_platform.patterns.registry import PatternRegistry
-from src.ib_platform.patterns.models import PatternDefinition, PatternCategory
-from src.ib_platform.domains.registry import DomainRegistry
 from src.ib_platform.domains.base import BaseDomain
+from src.ib_platform.domains.registry import DomainRegistry
 from src.ib_platform.domains.security.domain import SecurityDomain
+from src.ib_platform.graph.backends.memgraph import MemgraphBackend
+from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
+from src.ib_platform.graph.factory import GraphBackendFactory
+from src.ib_platform.graph.protocol import (
+    GraphNode,
+    TraversalDirection,
+    TraversalParams,
+)
+from src.ib_platform.patterns.detector import PatternDetector
+from src.ib_platform.patterns.models import PatternCategory, PatternDefinition
+from src.ib_platform.patterns.registry import PatternRegistry
 
 
 class TestE1INT01GraphBackendParity:
@@ -50,9 +54,9 @@ class TestE1INT01GraphBackendParity:
         pg_count = await pg.count_nodes()
         mg_count = await mg.count_nodes()
 
-        assert pg_count == mg_count == 100, (
-            f"Node count mismatch: PG={pg_count}, MG={mg_count}, Expected=100"
-        )
+        assert (
+            pg_count == mg_count == 100
+        ), f"Node count mismatch: PG={pg_count}, MG={mg_count}, Expected=100"
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -63,9 +67,9 @@ class TestE1INT01GraphBackendParity:
         pg_count = await pg.count_edges()
         mg_count = await mg.count_edges()
 
-        assert pg_count == mg_count == 200, (
-            f"Edge count mismatch: PG={pg_count}, MG={mg_count}, Expected=200"
-        )
+        assert (
+            pg_count == mg_count == 200
+        ), f"Edge count mismatch: PG={pg_count}, MG={mg_count}, Expected=200"
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -98,9 +102,9 @@ class TestE1INT01GraphBackendParity:
         else:
             ratio = mg_count / max(pg_count, 1)
 
-        assert ratio < 3.0, (
-            f"Traversal count mismatch too large: PG={pg_count}, MG={mg_count}"
-        )
+        assert (
+            ratio < 3.0
+        ), f"Traversal count mismatch too large: PG={pg_count}, MG={mg_count}"
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -120,9 +124,9 @@ class TestE1INT01GraphBackendParity:
         assert len(mg_neighbors) >= 2, "Memgraph should find at least 2 neighbors"
 
         # Counts should be reasonably similar
-        assert abs(len(pg_neighbors) - len(mg_neighbors)) <= 2, (
-            f"Neighbor count differs significantly: PG={len(pg_neighbors)}, MG={len(mg_neighbors)}"
-        )
+        assert (
+            abs(len(pg_neighbors) - len(mg_neighbors)) <= 2
+        ), f"Neighbor count differs significantly: PG={len(pg_neighbors)}, MG={len(mg_neighbors)}"
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -145,9 +149,7 @@ class TestE1INT02FullTraversalFlow:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_depth_3_traversal_returns_correct_subgraph(
-        self, populated_backends
-    ):
+    async def test_depth_3_traversal_returns_correct_subgraph(self, populated_backends):
         """Traversal at depth 3 returns expected subgraph size."""
         pg, mg, nodes = populated_backends
         start_node = pg._test_nodes[0]
@@ -182,9 +184,9 @@ class TestE1INT02FullTraversalFlow:
 
         # Should find predecessors and successors
         result_names = {n.properties.get("name") for n in result}
-        assert "node-049" in result_names or "node-051" in result_names, (
-            "Should find adjacent nodes"
-        )
+        assert (
+            "node-049" in result_names or "node-051" in result_names
+        ), "Should find adjacent nodes"
 
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -227,9 +229,9 @@ class TestE1INT03PatternDetectionPipeline:
             min_confidence=0.5,
         )
 
-        assert len(results) >= 5, (
-            f"Should find at least 5 patterns, found {len(results)}"
-        )
+        assert (
+            len(results) >= 5
+        ), f"Should find at least 5 patterns, found {len(results)}"
 
         # Check that we found CVE patterns
         cve_results = [r for r in results if "CVE" in r.matched_text]
@@ -237,9 +239,9 @@ class TestE1INT03PatternDetectionPipeline:
 
         # Check confidence scores are reasonable
         for result in results:
-            assert 0.0 <= result.final_confidence <= 1.0, (
-                f"Confidence {result.final_confidence} out of range"
-            )
+            assert (
+                0.0 <= result.final_confidence <= 1.0
+            ), f"Confidence {result.final_confidence} out of range"
 
     @pytest.mark.integration
     def test_confidence_scoring_accuracy(
@@ -258,16 +260,17 @@ class TestE1INT03PatternDetectionPipeline:
             if results:
                 best_match = max(results, key=lambda r: r.final_confidence)
                 # Check if confidence is within 0.15 of expected
-                if abs(best_match.final_confidence - case["expected_confidence"]) < 0.15:
+                if (
+                    abs(best_match.final_confidence - case["expected_confidence"])
+                    < 0.15
+                ):
                     correct += 1
             elif case["expected_confidence"] < 0.5:
                 # Correctly identified as low confidence
                 correct += 1
 
         accuracy = correct / total
-        assert accuracy >= 0.80, (
-            f"Confidence accuracy {accuracy:.1%} < 80% target"
-        )
+        assert accuracy >= 0.80, f"Confidence accuracy {accuracy:.1%} < 80% target"
 
     @pytest.mark.integration
     def test_pattern_categories_detected(
@@ -282,9 +285,9 @@ class TestE1INT03PatternDetectionPipeline:
         categories = {r.category for r in results}
 
         # Should detect at least 2 different categories
-        assert len(categories) >= 2, (
-            f"Should detect multiple categories, found: {categories}"
-        )
+        assert (
+            len(categories) >= 2
+        ), f"Should detect multiple categories, found: {categories}"
 
 
 class TestE1INT04DomainHotRegistration:
@@ -300,7 +303,10 @@ class TestE1INT04DomainHotRegistration:
         self, domain_registry: DomainRegistry
     ):
         """New domain's entity types become available immediately."""
-        from src.ib_platform.domains.base import EntityTypeDefinition, RelationshipTypeDefinition
+        from src.ib_platform.domains.base import (
+            EntityTypeDefinition,
+            RelationshipTypeDefinition,
+        )
 
         # Verify domain not present initially
         initial_domains = domain_registry.list_domains()
@@ -354,9 +360,7 @@ class TestE1INT04DomainHotRegistration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_security_domain_registration(
-        self, domain_registry: DomainRegistry
-    ):
+    async def test_security_domain_registration(self, domain_registry: DomainRegistry):
         """SecurityDomain registers correctly with all entity types."""
         # Register security domain
         security_domain = SecurityDomain()
@@ -370,15 +374,19 @@ class TestE1INT04DomainHotRegistration:
         entity_names = [et.name for et in domain.entity_types]
 
         expected_entities = [
-            "vulnerability", "threat", "control", "identity",
-            "compliance_requirement", "encryption_config",
-            "access_policy", "security_group", "security_finding",
+            "vulnerability",
+            "threat",
+            "control",
+            "identity",
+            "compliance_requirement",
+            "encryption_config",
+            "access_policy",
+            "security_group",
+            "security_finding",
         ]
 
         for entity_type in expected_entities:
-            assert entity_type in entity_names, (
-                f"Missing entity type: {entity_type}"
-            )
+            assert entity_type in entity_names, f"Missing entity type: {entity_type}"
 
     @pytest.mark.asyncio
     @pytest.mark.integration

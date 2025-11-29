@@ -21,7 +21,6 @@ from src.ib_platform.domains.security.factors import (
 from src.ib_platform.domains.security.patterns import SECURITY_PATTERNS
 from src.ib_platform.patterns.models import PatternCategory
 
-
 # --- Fixtures ---
 
 
@@ -32,7 +31,11 @@ def security_test_document() -> str:
     Returns:
         Content of security test document
     """
-    fixture_path = Path(__file__).parent.parent.parent.parent / "fixtures" / "security_test_doc.txt"
+    fixture_path = (
+        Path(__file__).parent.parent.parent.parent
+        / "fixtures"
+        / "security_test_doc.txt"
+    )
     return fixture_path.read_text()
 
 
@@ -98,8 +101,14 @@ class TestPatternDefinitions:
 
     def test_pattern_categories(self) -> None:
         """Verify patterns have correct categories."""
-        entity_patterns = {"cve_reference", "aws_arn", "compliance_framework",
-                          "encryption_reference", "security_group", "iam_policy"}
+        entity_patterns = {
+            "cve_reference",
+            "aws_arn",
+            "compliance_framework",
+            "encryption_reference",
+            "security_group",
+            "iam_policy",
+        }
         context_patterns = {"cvss_score", "severity_indicator"}
         relationship_patterns = {"mitigates_relationship", "protects_relationship"}
 
@@ -142,14 +151,17 @@ class TestPatternDefinitions:
 class TestPatternMatching:
     """Test pattern matching against real text."""
 
-    def test_cve_reference_detection(self, security_test_document: str,
-                                     pattern_by_name: Dict[str, object]) -> None:
+    def test_cve_reference_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test CVE reference pattern detection."""
         pattern = pattern_by_name["cve_reference"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document contains CVE-2023-44487, CVE-2023-12345, CVE-2024-0001
-        assert len(matches) >= 3, f"Expected at least 3 CVE matches, found {len(matches)}"
+        assert (
+            len(matches) >= 3
+        ), f"Expected at least 3 CVE matches, found {len(matches)}"
 
         # Verify specific CVEs are detected
         cve_ids = {match.group(0).upper() for match in matches}
@@ -157,100 +169,127 @@ class TestPatternMatching:
         assert "CVE-2023-12345" in cve_ids
         assert "CVE-2024-0001" in cve_ids
 
-    def test_aws_arn_detection(self, security_test_document: str,
-                               pattern_by_name: Dict[str, object]) -> None:
+    def test_aws_arn_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test AWS ARN pattern detection."""
         pattern = pattern_by_name["aws_arn"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document contains multiple ARNs
-        assert len(matches) >= 5, f"Expected at least 5 ARN matches, found {len(matches)}"
+        assert (
+            len(matches) >= 5
+        ), f"Expected at least 5 ARN matches, found {len(matches)}"
 
         # Verify ARN format
         for match in matches:
             arn = match.group(0)
             assert arn.startswith("arn:aws:"), f"Invalid ARN format: {arn}"
 
-    def test_compliance_framework_detection(self, security_test_document: str,
-                                           pattern_by_name: Dict[str, object]) -> None:
+    def test_compliance_framework_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test compliance framework pattern detection."""
         pattern = pattern_by_name["compliance_framework"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document mentions SOC 2, HIPAA, PCI-DSS, GDPR, NIST, FedRAMP, CIS, CCPA, ISO 27001, FISMA
-        assert len(matches) >= 10, f"Expected at least 10 framework matches, found {len(matches)}"
+        assert (
+            len(matches) >= 10
+        ), f"Expected at least 10 framework matches, found {len(matches)}"
 
         frameworks = {match.group(0).upper() for match in matches}
         assert any("SOC" in f and "2" in f for f in frameworks)
         assert any("HIPAA" in f for f in frameworks)
         assert any("PCI" in f for f in frameworks)
 
-    def test_cvss_score_detection(self, security_test_document: str,
-                                  pattern_by_name: Dict[str, object]) -> None:
+    def test_cvss_score_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test CVSS score pattern detection."""
         pattern = pattern_by_name["cvss_score"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document contains CVSS 10.0, CVSS: 8.5
-        assert len(matches) >= 2, f"Expected at least 2 CVSS matches, found {len(matches)}"
+        assert (
+            len(matches) >= 2
+        ), f"Expected at least 2 CVSS matches, found {len(matches)}"
 
-    def test_severity_indicator_detection(self, security_test_document: str,
-                                         pattern_by_name: Dict[str, object]) -> None:
+    def test_severity_indicator_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test severity indicator pattern detection."""
         pattern = pattern_by_name["severity_indicator"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document contains critical severity, high risk, medium priority, informational severity
-        assert len(matches) >= 4, f"Expected at least 4 severity matches, found {len(matches)}"
+        assert (
+            len(matches) >= 4
+        ), f"Expected at least 4 severity matches, found {len(matches)}"
 
-    def test_encryption_reference_detection(self, security_test_document: str,
-                                           pattern_by_name: Dict[str, object]) -> None:
+    def test_encryption_reference_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test encryption reference pattern detection."""
         pattern = pattern_by_name["encryption_reference"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document mentions AES-128, AES-256, KMS, TLS 1.3, TLS 1.2, RSA-2048, RSA-4096, HSM, SSL
-        assert len(matches) >= 8, f"Expected at least 8 encryption matches, found {len(matches)}"
+        assert (
+            len(matches) >= 8
+        ), f"Expected at least 8 encryption matches, found {len(matches)}"
 
         encryption_types = {match.group(0).upper() for match in matches}
         assert any("AES" in e for e in encryption_types)
         assert any("TLS" in e for e in encryption_types)
 
-    def test_security_group_detection(self, security_test_document: str,
-                                     pattern_by_name: Dict[str, object]) -> None:
+    def test_security_group_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test security group pattern detection."""
         pattern = pattern_by_name["security_group"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document contains security group sg-..., NSG references
-        assert len(matches) >= 4, f"Expected at least 4 security group matches, found {len(matches)}"
+        assert (
+            len(matches) >= 4
+        ), f"Expected at least 4 security group matches, found {len(matches)}"
 
-    def test_iam_policy_detection(self, security_test_document: str,
-                                 pattern_by_name: Dict[str, object]) -> None:
+    def test_iam_policy_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test IAM policy pattern detection."""
         pattern = pattern_by_name["iam_policy"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document contains IAM policy, IAM role, access policy, RBAC
-        assert len(matches) >= 6, f"Expected at least 6 IAM policy matches, found {len(matches)}"
+        assert (
+            len(matches) >= 6
+        ), f"Expected at least 6 IAM policy matches, found {len(matches)}"
 
-    def test_mitigates_relationship_detection(self, security_test_document: str,
-                                             pattern_by_name: Dict[str, object]) -> None:
+    def test_mitigates_relationship_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test mitigates relationship pattern detection."""
         pattern = pattern_by_name["mitigates_relationship"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document contains: "WAF mitigates", "mitigates SQL injection", "reduces", "addresses", "remediates"
-        assert len(matches) >= 4, f"Expected at least 4 mitigates matches, found {len(matches)}"
+        assert (
+            len(matches) >= 4
+        ), f"Expected at least 4 mitigates matches, found {len(matches)}"
 
-    def test_protects_relationship_detection(self, security_test_document: str,
-                                            pattern_by_name: Dict[str, object]) -> None:
+    def test_protects_relationship_detection(
+        self, security_test_document: str, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Test protects relationship pattern detection."""
         pattern = pattern_by_name["protects_relationship"]
         matches = list(pattern.compiled.finditer(security_test_document))
 
         # Document contains: "TLS protects", "secures", "safeguards", "defends", "protects"
-        assert len(matches) >= 4, f"Expected at least 4 protects matches, found {len(matches)}"
+        assert (
+            len(matches) >= 4
+        ), f"Expected at least 4 protects matches, found {len(matches)}"
 
 
 # --- Confidence Factor Tests ---
@@ -285,9 +324,9 @@ class TestConfidenceFactors:
 
         for factor in SECURITY_CONFIDENCE_FACTORS:
             expected = expected_weights[factor.name]
-            assert factor.weight == expected, (
-                f"Factor {factor.name} has weight {factor.weight}, expected {expected}"
-            )
+            assert (
+                factor.weight == expected
+            ), f"Factor {factor.name} has weight {factor.weight}, expected {expected}"
 
     def test_severity_context_detector(self) -> None:
         """Test severity context detector function."""
@@ -369,7 +408,9 @@ class TestPatternDetectionAccuracy:
             expected_count = expected_detections[pattern.name]
 
             # Calculate detection rate for this pattern
-            detection_rate = min(detected_count / expected_count, 1.0) if expected_count > 0 else 1.0
+            detection_rate = (
+                min(detected_count / expected_count, 1.0) if expected_count > 0 else 1.0
+            )
             pattern_results[pattern.name] = {
                 "expected": expected_count,
                 "detected": detected_count,
@@ -379,19 +420,23 @@ class TestPatternDetectionAccuracy:
             total_detected += min(detected_count, expected_count)
 
         # Calculate overall accuracy
-        overall_accuracy = total_detected / total_expected if total_expected > 0 else 0.0
+        overall_accuracy = (
+            total_detected / total_expected if total_expected > 0 else 0.0
+        )
 
         # Print detailed results for debugging
         print("\n=== Pattern Detection Results ===")
         for name, result in pattern_results.items():
-            print(f"{name:30} Expected: {result['expected']:3} Detected: {result['detected']:3} "
-                  f"Rate: {result['rate']:.1%}")
+            print(
+                f"{name:30} Expected: {result['expected']:3} Detected: {result['detected']:3} "
+                f"Rate: {result['rate']:.1%}"
+            )
         print(f"\nOverall Accuracy: {overall_accuracy:.1%}")
 
         # Verify accuracy is above threshold
-        assert overall_accuracy >= 0.85, (
-            f"Detection accuracy {overall_accuracy:.1%} is below required 85% threshold"
-        )
+        assert (
+            overall_accuracy >= 0.85
+        ), f"Detection accuracy {overall_accuracy:.1%} is below required 85% threshold"
 
     def test_pattern_examples_match(self) -> None:
         """Verify all pattern examples match their own patterns."""
@@ -399,9 +444,9 @@ class TestPatternDetectionAccuracy:
             if pattern.examples:
                 for example in pattern.examples:
                     matches = list(pattern.compiled.finditer(example))
-                    assert len(matches) > 0, (
-                        f"Pattern {pattern.name} did not match its own example: '{example}'"
-                    )
+                    assert (
+                        len(matches) > 0
+                    ), f"Pattern {pattern.name} did not match its own example: '{example}'"
 
     def test_no_false_positives_on_clean_text(self) -> None:
         """Verify patterns don't match on clearly unrelated text."""
@@ -421,9 +466,9 @@ class TestPatternDetectionAccuracy:
             total_matches += len(matches)
 
         # Allow a small number of incidental matches, but not many
-        assert total_matches < 3, (
-            f"Too many false positives ({total_matches}) on clean text"
-        )
+        assert (
+            total_matches < 3
+        ), f"Too many false positives ({total_matches}) on clean text"
 
 
 # --- Performance Tests ---
@@ -432,7 +477,9 @@ class TestPatternDetectionAccuracy:
 class TestPatternPerformance:
     """Test pattern matching performance."""
 
-    def test_pattern_compilation_cached(self, pattern_by_name: Dict[str, object]) -> None:
+    def test_pattern_compilation_cached(
+        self, pattern_by_name: Dict[str, object]
+    ) -> None:
         """Verify pattern compilation is cached."""
         pattern = pattern_by_name["cve_reference"]
         compiled1 = pattern.compiled
@@ -448,6 +495,7 @@ class TestPatternPerformance:
 
         # Time all patterns (should complete quickly)
         import time
+
         start_time = time.time()
 
         for pattern in SECURITY_PATTERNS:
@@ -456,6 +504,4 @@ class TestPatternPerformance:
         elapsed = time.time() - start_time
 
         # Should complete in under 1 second for 10x document
-        assert elapsed < 1.0, (
-            f"Pattern matching took {elapsed:.2f}s, expected < 1.0s"
-        )
+        assert elapsed < 1.0, f"Pattern matching took {elapsed:.2f}s, expected < 1.0s"

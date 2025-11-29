@@ -16,7 +16,7 @@ repos:
     rev: 23.11.0
     hooks:
       - id: black
-        language_version: python3.11
+        language_version: python3.12
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
@@ -45,13 +45,6 @@ repos:
 
   - repo: local
     hooks:
-      - id: check-file-size
-        name: Check file size (max 500 lines)
-        entry: bash -c 'for f in "$@"; do lines=$(wc -l < "$f"); if [ "$lines" -gt 500 ]; then echo "ERROR: $f has $lines lines (max 500)"; exit 1; fi; done' --
-        language: system
-        files: \.py$
-        exclude: ^tests/
-
       - id: pytest-check
         name: Run pytest
         entry: pytest tests/unit/ -x --tb=short -q

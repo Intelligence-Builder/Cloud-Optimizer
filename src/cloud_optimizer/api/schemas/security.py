@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-
 # ============================================================================
 # Scan Schemas
 # ============================================================================
@@ -18,7 +17,9 @@ from pydantic import BaseModel, Field
 class SecurityScanRequest(BaseModel):
     """Request for security entity scanning."""
 
-    text: str = Field(..., min_length=10, description="Text to scan for security entities")
+    text: str = Field(
+        ..., min_length=10, description="Text to scan for security entities"
+    )
     document_id: Optional[str] = Field(None, description="Optional document identifier")
     min_confidence: float = Field(
         0.7,
@@ -39,7 +40,9 @@ class SecurityEntity(BaseModel):
     entity_type: str = Field(..., description="Type of security entity")
     name: str = Field(..., description="Entity name")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
-    properties: Dict[str, Any] = Field(default_factory=dict, description="Entity properties")
+    properties: Dict[str, Any] = Field(
+        default_factory=dict, description="Entity properties"
+    )
 
 
 class SecurityRelationship(BaseModel):
@@ -56,7 +59,9 @@ class SecurityScanResult(BaseModel):
     """Result from security scanning."""
 
     scan_id: str = Field(..., description="Unique scan identifier")
-    document_id: Optional[str] = Field(None, description="Document identifier if provided")
+    document_id: Optional[str] = Field(
+        None, description="Document identifier if provided"
+    )
     entities_found: List[SecurityEntity] = Field(
         default_factory=list,
         description="Extracted security entities",
@@ -66,8 +71,12 @@ class SecurityScanResult(BaseModel):
         description="Extracted relationships",
     )
     entity_count: int = Field(..., description="Total number of entities found")
-    relationship_count: int = Field(..., description="Total number of relationships found")
-    processing_time_ms: float = Field(..., description="Processing time in milliseconds")
+    relationship_count: int = Field(
+        ..., description="Total number of relationships found"
+    )
+    processing_time_ms: float = Field(
+        ..., description="Processing time in milliseconds"
+    )
     timestamp: datetime = Field(..., description="Scan timestamp")
 
 
@@ -96,7 +105,9 @@ class VulnerabilityBase(BaseModel):
         le=10.0,
         description="CVSS score (0-10)",
     )
-    description: str = Field(..., min_length=10, description="Vulnerability description")
+    description: str = Field(
+        ..., min_length=10, description="Vulnerability description"
+    )
 
 
 class VulnerabilityCreate(VulnerabilityBase):
@@ -131,7 +142,9 @@ class SecurityControlBase(BaseModel):
     """Base security control model."""
 
     name: str = Field(..., min_length=3, description="Control name")
-    control_id: Optional[str] = Field(None, description="Control identifier (e.g., CC1.1)")
+    control_id: Optional[str] = Field(
+        None, description="Control identifier (e.g., CC1.1)"
+    )
     description: str = Field(..., min_length=10, description="Control description")
     category: str = Field(..., description="Control category")
 
@@ -144,7 +157,9 @@ class SecurityControlCreate(SecurityControlBase):
         pattern="^(not_implemented|partial|implemented)$",
         description="Implementation status",
     )
-    framework: Optional[str] = Field(None, description="Associated framework (SOC2, HIPAA, etc.)")
+    framework: Optional[str] = Field(
+        None, description="Associated framework (SOC2, HIPAA, etc.)"
+    )
 
 
 class SecurityControl(SecurityControlBase):
@@ -199,7 +214,9 @@ class ComplianceCheckResult(BaseModel):
     framework: str = Field(..., description="Compliance framework")
     total_requirements: int = Field(..., description="Total requirements checked")
     implemented: int = Field(..., description="Number of implemented requirements")
-    partial: int = Field(..., description="Number of partially implemented requirements")
+    partial: int = Field(
+        ..., description="Number of partially implemented requirements"
+    )
     gaps: int = Field(..., description="Number of compliance gaps")
     coverage_percentage: float = Field(
         ...,
@@ -268,7 +285,9 @@ class GraphNode(BaseModel):
     node_id: str = Field(..., description="Unique node identifier")
     node_type: str = Field(..., description="Type of node")
     label: str = Field(..., description="Node label")
-    properties: Dict[str, Any] = Field(default_factory=dict, description="Node properties")
+    properties: Dict[str, Any] = Field(
+        default_factory=dict, description="Node properties"
+    )
 
 
 class GraphEdge(BaseModel):
@@ -278,7 +297,9 @@ class GraphEdge(BaseModel):
     edge_type: str = Field(..., description="Type of relationship")
     source_id: str = Field(..., description="Source node ID")
     target_id: str = Field(..., description="Target node ID")
-    properties: Dict[str, Any] = Field(default_factory=dict, description="Edge properties")
+    properties: Dict[str, Any] = Field(
+        default_factory=dict, description="Edge properties"
+    )
 
 
 class SecurityGraph(BaseModel):

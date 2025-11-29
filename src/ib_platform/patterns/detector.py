@@ -86,9 +86,7 @@ class PatternDetector:
             extra={
                 "text_length": len(text),
                 "domains": domains,
-                "categories": [c.value for c in categories]
-                if categories
-                else None,
+                "categories": [c.value for c in categories] if categories else None,
                 "min_confidence": min_confidence,
             },
         )
@@ -112,9 +110,7 @@ class PatternDetector:
             self.scorer.score(match, text)
 
         # Filter by confidence
-        filtered_matches = [
-            m for m in matches if m.final_confidence >= min_confidence
-        ]
+        filtered_matches = [m for m in matches if m.final_confidence >= min_confidence]
 
         logger.info(
             "Pattern detection complete",
@@ -199,8 +195,7 @@ class PatternDetector:
                 if rel_match.metadata is None:
                     rel_match.metadata = {}
                 rel_match.metadata["nearby_entities"] = [
-                    {"name": e.output_value, "type": e.output_type}
-                    for e in nearby
+                    {"name": e.output_value, "type": e.output_type} for e in nearby
                 ]
 
         logger.debug(
@@ -313,9 +308,7 @@ class PatternDetector:
 
             # Apply category filter if specified
             if categories is not None:
-                patterns = [
-                    p for p in patterns if p.category in categories
-                ]
+                patterns = [p for p in patterns if p.category in categories]
         else:
             # Only category filter
             for category in categories:  # type: ignore

@@ -4,11 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from ib_platform.patterns.models import (
-    ConfidenceFactor,
-    PatternCategory,
-    PatternMatch,
-)
+from ib_platform.patterns.models import ConfidenceFactor, PatternCategory, PatternMatch
 from ib_platform.patterns.scorer import ConfidenceScorer, get_default_confidence_factors
 
 
@@ -84,9 +80,7 @@ class TestConfidenceScorer:
             surrounding_context="This is not a CVE-2021-44228 vulnerability",
         )
 
-        final_score = scorer.score(
-            match, "This is not a CVE-2021-44228 vulnerability"
-        )
+        final_score = scorer.score(match, "This is not a CVE-2021-44228 vulnerability")
 
         # Should be decreased by negation factor
         assert final_score < 0.85
@@ -175,9 +169,7 @@ class TestConfidenceScorer:
             surrounding_context="not $100 test",
         )
 
-        score, applied = confidence_scorer.apply_factors(
-            match, "not $100 test"
-        )
+        score, applied = confidence_scorer.apply_factors(match, "not $100 test")
 
         assert isinstance(score, float)
         assert isinstance(applied, list)

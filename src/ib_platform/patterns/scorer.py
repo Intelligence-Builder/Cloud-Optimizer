@@ -133,9 +133,7 @@ class ConfidenceScorer:
 
         return score, applied
 
-    def _factor_applies(
-        self, factor: ConfidenceFactor, match: PatternMatch
-    ) -> bool:
+    def _factor_applies(self, factor: ConfidenceFactor, match: PatternMatch) -> bool:
         """Check if a factor applies to a match.
 
         Args:
@@ -207,9 +205,7 @@ class ConfidenceScorer:
         self, match: PatternMatch, context: str, full_text: str
     ) -> bool:
         """Detect uncertainty markers near the match."""
-        uncertainty_words = (
-            r"\b(maybe|might|possibly|perhaps|potentially|unclear)\b"
-        )
+        uncertainty_words = r"\b(maybe|might|possibly|perhaps|potentially|unclear)\b"
         return bool(re.search(uncertainty_words, context, re.IGNORECASE))
 
     def _detect_monetary(

@@ -102,7 +102,7 @@ async def analyze_with_cloud_optimizer():
             "/api/v1/security/analyze",
             json={
                 "text": "We found CVE-2023-44487 affecting our web servers. "
-                       "This impacts SOC 2 compliance.",
+                "This impacts SOC 2 compliance.",
                 "source_type": "quick_scan",
             },
         )
@@ -112,8 +112,10 @@ async def analyze_with_cloud_optimizer():
             print(f"   Detected {result['entity_count']} entities")
             print(f"   Detected {result['relationship_count']} relationships")
             for entity in result["entities"]:
-                print(f"   - {entity['type']}: {entity['name']} "
-                      f"(confidence: {entity['confidence']:.2f})")
+                print(
+                    f"   - {entity['type']}: {entity['name']} "
+                    f"(confidence: {entity['confidence']:.2f})"
+                )
         else:
             print(f"   Error: {response.status_code} - {response.text}")
 
@@ -165,7 +167,9 @@ async def analyze_with_cloud_optimizer():
 
             print(f"\n   Relationship Types ({len(schema['relationship_types'])}):")
             for rt in schema["relationship_types"][:5]:
-                print(f"   - {rt['name']}: {rt['source_types']} -> {rt['target_types']}")
+                print(
+                    f"   - {rt['name']}: {rt['source_types']} -> {rt['target_types']}"
+                )
         else:
             print(f"   Error: {response.status_code} - {response.text}")
 

@@ -1,12 +1,12 @@
 """Tests for base domain classes and definitions."""
 
+import pytest
+
 from ib_platform.domains.base import (
     BaseDomain,
     EntityTypeDefinition,
     RelationshipTypeDefinition,
 )
-
-import pytest
 
 
 class TestEntityTypeDefinition:

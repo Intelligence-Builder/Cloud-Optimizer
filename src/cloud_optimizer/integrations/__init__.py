@@ -1,1 +1,1 @@
-"""External integrations for Cloud Optimizer."""
+"""Cloud Optimizer integrations package."""

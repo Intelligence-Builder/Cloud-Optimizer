@@ -43,9 +43,7 @@ class PatternRegistry:
         """
         with self._lock:
             if pattern.id in self._patterns:
-                raise ValueError(
-                    f"Pattern with ID {pattern.id} is already registered"
-                )
+                raise ValueError(f"Pattern with ID {pattern.id} is already registered")
 
             self._patterns[pattern.id] = pattern
             logger.info(
@@ -105,9 +103,7 @@ class PatternRegistry:
             List of matching pattern definitions
         """
         with self._lock:
-            patterns = [
-                p for p in self._patterns.values() if p.domain == domain
-            ]
+            patterns = [p for p in self._patterns.values() if p.domain == domain]
 
             if category is not None:
                 patterns = [p for p in patterns if p.category == category]
@@ -123,9 +119,7 @@ class PatternRegistry:
 
             return patterns
 
-    def get_by_category(
-        self, category: PatternCategory
-    ) -> List[PatternDefinition]:
+    def get_by_category(self, category: PatternCategory) -> List[PatternDefinition]:
         """Get all patterns for a specific category.
 
         Args:
@@ -135,9 +129,7 @@ class PatternRegistry:
             List of matching pattern definitions
         """
         with self._lock:
-            patterns = [
-                p for p in self._patterns.values() if p.category == category
-            ]
+            patterns = [p for p in self._patterns.values() if p.category == category]
 
             logger.debug(
                 "Retrieved patterns by category",
@@ -173,6 +165,4 @@ class PatternRegistry:
         with self._lock:
             count = len(self._patterns)
             self._patterns.clear()
-            logger.warning(
-                f"Pattern registry cleared ({count} patterns removed)"
-            )
+            logger.warning(f"Pattern registry cleared ({count} patterns removed)")

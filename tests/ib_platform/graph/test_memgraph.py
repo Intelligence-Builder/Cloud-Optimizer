@@ -8,18 +8,18 @@ Requirements:
     docker-compose -f docker/docker-compose.test.yml up -d
 """
 
+import time
+
 import pytest
 import pytest_asyncio
-import time
 
 from src.ib_platform.graph.backends.memgraph import MemgraphBackend
 from src.ib_platform.graph.protocol import (
-    GraphNode,
     GraphEdge,
+    GraphNode,
     TraversalDirection,
     TraversalParams,
 )
-
 
 # ============================================================================
 # Unit Tests (no database required)

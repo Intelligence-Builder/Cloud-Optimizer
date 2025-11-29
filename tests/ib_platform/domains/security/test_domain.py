@@ -159,9 +159,7 @@ class TestSecurityDomainEntityTypes:
         assert "severity" in finding_type.required_properties
         assert "finding_type" in finding_type.optional_properties
 
-    def test_identity_entity_definition(
-        self, security_domain: SecurityDomain
-    ) -> None:
+    def test_identity_entity_definition(self, security_domain: SecurityDomain) -> None:
         """Test identity entity type has correct properties."""
         identity_type = next(
             et for et in security_domain.entity_types if et.name == "identity"
@@ -213,9 +211,7 @@ class TestSecurityDomainRelationshipTypes:
         exposes = next(
             rt for rt in security_domain.relationship_types if rt.name == "exposes"
         )
-        assert (
-            exposes.description == "Configuration exposes to vulnerability or threat"
-        )
+        assert exposes.description == "Configuration exposes to vulnerability or threat"
         assert "encryption_config" in exposes.valid_source_types
         assert "access_policy" in exposes.valid_source_types
         assert "security_group" in exposes.valid_source_types
@@ -322,7 +318,9 @@ class TestSecurityDomainEntityValidation:
         self, security_domain: SecurityDomain
     ) -> None:
         """Test validation fails for control without name."""
-        errors = security_domain.validate_entity("control", {"control_type": "preventive"})
+        errors = security_domain.validate_entity(
+            "control", {"control_type": "preventive"}
+        )
         assert len(errors) > 0
         assert any("name" in error for error in errors)
 

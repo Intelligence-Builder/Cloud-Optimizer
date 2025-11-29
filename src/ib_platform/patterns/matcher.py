@@ -24,9 +24,7 @@ class PatternMatcher:
         >>> matches_all = matcher.match_all(text, [p1, p2, p3])
     """
 
-    def match(
-        self, text: str, pattern: PatternDefinition
-    ) -> List[PatternMatch]:
+    def match(self, text: str, pattern: PatternDefinition) -> List[PatternMatch]:
         """Match a single pattern against text.
 
         Args:

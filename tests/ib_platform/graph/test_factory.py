@@ -10,10 +10,9 @@ Requirements:
 
 import pytest
 
-from src.ib_platform.graph.factory import GraphBackendFactory, GraphBackendType
-from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
 from src.ib_platform.graph.backends.memgraph import MemgraphBackend
-
+from src.ib_platform.graph.backends.postgres_cte import PostgresCTEBackend
+from src.ib_platform.graph.factory import GraphBackendFactory, GraphBackendType
 
 # ============================================================================
 # Unit Tests - No database required

@@ -131,6 +131,7 @@ def create_app() -> FastAPI:
 
     # Register security analysis router
     from cloud_optimizer.api.routers import security
+
     app.include_router(
         security.router,
         prefix="/api/v1/security",

@@ -249,7 +249,9 @@ class MemgraphBackend:
                 raise ValueError("Each node must have at least one label")
 
             labels_key = ":".join(sorted(labels))
-            by_labels[labels_key].append({"id": node_id, "labels": labels, "props": props})
+            by_labels[labels_key].append(
+                {"id": node_id, "labels": labels, "props": props}
+            )
 
         with driver.session(database=self._database) as session:
             for labels_str, group in by_labels.items():
@@ -452,7 +454,9 @@ class MemgraphBackend:
             props = {**edge_spec.get("properties", {}), "id": edge_id}
 
             if not all([source_id, target_id, edge_type]):
-                raise ValueError("Each edge must have source_id, target_id, and edge_type")
+                raise ValueError(
+                    "Each edge must have source_id, target_id, and edge_type"
+                )
 
             by_type[edge_type].append(
                 {
@@ -511,11 +515,17 @@ class MemgraphBackend:
 
         # Build direction pattern with path variable for depth calculation
         if params.direction == TraversalDirection.OUTGOING:
-            pattern = f"path = (start)-[r{rel_pattern}*1..{params.max_depth}]->(connected)"
+            pattern = (
+                f"path = (start)-[r{rel_pattern}*1..{params.max_depth}]->(connected)"
+            )
         elif params.direction == TraversalDirection.INCOMING:
-            pattern = f"path = (start)<-[r{rel_pattern}*1..{params.max_depth}]-(connected)"
+            pattern = (
+                f"path = (start)<-[r{rel_pattern}*1..{params.max_depth}]-(connected)"
+            )
         else:
-            pattern = f"path = (start)-[r{rel_pattern}*1..{params.max_depth}]-(connected)"
+            pattern = (
+                f"path = (start)-[r{rel_pattern}*1..{params.max_depth}]-(connected)"
+            )
 
         # Memgraph-compatible query using size(relationships(path)) for depth
         query = f"""
@@ -799,7 +809,11 @@ class MemgraphBackend:
 
         logger.debug(
             f"Extracted subgraph with {len(nodes)} nodes"
-            + (f" and {len(result_dict.get('edges', []))} edges" if include_edges else "")
+            + (
+                f" and {len(result_dict.get('edges', []))} edges"
+                if include_edges
+                else ""
+            )
         )
         return result_dict
 
@@ -970,7 +984,9 @@ class MemgraphBackend:
             result = session.run(query)
             count = result.single()["count"]
 
-        logger.debug(f"Counted {count} nodes" + (f" with labels {labels}" if labels else ""))
+        logger.debug(
+            f"Counted {count} nodes" + (f" with labels {labels}" if labels else "")
+        )
         return count
 
     async def count_edges(
@@ -995,6 +1011,7 @@ class MemgraphBackend:
             count = result.single()["count"]
 
         logger.debug(
-            f"Counted {count} edges" + (f" with types {edge_types}" if edge_types else "")
+            f"Counted {count} edges"
+            + (f" with types {edge_types}" if edge_types else "")
         )
         return count

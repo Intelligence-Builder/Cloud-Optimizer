@@ -130,7 +130,9 @@ class IntelligenceBuilderService:
     def _ensure_connected(self) -> None:
         """Ensure client is connected."""
         if not self._connected or not self._client:
-            raise RuntimeError("Not connected to Intelligence-Builder. Call connect() first.")
+            raise RuntimeError(
+                "Not connected to Intelligence-Builder. Call connect() first."
+            )
 
     # =========================================================================
     # Security Analysis
@@ -205,7 +207,9 @@ class IntelligenceBuilderService:
             "controls": [self._entity_to_dict(c) for c in controls],
             "compliance_impacts": [self._entity_to_dict(c) for c in compliance],
             "threat_actors": [self._entity_to_dict(t) for t in threats],
-            "relationships": [self._relationship_to_dict(r) for r in result.relationships],
+            "relationships": [
+                self._relationship_to_dict(r) for r in result.relationships
+            ],
             "risk_score": risk_score,
             "entity_count": result.entity_count,
             "relationship_count": result.relationship_count,
@@ -228,9 +232,7 @@ class IntelligenceBuilderService:
         threat_bonus = min(len(threats) * 10, 20)
 
         # Add for high confidence vulnerabilities
-        high_confidence = sum(
-            1 for v in vulnerabilities if v.confidence > 0.9
-        )
+        high_confidence = sum(1 for v in vulnerabilities if v.confidence > 0.9)
         confidence_bonus = min(high_confidence * 5, 20)
 
         return min(base_score + threat_bonus + confidence_bonus, 100.0)
@@ -277,20 +279,24 @@ class IntelligenceBuilderService:
         entity_name_map: Dict[str, str] = {}
 
         for vuln in analysis.get("vulnerabilities", []):
-            entity = await self._client.create_entity({
-                "entity_type": "vulnerability",
-                "name": vuln["name"],
-                "metadata": vuln["properties"],
-            })
+            entity = await self._client.create_entity(
+                {
+                    "entity_type": "vulnerability",
+                    "name": vuln["name"],
+                    "metadata": vuln["properties"],
+                }
+            )
             entity_ids.append(str(entity.entity_id))
             entity_name_map[vuln["name"]] = str(entity.entity_id)
 
         for control in analysis.get("controls", []):
-            entity = await self._client.create_entity({
-                "entity_type": "control",
-                "name": control["name"],
-                "metadata": control["properties"],
-            })
+            entity = await self._client.create_entity(
+                {
+                    "entity_type": "control",
+                    "name": control["name"],
+                    "metadata": control["properties"],
+                }
+            )
             entity_ids.append(str(entity.entity_id))
             entity_name_map[control["name"]] = str(entity.entity_id)
 
@@ -301,12 +307,14 @@ class IntelligenceBuilderService:
             target_id = entity_name_map.get(rel["target"])
 
             if source_id and target_id:
-                relationship = await self._client.create_relationship({
-                    "from_entity_id": source_id,
-                    "to_entity_id": target_id,
-                    "relationship_type": rel["type"],
-                    "confidence": rel["confidence"],
-                })
+                relationship = await self._client.create_relationship(
+                    {
+                        "from_entity_id": source_id,
+                        "to_entity_id": target_id,
+                        "relationship_type": rel["type"],
+                        "confidence": rel["confidence"],
+                    }
+                )
                 relationship_ids.append(str(relationship.relationship_id))
 
         return {

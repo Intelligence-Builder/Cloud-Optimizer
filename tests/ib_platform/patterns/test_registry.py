@@ -4,10 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from ib_platform.patterns.models import (
-    PatternCategory,
-    PatternDefinition,
-)
+from ib_platform.patterns.models import PatternCategory, PatternDefinition
 from ib_platform.patterns.registry import PatternRegistry
 
 
@@ -68,9 +65,7 @@ class TestPatternRegistry:
         result = pattern_registry.get(uuid4())
         assert result is None
 
-    def test_get_by_domain(
-        self, populated_registry: PatternRegistry
-    ) -> None:
+    def test_get_by_domain(self, populated_registry: PatternRegistry) -> None:
         """Test retrieving patterns by domain."""
         patterns = populated_registry.get_by_domain("security")
 
@@ -87,18 +82,14 @@ class TestPatternRegistry:
 
         assert all(p.category == PatternCategory.ENTITY for p in patterns)
 
-    def test_get_by_category(
-        self, populated_registry: PatternRegistry
-    ) -> None:
+    def test_get_by_category(self, populated_registry: PatternRegistry) -> None:
         """Test retrieving patterns by category."""
         patterns = populated_registry.get_by_category(PatternCategory.ENTITY)
 
         assert len(patterns) == 2
         assert all(p.category == PatternCategory.ENTITY for p in patterns)
 
-    def test_list_all(
-        self, populated_registry: PatternRegistry
-    ) -> None:
+    def test_list_all(self, populated_registry: PatternRegistry) -> None:
         """Test listing all patterns."""
         all_patterns = populated_registry.list_all()
 
@@ -113,9 +104,7 @@ class TestPatternRegistry:
         pattern_registry.register(sample_cve_pattern)
         assert pattern_registry.count() == 1
 
-    def test_clear(
-        self, populated_registry: PatternRegistry
-    ) -> None:
+    def test_clear(self, populated_registry: PatternRegistry) -> None:
         """Test clearing all patterns."""
         assert populated_registry.count() == 2
 
