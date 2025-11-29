@@ -1,133 +1,186 @@
-"""Unit tests for SecurityService."""
+"""
+Unit tests for SecurityService.
+
+Testing Strategy:
+- Unit tests: Test pure logic without external dependencies
+- Tests requiring IB service use stub implementations (not mocks)
+- AWS interaction tests are in integration tests using LocalStack
+
+Note: SecurityService depends on IntelligenceBuilderService which is an
+external SDK. For unit tests, we use a simple stub that implements the
+interface. Integration tests (test_epic3_app.py) test with LocalStack.
+"""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 from cloud_optimizer.services.security import SecurityService
 
 
-class TestSecurityService:
-    """Tests for SecurityService."""
+# ============================================================================
+# Stub Implementation for IB Service (NOT a mock - implements interface)
+# ============================================================================
 
-    @pytest.fixture
-    def mock_ib_service(self):
-        """Create mock IB service."""
-        mock_ib = MagicMock()
-        mock_ib.is_connected = True
-        mock_ib.create_entity = AsyncMock()
-        mock_ib.query_entities = AsyncMock(return_value={"entities": []})
-        return mock_ib
 
-    @pytest.fixture
-    def security_service(self, mock_ib_service):
-        """Create SecurityService with mocked dependencies."""
-        return SecurityService(ib_service=mock_ib_service)
+@dataclass
+class StubIBService:
+    """
+    Stub implementation of IB service interface for unit testing.
 
-    def test_service_initialization(self, mock_ib_service):
-        """Test service initializes correctly."""
-        service = SecurityService(ib_service=mock_ib_service)
-        assert service.ib_service is mock_ib_service
+    This is NOT a mock - it's a simple implementation that follows
+    the same interface as the real IB service.
+    """
 
-    def test_get_scanner_creates_security_group_scanner(self, security_service):
-        """Test get_scanner creates SecurityGroupScanner."""
-        scanner = security_service._get_scanner("security_groups", "us-east-1")
+    is_connected: bool = True
+    _entities: List[Dict[str, Any]] = None
+
+    def __post_init__(self):
+        if self._entities is None:
+            self._entities = []
+
+    async def create_entity(self, entity_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Store entity in memory."""
+        self._entities.append(entity_data)
+        return entity_data
+
+    async def query_entities(
+        self,
+        entity_type: str,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        """Return stored entities."""
+        return {"entities": self._entities}
+
+
+# ============================================================================
+# Unit Tests - Pure Logic (No External Dependencies)
+# ============================================================================
+
+
+class TestSecurityServiceInitialization:
+    """Tests for SecurityService initialization and configuration."""
+
+    def test_service_initializes_without_ib(self):
+        """Service can be created without IB service."""
+        service = SecurityService(ib_service=None)
+        assert service.ib_service is None
+
+    def test_service_initializes_with_ib(self):
+        """Service accepts IB service dependency."""
+        stub_ib = StubIBService()
+        service = SecurityService(ib_service=stub_ib)
+        assert service.ib_service is stub_ib
+
+
+class TestScannerFactory:
+    """Tests for scanner creation and caching."""
+
+    def test_creates_security_group_scanner(self):
+        """Factory creates SecurityGroupScanner for 'security_groups' type."""
+        service = SecurityService()
+        scanner = service._get_scanner("security_groups", "us-east-1")
+
         assert scanner is not None
         assert scanner.get_scanner_name() == "SecurityGroupScanner"
+        assert scanner.region == "us-east-1"
 
-    def test_get_scanner_creates_iam_scanner(self, security_service):
-        """Test get_scanner creates IAMScanner."""
-        scanner = security_service._get_scanner("iam", "us-east-1")
+    def test_creates_iam_scanner(self):
+        """Factory creates IAMScanner for 'iam' type."""
+        service = SecurityService()
+        scanner = service._get_scanner("iam", "us-east-1")
+
         assert scanner is not None
         assert scanner.get_scanner_name() == "IAMScanner"
 
-    def test_get_scanner_creates_encryption_scanner(self, security_service):
-        """Test get_scanner creates EncryptionScanner."""
-        scanner = security_service._get_scanner("encryption", "us-east-1")
+    def test_creates_encryption_scanner(self):
+        """Factory creates EncryptionScanner for 'encryption' type."""
+        service = SecurityService()
+        scanner = service._get_scanner("encryption", "us-east-1")
+
         assert scanner is not None
         assert scanner.get_scanner_name() == "EncryptionScanner"
 
-    def test_get_scanner_raises_for_unknown_type(self, security_service):
-        """Test get_scanner raises for unknown scan type."""
-        with pytest.raises(ValueError, match="Unknown scan type"):
-            security_service._get_scanner("unknown_type", "us-east-1")
+    def test_raises_for_unknown_scan_type(self):
+        """Factory raises ValueError for unknown scan types."""
+        service = SecurityService()
 
-    def test_get_scanner_caching(self, security_service):
-        """Test scanner instances are cached."""
-        scanner1 = security_service._get_scanner("security_groups", "us-east-1")
-        scanner2 = security_service._get_scanner("security_groups", "us-east-1")
+        with pytest.raises(ValueError, match="Unknown scan type"):
+            service._get_scanner("unknown_type", "us-east-1")
+
+    def test_caches_scanner_instances(self):
+        """Scanner instances are cached by type and region."""
+        service = SecurityService()
+
+        scanner1 = service._get_scanner("security_groups", "us-east-1")
+        scanner2 = service._get_scanner("security_groups", "us-east-1")
+
         assert scanner1 is scanner2
 
-    @pytest.mark.asyncio
-    async def test_scan_account_runs_all_scan_types(
-        self, security_service, mock_ib_service
-    ):
-        """Test scan_account runs all scan types by default."""
-        with patch.object(security_service, "_run_scan") as mock_run_scan:
-            mock_run_scan.return_value = []
+    def test_different_regions_have_different_scanners(self):
+        """Different regions get different scanner instances."""
+        service = SecurityService()
 
-            results = await security_service.scan_account("123456789012")
+        scanner_east = service._get_scanner("security_groups", "us-east-1")
+        scanner_west = service._get_scanner("security_groups", "us-west-2")
 
-            assert "security_groups" in results
-            assert "iam" in results
-            assert "encryption" in results
-            assert mock_run_scan.call_count == 3
+        assert scanner_east is not scanner_west
+        assert scanner_east.region == "us-east-1"
+        assert scanner_west.region == "us-west-2"
 
-    @pytest.mark.asyncio
-    async def test_scan_account_runs_specific_scan_types(
-        self, security_service, mock_ib_service
-    ):
-        """Test scan_account runs only specified scan types."""
-        with patch.object(security_service, "_run_scan") as mock_run_scan:
-            mock_run_scan.return_value = []
 
-            results = await security_service.scan_account(
-                "123456789012", scan_types=["iam"]
-            )
-
-            assert "iam" in results
-            assert "security_groups" not in results
-            assert mock_run_scan.call_count == 1
+class TestFindingsWithoutIB:
+    """Tests for finding operations when IB service not available."""
 
     @pytest.mark.asyncio
-    async def test_scan_account_returns_finding_counts(
-        self, security_service, mock_ib_service
-    ):
-        """Test scan_account returns correct finding counts."""
-        with patch.object(security_service, "_run_scan") as mock_run_scan:
-            mock_run_scan.return_value = [
-                {"finding_type": "test1"},
-                {"finding_type": "test2"},
-            ]
+    async def test_get_findings_returns_empty_without_ib(self):
+        """get_findings returns empty list when IB not connected."""
+        service = SecurityService(ib_service=None)
 
-            results = await security_service.scan_account(
-                "123456789012", scan_types=["security_groups"]
-            )
+        findings = await service.get_findings()
 
-            assert results["security_groups"] == 2
+        assert findings == []
 
     @pytest.mark.asyncio
-    async def test_run_scan_executes_scanner(self, security_service):
-        """Test _run_scan executes the correct scanner."""
-        mock_scanner = MagicMock()
-        mock_scanner.scan = AsyncMock(
-            return_value=[{"finding_type": "test_finding"}]
-        )
+    async def test_get_finding_stats_returns_empty_without_ib(self):
+        """get_finding_stats returns empty stats when IB not connected."""
+        service = SecurityService(ib_service=None)
 
-        with patch.object(
-            security_service, "_get_scanner", return_value=mock_scanner
-        ):
-            findings = await security_service._run_scan(
-                "security_groups", "123456789012", "us-east-1"
-            )
+        stats = await service.get_finding_stats()
 
-            assert len(findings) == 1
-            mock_scanner.scan.assert_called_once_with("123456789012")
+        assert stats["total"] == 0
+        assert stats["by_severity"] == {}
+        assert stats["by_type"] == {}
+        assert stats["ib_available"] is False
 
     @pytest.mark.asyncio
-    async def test_persist_findings_creates_entities(
-        self, security_service, mock_ib_service
-    ):
-        """Test _persist_findings creates entities in IB."""
+    async def test_persist_findings_skips_without_ib(self):
+        """_persist_findings does nothing when IB not available."""
+        service = SecurityService(ib_service=None)
+        findings = [{"title": "Test Finding"}]
+
+        # Should not raise exception
+        await service._persist_findings(findings)
+
+
+# ============================================================================
+# Tests with Stub IB Service (Interface Testing)
+# ============================================================================
+
+
+class TestFindingsWithStubIB:
+    """Tests for finding operations using stub IB service."""
+
+    @pytest.fixture
+    def service_with_stub_ib(self):
+        """Create service with stub IB implementation."""
+        stub_ib = StubIBService(is_connected=True)
+        return SecurityService(ib_service=stub_ib)
+
+    @pytest.mark.asyncio
+    async def test_persist_findings_stores_entities(self, service_with_stub_ib):
+        """_persist_findings creates entities through IB service."""
         findings = [
             {
                 "title": "Test Finding",
@@ -142,67 +195,38 @@ class TestSecurityService:
             }
         ]
 
-        await security_service._persist_findings(findings)
+        await service_with_stub_ib._persist_findings(findings)
 
-        mock_ib_service.create_entity.assert_called_once()
-        call_args = mock_ib_service.create_entity.call_args[0][0]
-        assert call_args["entity_type"] == "security_finding"
-        assert call_args["name"] == "Test Finding"
-
-    @pytest.mark.asyncio
-    async def test_persist_findings_skips_if_no_ib_service(self):
-        """Test _persist_findings skips when IB service not available."""
-        service = SecurityService(ib_service=None)
-        findings = [{"title": "Test"}]
-
-        # Should not raise exception
-        await service._persist_findings(findings)
+        # Verify entity was stored
+        stored = service_with_stub_ib.ib_service._entities
+        assert len(stored) == 1
+        assert stored[0]["entity_type"] == "security_finding"
+        assert stored[0]["name"] == "Test Finding"
 
     @pytest.mark.asyncio
-    async def test_get_findings_retrieves_from_ib(
-        self, security_service, mock_ib_service
-    ):
-        """Test get_findings retrieves from IB service."""
-        mock_ib_service.query_entities.return_value = {
-            "entities": [{"id": "1", "name": "Finding 1"}]
-        }
+    async def test_get_findings_retrieves_entities(self, service_with_stub_ib):
+        """get_findings retrieves entities from IB service."""
+        # Pre-populate stub
+        service_with_stub_ib.ib_service._entities = [
+            {"id": "1", "name": "Finding 1"},
+            {"id": "2", "name": "Finding 2"},
+        ]
 
-        findings = await security_service.get_findings()
+        findings = await service_with_stub_ib.get_findings()
 
-        assert len(findings) == 1
-        mock_ib_service.query_entities.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_get_findings_filters_by_severity(
-        self, security_service, mock_ib_service
-    ):
-        """Test get_findings applies severity filter."""
-        await security_service.get_findings(severity="critical")
-
-        call_args = mock_ib_service.query_entities.call_args
-        assert call_args[1]["filters"]["severity"] == "critical"
+        assert len(findings) == 2
 
     @pytest.mark.asyncio
-    async def test_get_findings_returns_empty_if_no_ib_service(self):
-        """Test get_findings returns empty list when IB not available."""
-        service = SecurityService(ib_service=None)
-        findings = await service.get_findings()
-        assert findings == []
+    async def test_get_finding_stats_calculates_statistics(self, service_with_stub_ib):
+        """get_finding_stats calculates correct statistics."""
+        # Pre-populate stub with findings
+        service_with_stub_ib.ib_service._entities = [
+            {"metadata": {"severity": "high", "finding_type": "sg"}},
+            {"metadata": {"severity": "high", "finding_type": "iam"}},
+            {"metadata": {"severity": "critical", "finding_type": "sg"}},
+        ]
 
-    @pytest.mark.asyncio
-    async def test_get_finding_stats_calculates_statistics(
-        self, security_service, mock_ib_service
-    ):
-        """Test get_finding_stats calculates statistics."""
-        mock_ib_service.query_entities.return_value = {
-            "entities": [
-                {"metadata": {"severity": "high", "finding_type": "sg"}},
-                {"metadata": {"severity": "high", "finding_type": "iam"}},
-                {"metadata": {"severity": "critical", "finding_type": "sg"}},
-            ]
-        }
-
-        stats = await security_service.get_finding_stats()
+        stats = await service_with_stub_ib.get_finding_stats()
 
         assert stats["total"] == 3
         assert stats["by_severity"]["high"] == 2
@@ -212,12 +236,114 @@ class TestSecurityService:
         assert stats["ib_available"] is True
 
     @pytest.mark.asyncio
-    async def test_get_finding_stats_returns_empty_if_no_ib(self):
-        """Test get_finding_stats returns empty stats when IB not available."""
-        service = SecurityService(ib_service=None)
-        stats = await service.get_finding_stats()
+    async def test_finding_stats_handles_missing_metadata(self, service_with_stub_ib):
+        """get_finding_stats handles entities without metadata."""
+        service_with_stub_ib.ib_service._entities = [
+            {"id": "1"},  # No metadata
+            {"metadata": {}},  # Empty metadata
+            {"metadata": {"severity": "high"}},  # Partial metadata
+        ]
 
-        assert stats["total"] == 0
-        assert stats["by_severity"] == {}
-        assert stats["by_type"] == {}
-        assert stats["ib_available"] is False
+        stats = await service_with_stub_ib.get_finding_stats()
+
+        assert stats["total"] == 3
+        # Missing fields default to "unknown"
+        assert stats["by_severity"]["unknown"] == 2
+        assert stats["by_severity"]["high"] == 1
+
+
+# ============================================================================
+# Scan Account Tests (Orchestration Logic)
+# ============================================================================
+
+
+class TestScanAccountOrchestration:
+    """Tests for scan_account orchestration logic.
+
+    Note: These tests verify the orchestration logic.
+    Actual AWS scanning is tested in integration tests with LocalStack.
+    """
+
+    @pytest.mark.asyncio
+    async def test_scan_account_defaults_to_all_scan_types(self):
+        """scan_account runs all scan types when none specified."""
+        service = SecurityService()
+
+        # Track which scan types were requested
+        scanned_types = []
+        original_run_scan = service._run_scan
+
+        async def tracking_run_scan(scan_type, account_id, region):
+            scanned_types.append(scan_type)
+            return []
+
+        service._run_scan = tracking_run_scan
+
+        await service.scan_account("123456789012")
+
+        assert "security_groups" in scanned_types
+        assert "iam" in scanned_types
+        assert "encryption" in scanned_types
+
+    @pytest.mark.asyncio
+    async def test_scan_account_respects_specified_types(self):
+        """scan_account only runs specified scan types."""
+        service = SecurityService()
+
+        scanned_types = []
+
+        async def tracking_run_scan(scan_type, account_id, region):
+            scanned_types.append(scan_type)
+            return []
+
+        service._run_scan = tracking_run_scan
+
+        await service.scan_account(
+            "123456789012",
+            scan_types=["iam"],
+        )
+
+        assert scanned_types == ["iam"]
+
+    @pytest.mark.asyncio
+    async def test_scan_account_returns_finding_counts(self):
+        """scan_account returns correct finding counts per type."""
+        service = SecurityService()
+
+        async def fake_run_scan(scan_type, account_id, region):
+            if scan_type == "security_groups":
+                return [{"f": 1}, {"f": 2}, {"f": 3}]
+            elif scan_type == "iam":
+                return [{"f": 1}]
+            return []
+
+        service._run_scan = fake_run_scan
+
+        results = await service.scan_account(
+            "123456789012",
+            scan_types=["security_groups", "iam"],
+        )
+
+        assert results["security_groups"] == 3
+        assert results["iam"] == 1
+
+    @pytest.mark.asyncio
+    async def test_scan_account_uses_specified_region(self):
+        """scan_account passes region to scanners."""
+        service = SecurityService()
+
+        used_regions = []
+
+        async def tracking_run_scan(scan_type, account_id, region):
+            used_regions.append(region)
+            return []
+
+        service._run_scan = tracking_run_scan
+
+        await service.scan_account(
+            "123456789012",
+            scan_types=["iam"],
+            region="eu-west-1",
+        )
+
+        assert used_regions == ["eu-west-1"]

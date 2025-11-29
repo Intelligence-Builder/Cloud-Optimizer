@@ -104,10 +104,6 @@ def create_app() -> FastAPI:
     )
 
     # Register routers
-    # TODO: Add routers as they are implemented
-    # from cloud_optimizer.api.routers import security, health
-    # app.include_router(health.router, tags=["Health"])
-    # app.include_router(security.router, prefix="/api/v1/security", tags=["Security"])
 
     @app.get("/health")
     async def health_check() -> dict[str, str]:

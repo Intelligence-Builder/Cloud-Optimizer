@@ -1,11 +1,16 @@
 """
-Integration test fixtures for Epic 1: Platform Foundation.
+Integration test fixtures for Cloud Optimizer.
 
-These fixtures provide shared resources for E1-INT-01 through E1-INT-05 tests.
-All tests use REAL database connections - NO MOCKS.
+These fixtures provide shared resources for ALL integration tests.
+All tests use REAL connections - NO MOCKS.
 
 Requirements:
     docker-compose -f docker/docker-compose.test.yml up -d
+
+Services:
+    - PostgreSQL (port 5434) - Graph database
+    - Memgraph (port 7688) - Graph database
+    - LocalStack (port 4566) - AWS services
 """
 
 import asyncio
@@ -37,6 +42,25 @@ from tests.ib_platform.graph.conftest import (
     asyncpg_pool,
     memgraph_backend,
     postgres_backend,
+)
+
+# Import AWS/LocalStack fixtures
+from tests.integration.aws_conftest import (
+    LOCALSTACK_ENDPOINT,
+    aws_account_id,
+    ec2_client,
+    encrypted_bucket,
+    iam_client,
+    is_localstack_available,
+    least_privilege_policy,
+    risky_security_group,
+    s3_client,
+    safe_security_group,
+    unencrypted_bucket,
+    user_with_mfa,
+    user_without_mfa,
+    vpc_id,
+    wildcard_policy,
 )
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures"

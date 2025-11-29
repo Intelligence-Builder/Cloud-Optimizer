@@ -122,8 +122,15 @@ class DomainSchemaResponse(BaseModel):
 # ============================================================================
 
 
-async def get_ib_service(request: Request):
-    """Get IB service from app state."""
+async def get_ib_service(request: Request) -> Any:
+    """Get IB service from app state.
+
+    Returns:
+        IntelligenceBuilderService instance
+
+    Raises:
+        HTTPException: If service not available or not connected
+    """
     if not hasattr(request.app.state, "ib_service") or not request.app.state.ib_service:
         raise HTTPException(
             status_code=503,

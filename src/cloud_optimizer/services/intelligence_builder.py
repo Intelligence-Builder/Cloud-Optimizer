@@ -5,7 +5,6 @@ Provides Cloud Optimizer specific functionality built on the IB SDK.
 """
 
 import logging
-from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from cloud_optimizer.config import Settings, get_settings
@@ -19,11 +18,8 @@ try:
         ClientConfig,
         DetectedEntity,
         DetectedRelationship,
-        DomainInfo,
-        Entity,
         IntelligenceBuilderClient,
         PatternDetectionResponse,
-        Relationship,
     )
 
     SDK_AVAILABLE = True
