@@ -31,14 +31,16 @@ LOCALSTACK_CONFIG = Config(
 def is_localstack_available() -> bool:
     """Check if LocalStack is available."""
     try:
+        # Use EC2 describe_regions as a lightweight health check
+        # (STS may not be enabled in all LocalStack configurations)
         client = boto3.client(
-            "sts",
+            "ec2",
             endpoint_url=LOCALSTACK_ENDPOINT,
             aws_access_key_id="test",
             aws_secret_access_key="test",
             config=LOCALSTACK_CONFIG,
         )
-        client.get_caller_identity()
+        client.describe_regions()
         return True
     except Exception:
         return False
@@ -57,7 +59,9 @@ def ec2_client() -> Generator[Any, None, None]:
     Cleans up all security groups after each test.
     """
     if not is_localstack_available():
-        pytest.skip("LocalStack not available - run: docker-compose -f docker/docker-compose.test.yml up -d")
+        pytest.skip(
+            "LocalStack not available - run: docker-compose -f docker/docker-compose.test.yml up -d"
+        )
 
     client = boto3.client(
         "ec2",
@@ -98,7 +102,9 @@ def vpc_id(ec2_client: Any) -> Generator[str, None, None]:
 
 
 @pytest.fixture(scope="function")
-def risky_security_group(ec2_client: Any, vpc_id: str) -> Generator[Dict[str, Any], None, None]:
+def risky_security_group(
+    ec2_client: Any, vpc_id: str
+) -> Generator[Dict[str, Any], None, None]:
     """
     Create a security group with risky rules (0.0.0.0/0 on SSH).
 
@@ -120,7 +126,9 @@ def risky_security_group(ec2_client: Any, vpc_id: str) -> Generator[Dict[str, An
                 "IpProtocol": "tcp",
                 "FromPort": 22,
                 "ToPort": 22,
-                "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "SSH from anywhere"}],
+                "IpRanges": [
+                    {"CidrIp": "0.0.0.0/0", "Description": "SSH from anywhere"}
+                ],
             }
         ],
     )
@@ -133,7 +141,9 @@ def risky_security_group(ec2_client: Any, vpc_id: str) -> Generator[Dict[str, An
                 "IpProtocol": "tcp",
                 "FromPort": 3389,
                 "ToPort": 3389,
-                "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "RDP from anywhere"}],
+                "IpRanges": [
+                    {"CidrIp": "0.0.0.0/0", "Description": "RDP from anywhere"}
+                ],
             }
         ],
     )
@@ -146,7 +156,9 @@ def risky_security_group(ec2_client: Any, vpc_id: str) -> Generator[Dict[str, An
 
 
 @pytest.fixture(scope="function")
-def safe_security_group(ec2_client: Any, vpc_id: str) -> Generator[Dict[str, Any], None, None]:
+def safe_security_group(
+    ec2_client: Any, vpc_id: str
+) -> Generator[Dict[str, Any], None, None]:
     """
     Create a security group with safe rules (internal CIDR only).
 
@@ -167,7 +179,9 @@ def safe_security_group(ec2_client: Any, vpc_id: str) -> Generator[Dict[str, Any
                 "IpProtocol": "tcp",
                 "FromPort": 443,
                 "ToPort": 443,
-                "IpRanges": [{"CidrIp": "10.0.0.0/8", "Description": "HTTPS from internal"}],
+                "IpRanges": [
+                    {"CidrIp": "10.0.0.0/8", "Description": "HTTPS from internal"}
+                ],
             }
         ],
     )
@@ -210,15 +224,21 @@ def iam_client() -> Generator[Any, None, None]:
         for user in client.list_users().get("Users", []):
             if user["UserName"].startswith("test-"):
                 # Delete MFA devices first
-                for mfa in client.list_mfa_devices(UserName=user["UserName"]).get("MFADevices", []):
+                for mfa in client.list_mfa_devices(UserName=user["UserName"]).get(
+                    "MFADevices", []
+                ):
                     client.deactivate_mfa_device(
                         UserName=user["UserName"],
                         SerialNumber=mfa["SerialNumber"],
                     )
                     client.delete_virtual_mfa_device(SerialNumber=mfa["SerialNumber"])
                 # Detach policies
-                for policy in client.list_attached_user_policies(UserName=user["UserName"]).get("AttachedPolicies", []):
-                    client.detach_user_policy(UserName=user["UserName"], PolicyArn=policy["PolicyArn"])
+                for policy in client.list_attached_user_policies(
+                    UserName=user["UserName"]
+                ).get("AttachedPolicies", []):
+                    client.detach_user_policy(
+                        UserName=user["UserName"], PolicyArn=policy["PolicyArn"]
+                    )
                 client.delete_user(UserName=user["UserName"])
 
         # Delete policies
@@ -293,6 +313,7 @@ def wildcard_policy(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
     }
 
     import json
+
     response = iam_client.create_policy(
         PolicyName=policy_name,
         PolicyDocument=json.dumps(policy_document),
@@ -326,6 +347,7 @@ def least_privilege_policy(iam_client: Any) -> Generator[Dict[str, Any], None, N
     }
 
     import json
+
     response = iam_client.create_policy(
         PolicyName=policy_name,
         PolicyDocument=json.dumps(policy_document),
@@ -398,11 +420,7 @@ def encrypted_bucket(s3_client: Any) -> Generator[str, None, None]:
         Bucket=bucket_name,
         ServerSideEncryptionConfiguration={
             "Rules": [
-                {
-                    "ApplyServerSideEncryptionByDefault": {
-                        "SSEAlgorithm": "AES256"
-                    }
-                }
+                {"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}
             ]
         },
     )

@@ -57,9 +57,7 @@ class IAMScanner(BaseAWSScanner):
 
         return findings
 
-    def _scan_policies(
-        self, iam_client: Any, account_id: str
-    ) -> List[Dict[str, Any]]:
+    def _scan_policies(self, iam_client: Any, account_id: str) -> List[Dict[str, Any]]:
         """
         Scan IAM policies for overly permissive permissions.
 
@@ -99,9 +97,7 @@ class IAMScanner(BaseAWSScanner):
 
         return findings
 
-    def _scan_users(
-        self, iam_client: Any, account_id: str
-    ) -> List[Dict[str, Any]]:
+    def _scan_users(self, iam_client: Any, account_id: str) -> List[Dict[str, Any]]:
         """
         Scan IAM users for security issues.
 
@@ -234,9 +230,7 @@ class IAMScanner(BaseAWSScanner):
             "metadata": {"policy_arn": policy_arn},
         }
 
-    def _create_no_mfa_finding(
-        self, user_name: str, account_id: str
-    ) -> Dict[str, Any]:
+    def _create_no_mfa_finding(self, user_name: str, account_id: str) -> Dict[str, Any]:
         """Create finding for user without MFA."""
         return {
             "finding_type": "iam_user_no_mfa",

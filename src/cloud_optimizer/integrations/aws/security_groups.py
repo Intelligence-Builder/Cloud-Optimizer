@@ -50,9 +50,7 @@ class SecurityGroupScanner(BaseAWSScanner):
                 # Check ingress rules
                 for rule in sg.get("IpPermissions", []):
                     findings.extend(
-                        self._check_ingress_rule(
-                            sg_id, sg_name, rule, account_id
-                        )
+                        self._check_ingress_rule(sg_id, sg_name, rule, account_id)
                     )
 
             logger.info(

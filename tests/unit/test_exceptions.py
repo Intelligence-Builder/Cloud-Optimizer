@@ -97,7 +97,11 @@ class TestAWSIntegrationError:
 
     def test_aws_integration_error_with_aws_details(self) -> None:
         """Test AWSIntegrationError with AWS-specific details."""
-        details = {"service": "ec2", "region": "us-east-1", "error_code": "AccessDenied"}
+        details = {
+            "service": "ec2",
+            "region": "us-east-1",
+            "error_code": "AccessDenied",
+        }
         error = AWSIntegrationError("AWS access denied", details=details)
 
         assert error.message == "AWS access denied"

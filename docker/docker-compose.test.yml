@@ -44,9 +44,8 @@ services:
     environment:
       SERVICES: ec2,iam,s3,cloudwatch,rds
       DEBUG: 0
-      DATA_DIR: /tmp/localstack/data
-    volumes:
-      - localstack-data:/tmp/localstack
-
-volumes:
-  localstack-data:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

@@ -222,9 +222,7 @@ class TestIAMScanner:
         scanner = IAMScanner()
 
         policy_doc = {
-            "Statement": [
-                {"Effect": "Allow", "Action": "*", "Resource": "*"}
-            ]
+            "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]
         }
 
         assert scanner._has_wildcard_permissions(policy_doc) is True
@@ -252,11 +250,7 @@ class TestIAMScanner:
         """Test Deny statements are not flagged."""
         scanner = IAMScanner()
 
-        policy_doc = {
-            "Statement": [
-                {"Effect": "Deny", "Action": "*", "Resource": "*"}
-            ]
-        }
+        policy_doc = {"Statement": [{"Effect": "Deny", "Action": "*", "Resource": "*"}]}
 
         assert scanner._has_wildcard_permissions(policy_doc) is False
 
@@ -264,9 +258,7 @@ class TestIAMScanner:
         """Test handling of single statement as dict (not list)."""
         scanner = IAMScanner()
 
-        policy_doc = {
-            "Statement": {"Effect": "Allow", "Action": "*", "Resource": "*"}
-        }
+        policy_doc = {"Statement": {"Effect": "Allow", "Action": "*", "Resource": "*"}}
 
         assert scanner._has_wildcard_permissions(policy_doc) is True
 

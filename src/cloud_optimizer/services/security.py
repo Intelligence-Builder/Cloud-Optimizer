@@ -19,9 +19,7 @@ class SecurityService:
     through the IB SDK. It does NOT implement graph operations directly.
     """
 
-    def __init__(
-        self, ib_service: Optional[IntelligenceBuilderService] = None
-    ) -> None:
+    def __init__(self, ib_service: Optional[IntelligenceBuilderService] = None) -> None:
         """
         Initialize security service.
 
@@ -218,7 +216,9 @@ class SecurityService:
             return findings
 
         except Exception as e:
-            self.logger.error(f"Failed to retrieve findings from IB: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to retrieve findings from IB: {e}", exc_info=True
+            )
             return []
 
     async def get_finding_stats(self) -> Dict[str, Any]:

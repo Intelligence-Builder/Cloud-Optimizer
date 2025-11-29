@@ -3,6 +3,8 @@
 import logging
 from typing import Any, Dict, List
 
+from botocore.exceptions import ClientError
+
 from cloud_optimizer.integrations.aws.base import BaseAWSScanner
 
 logger = logging.getLogger(__name__)
@@ -110,12 +112,20 @@ class EncryptionScanner(BaseAWSScanner):
                 # Check encryption
                 try:
                     s3_client.get_bucket_encryption(Bucket=bucket_name)
-                except s3_client.exceptions.ServerSideEncryptionConfigurationNotFoundError:
-                    findings.append(
-                        self._create_unencrypted_s3_finding(
-                            bucket_name, account_id
+                except ClientError as e:
+                    error_code = e.response.get("Error", {}).get("Code", "")
+                    # ServerSideEncryptionConfigurationNotFoundError indicates no encryption
+                    if error_code in (
+                        "ServerSideEncryptionConfigurationNotFoundError",
+                        "NoSuchBucketEncryption",
+                    ):
+                        findings.append(
+                            self._create_unencrypted_s3_finding(bucket_name, account_id)
                         )
-                    )
+                    else:
+                        logger.debug(
+                            f"Could not check encryption for {bucket_name}: {e}"
+                        )
                 except Exception as e:
                     logger.debug(f"Could not check encryption for {bucket_name}: {e}")
 

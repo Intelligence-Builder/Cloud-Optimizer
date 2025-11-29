@@ -11,12 +11,12 @@ external SDK. For unit tests, we use a simple stub that implements the
 interface. Integration tests (test_epic3_app.py) test with LocalStack.
 """
 
-import pytest
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from cloud_optimizer.services.security import SecurityService
+import pytest
 
+from cloud_optimizer.services.security import SecurityService
 
 # ============================================================================
 # Stub Implementation for IB Service (NOT a mock - implements interface)
