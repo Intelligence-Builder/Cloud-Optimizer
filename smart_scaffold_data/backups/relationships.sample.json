@@ -1,0 +1,4 @@
+[
+  {"type": "implements", "source_id": "pr-001", "target_id": "issue-001"},
+  {"type": "modifies", "source_id": "commit-001", "target_id": "file-001"}
+]

@@ -159,3 +159,4 @@ Thumbs.db
 *.bak
 .secrets
 credentials.json
+smart_scaffold_data/temp/

@@ -17,18 +17,11 @@ Requirements:
     docker-compose -f docker/docker-compose.test.yml up -d
 """
 
-import os
 from typing import Any, Dict, Generator
 
-import boto3
 import pytest
-from botocore.config import Config
 
-from tests.integration.aws_conftest import (
-    LOCALSTACK_CONFIG,
-    LOCALSTACK_ENDPOINT,
-    is_localstack_available,
-)
+from tests.integration.aws_conftest import USE_REAL_AWS, create_client
 
 # Test account ID for LocalStack
 TEST_ACCOUNT_ID = "000000000000"
@@ -49,17 +42,8 @@ class TestCostScannerIdleResources:
 
     @pytest.fixture(scope="function")
     def ec2_client(self) -> Generator[Any, None, None]:
-        """Create EC2 client for LocalStack."""
-        if not is_localstack_available():
-            pytest.skip("LocalStack not available")
-
-        client = boto3.client(
-            "ec2",
-            endpoint_url=LOCALSTACK_ENDPOINT,
-            aws_access_key_id="test",
-            aws_secret_access_key="test",
-            config=LOCALSTACK_CONFIG,
-        )
+        """Create EC2 client for LocalStack or real AWS."""
+        client = create_client("ec2")
         yield client
 
         # Cleanup
@@ -128,27 +112,11 @@ class TestCostScannerIdleResources:
 
         scanner = CostExplorerScanner(region="us-east-1")
 
-        def localstack_get_client(service_name: str):
-            return boto3.client(
-                service_name,
-                endpoint_url=LOCALSTACK_ENDPOINT,
-                aws_access_key_id="test",
-                aws_secret_access_key="test",
-                region_name="us-east-1",
-            )
-
-        scanner.get_client = localstack_get_client
+        scanner.get_client = create_client
 
         # Call _find_idle_resources directly (Cost Explorer API not available)
-        findings = scanner._find_idle_resources(TEST_ACCOUNT_ID)
-
-        # Should detect the idle EBS volume
-        ebs_findings = [
-            f
-            for f in findings
-            if f.get("finding_type") == "idle_resource"
-            and f.get("resource_type") == "ebs_volume"
-        ]
+        account_id = "000000000000" if not USE_REAL_AWS else TEST_ACCOUNT_ID
+        findings = scanner._find_idle_resources(account_id)
 
         # Note: LocalStack may not set creation time far enough back
         # This test verifies the scanner can read volumes from LocalStack
@@ -163,19 +131,10 @@ class TestCostScannerIdleResources:
         from cloud_optimizer.integrations.aws.cost import CostExplorerScanner
 
         scanner = CostExplorerScanner(region="us-east-1")
+        scanner.get_client = create_client
 
-        def localstack_get_client(service_name: str):
-            return boto3.client(
-                service_name,
-                endpoint_url=LOCALSTACK_ENDPOINT,
-                aws_access_key_id="test",
-                aws_secret_access_key="test",
-                region_name="us-east-1",
-            )
-
-        scanner.get_client = localstack_get_client
-
-        findings = scanner._find_idle_resources(TEST_ACCOUNT_ID)
+        account_id = "000000000000" if not USE_REAL_AWS else TEST_ACCOUNT_ID
+        findings = scanner._find_idle_resources(account_id)
 
         # Verify the scanner can communicate with LocalStack and returns findings list
         assert isinstance(findings, list)
@@ -198,13 +157,23 @@ class TestCostScannerIdleResources:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="Cost Explorer API (ce) not available in LocalStack Community. "
-        "Cost anomaly, RI recommendations, and rightsizing require LocalStack Pro or real AWS."
+    @pytest.mark.skipif(
+        not USE_REAL_AWS,
+        reason="Cost Explorer API (ce) not available in LocalStack Community.",
     )
     async def test_cost_scanner_full_scan(self):
         """Full cost scanner scan requires Cost Explorer API."""
-        pass
+        from cloud_optimizer.integrations.aws.cost import CostExplorerScanner
+
+        scanner = CostExplorerScanner(region="us-east-1")
+        scanner.get_client = create_client
+
+        # Get real account ID
+        sts = create_client("sts")
+        account_id = sts.get_caller_identity()["Account"]
+
+        findings = await scanner.scan(account_id)
+        assert isinstance(findings, list)
 
 
 # ============================================================================
@@ -221,32 +190,14 @@ class TestPerformanceScannerCloudWatch:
 
     @pytest.fixture(scope="function")
     def cloudwatch_client(self) -> Generator[Any, None, None]:
-        """Create CloudWatch client for LocalStack."""
-        if not is_localstack_available():
-            pytest.skip("LocalStack not available")
-
-        client = boto3.client(
-            "cloudwatch",
-            endpoint_url=LOCALSTACK_ENDPOINT,
-            aws_access_key_id="test",
-            aws_secret_access_key="test",
-            config=LOCALSTACK_CONFIG,
-        )
+        """Create CloudWatch client for LocalStack or real AWS."""
+        client = create_client("cloudwatch")
         yield client
 
     @pytest.fixture(scope="function")
     def ec2_client_for_performance(self) -> Generator[Any, None, None]:
-        """Create EC2 client for LocalStack."""
-        if not is_localstack_available():
-            pytest.skip("LocalStack not available")
-
-        client = boto3.client(
-            "ec2",
-            endpoint_url=LOCALSTACK_ENDPOINT,
-            aws_access_key_id="test",
-            aws_secret_access_key="test",
-            config=LOCALSTACK_CONFIG,
-        )
+        """Create EC2 client for LocalStack or real AWS."""
+        client = create_client("ec2")
         yield client
 
     @pytest.mark.integration
@@ -271,22 +222,13 @@ class TestPerformanceScannerCloudWatch:
         from cloud_optimizer.integrations.aws.performance import CloudWatchScanner
 
         scanner = CloudWatchScanner(region="us-east-1")
+        scanner.get_client = create_client
 
-        def localstack_get_client(service_name: str):
-            return boto3.client(
-                service_name,
-                endpoint_url=LOCALSTACK_ENDPOINT,
-                aws_access_key_id="test",
-                aws_secret_access_key="test",
-                region_name="us-east-1",
-            )
-
-        scanner.get_client = localstack_get_client
-
-        # This tests that the scanner can communicate with LocalStack EC2
+        # This tests that the scanner can communicate with LocalStack/AWS EC2
         # Even if no instances exist, it should not error
+        account_id = "000000000000" if not USE_REAL_AWS else TEST_ACCOUNT_ID
         try:
-            findings = await scanner.scan(TEST_ACCOUNT_ID)
+            findings = await scanner.scan(account_id)
             assert isinstance(findings, list)
         except Exception as e:
             # CloudWatch metrics may not be available in LocalStack
@@ -294,13 +236,23 @@ class TestPerformanceScannerCloudWatch:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="CloudWatch metrics require running EC2 instances with agents. "
-        "Full performance testing requires LocalStack Pro or real AWS."
+    @pytest.mark.skipif(
+        not USE_REAL_AWS,
+        reason="CloudWatch metrics require running EC2 instances with agents.",
     )
     async def test_performance_scanner_detects_cpu_bottleneck(self):
         """Full CPU bottleneck detection requires CloudWatch metrics data."""
-        pass
+        from cloud_optimizer.integrations.aws.performance import CloudWatchScanner
+
+        scanner = CloudWatchScanner(region="us-east-1")
+        scanner.get_client = create_client
+
+        sts = create_client("sts")
+        account_id = sts.get_caller_identity()["Account"]
+
+        # Scan for performance issues - may return empty if no instances
+        findings = await scanner.scan(account_id)
+        assert isinstance(findings, list)
 
 
 # ============================================================================
@@ -318,17 +270,8 @@ class TestReliabilityScannerEC2:
 
     @pytest.fixture(scope="function")
     def ec2_client_for_reliability(self) -> Generator[Any, None, None]:
-        """Create EC2 client for LocalStack."""
-        if not is_localstack_available():
-            pytest.skip("LocalStack not available")
-
-        client = boto3.client(
-            "ec2",
-            endpoint_url=LOCALSTACK_ENDPOINT,
-            aws_access_key_id="test",
-            aws_secret_access_key="test",
-            config=LOCALSTACK_CONFIG,
-        )
+        """Create EC2 client for LocalStack or real AWS."""
+        client = create_client("ec2")
         yield client
 
     @pytest.mark.integration
@@ -344,23 +287,41 @@ class TestReliabilityScannerEC2:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="RDS is NOT available in LocalStack Community. "
-        "Single-AZ RDS, Multi-AZ, and backup detection require LocalStack Pro or real AWS."
+    @pytest.mark.skipif(
+        not USE_REAL_AWS,
+        reason="RDS is NOT available in LocalStack Community.",
     )
     async def test_reliability_scanner_detects_single_az_rds(self):
         """Single-AZ RDS detection requires RDS service."""
-        pass
+        from cloud_optimizer.integrations.aws.reliability import ReliabilityScanner
+
+        scanner = ReliabilityScanner(region="us-east-1")
+        scanner.get_client = create_client
+
+        sts = create_client("sts")
+        account_id = sts.get_caller_identity()["Account"]
+
+        findings = await scanner.scan(account_id)
+        assert isinstance(findings, list)
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="ELB is NOT available in LocalStack Community. "
-        "Health check validation requires LocalStack Pro or real AWS."
+    @pytest.mark.skipif(
+        not USE_REAL_AWS,
+        reason="ELB is NOT available in LocalStack Community.",
     )
     async def test_reliability_scanner_detects_missing_health_checks(self):
         """Health check detection requires ELB service."""
-        pass
+        from cloud_optimizer.integrations.aws.reliability import ReliabilityScanner
+
+        scanner = ReliabilityScanner(region="us-east-1")
+        scanner.get_client = create_client
+
+        sts = create_client("sts")
+        account_id = sts.get_caller_identity()["Account"]
+
+        findings = await scanner.scan(account_id)
+        assert isinstance(findings, list)
 
 
 # ============================================================================
@@ -378,17 +339,8 @@ class TestOperationsScannerEC2:
 
     @pytest.fixture(scope="function")
     def ec2_client_for_operations(self) -> Generator[Any, None, None]:
-        """Create EC2 client for LocalStack."""
-        if not is_localstack_available():
-            pytest.skip("LocalStack not available")
-
-        client = boto3.client(
-            "ec2",
-            endpoint_url=LOCALSTACK_ENDPOINT,
-            aws_access_key_id="test",
-            aws_secret_access_key="test",
-            config=LOCALSTACK_CONFIG,
-        )
+        """Create EC2 client for LocalStack or real AWS."""
+        client = create_client("ec2")
         yield client
 
         # Cleanup test instances
@@ -399,9 +351,7 @@ class TestOperationsScannerEC2:
             for reservation in instances.get("Reservations", []):
                 for instance in reservation.get("Instances", []):
                     try:
-                        client.terminate_instances(
-                            InstanceIds=[instance["InstanceId"]]
-                        )
+                        client.terminate_instances(InstanceIds=[instance["InstanceId"]])
                     except Exception:
                         pass
         except Exception:
@@ -422,23 +372,41 @@ class TestOperationsScannerEC2:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="SSM is DISABLED in LocalStack Community. "
-        "SSM Agent status and automation checks require LocalStack Pro or real AWS."
+    @pytest.mark.skipif(
+        not USE_REAL_AWS,
+        reason="SSM is DISABLED in LocalStack Community.",
     )
     async def test_operations_scanner_detects_missing_ssm_agent(self):
         """SSM Agent detection requires SSM service."""
-        pass
+        from cloud_optimizer.integrations.aws.operations import SystemsManagerScanner
+
+        scanner = SystemsManagerScanner(region="us-east-1")
+        scanner.get_client = create_client
+
+        sts = create_client("sts")
+        account_id = sts.get_caller_identity()["Account"]
+
+        findings = await scanner.scan(account_id)
+        assert isinstance(findings, list)
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="CloudWatch alarms require full CloudWatch support. "
-        "Monitoring gap detection requires LocalStack Pro or real AWS."
+    @pytest.mark.skipif(
+        not USE_REAL_AWS,
+        reason="CloudWatch alarms require full CloudWatch support.",
     )
     async def test_operations_scanner_detects_monitoring_gaps(self):
         """Monitoring gap detection requires CloudWatch alarms."""
-        pass
+        from cloud_optimizer.integrations.aws.operations import SystemsManagerScanner
+
+        scanner = SystemsManagerScanner(region="us-east-1")
+        scanner.get_client = create_client
+
+        sts = create_client("sts")
+        account_id = sts.get_caller_identity()["Account"]
+
+        findings = await scanner.scan(account_id)
+        assert isinstance(findings, list)
 
 
 # ============================================================================

@@ -9,6 +9,7 @@ import pytest
 from cloud_optimizer.integrations.smart_scaffold.validator import (
     CutoverManager,
     MigrationValidator,
+    ParallelValidator,
     ValidationResult,
 )
 
@@ -142,6 +143,7 @@ class TestMigrationValidator:
 
         assert passed is True
         assert metrics["matched"] == 2
+        assert metrics["validated"] == 2
         assert metrics["mismatched"] == 0
 
     @pytest.mark.asyncio
@@ -274,6 +276,42 @@ class TestCutoverManager:
         assert isinstance(result, ValidationResult)
 
 
+class TestParallelValidator:
+    """Tests for ParallelValidator helper."""
+
+    @pytest.mark.asyncio
+    async def test_parallel_validator_matches(self):
+        """Parallel validator reports matches when counts align."""
+        mock_ss_kg = MockSSKnowledgeGraph()
+        mock_ib_service = MockValidatorIBService()
+        validator = ParallelValidator(mock_ss_kg, mock_ib_service)
+
+        mock_ss_kg.query_results = [{"id": "issue-001"}]
+        mock_ib_service.search_entities_result = {
+            "entities": [{"entity_id": "ib-001"}]
+        }
+
+        result = await validator.validate_query("issue")
+
+        assert result["matches"] is True
+
+    @pytest.mark.asyncio
+    async def test_parallel_validator_logs_mismatch(self):
+        """Parallel validator detects mismatch counts."""
+        mock_ss_kg = MockSSKnowledgeGraph()
+        mock_ib_service = MockValidatorIBService()
+        manager = CutoverManager(mock_ss_kg, mock_ib_service)
+        validator = ParallelValidator(mock_ss_kg, mock_ib_service, manager)
+
+        mock_ss_kg.query_results = [{"id": "issue-001"}, {"id": "issue-002"}]
+        mock_ib_service.search_entities_result = {"entities": [{"entity_id": "ib-001"}]}
+
+        result = await validator.validate_query("issue")
+
+        assert result["matches"] is False
+        assert len(manager.get_discrepancies()) == 1
+
+
 # ============================================================================
 # Mock Services for Testing
 # ============================================================================
@@ -286,6 +324,7 @@ class MockSSKnowledgeGraph:
         self.entity_counts = {}
         self.relationship_counts = {}
         self.entities = {}
+        self.query_results = []
 
     async def count_by_type(self) -> dict:
         """Return entity counts by type."""
@@ -299,6 +338,10 @@ class MockSSKnowledgeGraph:
         """Get entity by ID."""
         return self.entities.get(node_id)
 
+    async def query(self, query: str):
+        """Return query results."""
+        return self.query_results
+
 
 class MockValidatorIBService:
     """Mock IB service for validator testing."""
@@ -307,6 +350,7 @@ class MockValidatorIBService:
         self.entity_counts = {}
         self.relationship_counts = {}
         self.entities = {}
+        self.search_entities_result = {"entities": []}
 
     async def query_entities(self, entity_type: str = None, limit: int = 100, **kwargs):
         """Mock entity query."""
@@ -324,3 +368,7 @@ class MockValidatorIBService:
     async def get_entity_by_id(self, entity_id: str) -> dict:
         """Get entity by ID."""
         return self.entities.get(entity_id)
+
+    async def search_entities(self, **kwargs):
+        """Mock search."""
+        return self.search_entities_result

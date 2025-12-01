@@ -17,6 +17,7 @@ from cloud_optimizer.integrations.smart_scaffold.context_sync import (
     SyncResult,
     WorkflowCoordinator,
 )
+from cloud_optimizer.integrations.smart_scaffold.hybrid import HybridKnowledgeGraph
 from cloud_optimizer.integrations.smart_scaffold.entity_migrator import (
     EntityMigrator,
     EntityTypeMapping,
@@ -30,6 +31,7 @@ from cloud_optimizer.integrations.smart_scaffold.relationship_migrator import (
 from cloud_optimizer.integrations.smart_scaffold.validator import (
     CutoverManager,
     MigrationValidator,
+    ParallelValidator,
     ValidationResult,
 )
 
@@ -46,8 +48,10 @@ __all__ = [
     "ContextIBSync",
     "SyncResult",
     "WorkflowCoordinator",
+    "HybridKnowledgeGraph",
     # Cutover Validation (Issue #21)
     "MigrationValidator",
     "ValidationResult",
     "CutoverManager",
+    "ParallelValidator",
 ]

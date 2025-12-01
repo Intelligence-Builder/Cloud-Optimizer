@@ -1,0 +1,26 @@
+[
+  {
+    "id": "issue-001",
+    "type": "Issue",
+    "name": "Improve authentication flow",
+    "properties": {"number": 101, "state": "open", "labels": ["security"]}
+  },
+  {
+    "id": "pr-001",
+    "type": "PR",
+    "name": "Auth refactor",
+    "properties": {"number": 205, "state": "merged", "merged": true}
+  },
+  {
+    "id": "commit-001",
+    "type": "Commit",
+    "name": "Fix token refresh",
+    "properties": {"sha": "abc123", "author": "dev1"}
+  },
+  {
+    "id": "file-001",
+    "type": "File",
+    "name": "src/auth/service.py",
+    "properties": {"path": "src/auth/service.py", "language": "python", "size": 2048}
+  }
+]

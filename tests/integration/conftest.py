@@ -47,12 +47,14 @@ from tests.ib_platform.graph.conftest import (
 # Import AWS/LocalStack fixtures
 from tests.integration.aws_conftest import (
     LOCALSTACK_ENDPOINT,
+    aws_mode,
     aws_account_id,
     ec2_client,
     encrypted_bucket,
     iam_client,
     is_localstack_available,
     least_privilege_policy,
+    test_prefix,
     risky_security_group,
     s3_client,
     safe_security_group,

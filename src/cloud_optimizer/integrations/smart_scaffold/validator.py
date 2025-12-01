@@ -85,6 +85,7 @@ class MigrationValidator:
         ss_kg: Any,
         ib_service: Any,
         entity_id_mapping: Optional[Dict[str, str]] = None,
+        random_seed: Optional[int] = None,
     ) -> None:
         """Initialize migration validator.
 
@@ -97,6 +98,7 @@ class MigrationValidator:
         self.ib_service = ib_service
         self.entity_id_mapping = entity_id_mapping or {}
         self.logger = logging.getLogger(__name__)
+        self._random = random.Random(random_seed)
 
     async def validate_all(self) -> ValidationResult:
         """Run all validation checks.
@@ -332,30 +334,34 @@ class MigrationValidator:
             Tuple of (passed, metrics dict)
         """
         metrics: Dict[str, Any] = {
-            "sample_size": 0,
+            "requested_sample": 0,
+            "validated": 0,
             "matched": 0,
             "mismatched": 0,
+            "skipped": 0,
             "mismatches": [],
         }
 
         try:
-            # Get sample of entity IDs from mapping
             all_ids = list(self.entity_id_mapping.keys())
             if not all_ids:
                 return True, {"skipped": "No entity mapping available"}
 
-            actual_sample_size = min(sample_size, len(all_ids))
-            sample_ids = random.sample(all_ids, actual_sample_size)
-            metrics["sample_size"] = actual_sample_size
+            target = min(sample_size, len(all_ids))
+            metrics["requested_sample"] = target
+            shuffled_ids = list(all_ids)
+            self._random.shuffle(shuffled_ids)
 
-            # Validate each sampled entity
-            for ss_id in sample_ids:
+            for ss_id in shuffled_ids:
                 ib_id = self.entity_id_mapping.get(ss_id)
-                if not ib_id:
+                status, reason = await self._validate_entity_match(ss_id, ib_id)
+
+                if status == "skipped":
+                    metrics["skipped"] += 1
                     continue
 
-                match_result = await self._validate_entity_match(ss_id, ib_id)
-                if match_result[0]:
+                metrics["validated"] += 1
+                if status == "matched":
                     metrics["matched"] += 1
                 else:
                     metrics["mismatched"] += 1
@@ -363,9 +369,16 @@ class MigrationValidator:
                         {
                             "ss_id": ss_id,
                             "ib_id": ib_id,
-                            "reason": match_result[1],
+                            "reason": reason,
                         }
                     )
+
+                if metrics["validated"] >= target:
+                    break
+
+            if metrics["validated"] == 0:
+                metrics["skipped_reason"] = "No comparable entities found"
+                return True, metrics
 
             passed = metrics["mismatched"] == 0
             return passed, metrics
@@ -374,7 +387,7 @@ class MigrationValidator:
             self.logger.error(f"Sample validation failed: {e}")
             return False, {"error": str(e)}
 
-    async def _validate_entity_match(self, ss_id: str, ib_id: str) -> Tuple[bool, str]:
+    async def _validate_entity_match(self, ss_id: str, ib_id: str) -> Tuple[str, str]:
         """Validate single entity match between systems.
 
         Args:
@@ -382,7 +395,7 @@ class MigrationValidator:
             ib_id: Intelligence-Builder entity ID
 
         Returns:
-            Tuple of (matched, reason if not matched)
+            Tuple of (status, reason). Status may be 'matched', 'mismatched', or 'skipped'.
         """
         try:
             # Get SS entity
@@ -394,25 +407,90 @@ class MigrationValidator:
             ib_entity = await self.ib_service.get_entity_by_id(ib_id)
 
             if not ss_entity and not ib_entity:
-                return True, ""  # Both missing, technically matched
+                return "skipped", "Entity missing in both systems"
 
             if not ss_entity:
-                return False, "SS entity not found"
+                return "mismatched", "SS entity not found"
 
             if not ib_entity:
-                return False, "IB entity not found"
+                return "mismatched", "IB entity not found"
 
             # Compare key properties
             ss_name = ss_entity.get("name", "")
             ib_name = ib_entity.get("name", "")
 
             if ss_name != ib_name:
-                return False, f"Name mismatch: '{ss_name}' vs '{ib_name}'"
+                return "mismatched", f"Name mismatch: '{ss_name}' vs '{ib_name}'"
 
-            return True, ""
+            return "matched", ""
 
         except Exception as e:
-            return False, str(e)
+            return "mismatched", str(e)
+
+
+class ParallelValidator:
+    """Validate results from SS and IB during the parallel run period."""
+
+    def __init__(
+        self,
+        ss_kg: Any,
+        ib_service: Any,
+        cutover_manager: Optional["CutoverManager"] = None,
+    ) -> None:
+        self.ss_kg = ss_kg
+        self.ib_service = ib_service
+        self.cutover_manager = cutover_manager
+        self.logger = logging.getLogger(__name__)
+
+    async def validate_query(
+        self,
+        query: str,
+        entity_type: Optional[str] = None,
+        limit: int = 25,
+    ) -> Dict[str, Any]:
+        """Run the same query on SS and IB and compare results."""
+        ss_result = await self._execute_ss_query(query, limit)
+        ib_result = await self._execute_ib_query(query, entity_type, limit)
+        matches = self._results_match(ss_result, ib_result)
+
+        if not matches and self.cutover_manager:
+            await self.cutover_manager.log_discrepancy(
+                query=query,
+                ss_result=ss_result,
+                ib_result=ib_result.get("entities", []),
+            )
+
+        return {
+            "query": query,
+            "matches": matches,
+            "ss_result_count": len(ss_result),
+            "ib_result_count": len(ib_result.get("entities", [])),
+        }
+
+    async def _execute_ss_query(self, query: str, limit: int) -> List[Any]:
+        if hasattr(self.ss_kg, "query"):
+            result = await self.ss_kg.query(query)
+            return list(result)[:limit]
+        return []
+
+    async def _execute_ib_query(
+        self, query: str, entity_type: Optional[str], limit: int
+    ) -> Dict[str, Any]:
+        if hasattr(self.ib_service, "search_entities"):
+            return await self.ib_service.search_entities(
+                query_text=query, entity_types=[entity_type] if entity_type else None, limit=limit
+            )
+        return await self.ib_service.query_entities(
+            entity_type=entity_type,
+            limit=limit,
+            query_text=query,
+        )
+
+    def _results_match(
+        self, ss_result: List[Any], ib_result: Dict[str, Any]
+    ) -> bool:
+        ib_entities = ib_result.get("entities", [])
+        return len(ss_result) == len(ib_entities)
 
 
 class CutoverManager:

@@ -1,44 +1,73 @@
 """
-AWS Integration Test Fixtures using LocalStack.
+AWS Integration Test Fixtures - LocalStack or Real AWS.
 
-These fixtures connect to REAL LocalStack services - NO MOCKS.
-All tests run against actual AWS API-compatible infrastructure.
+Supports two modes:
+1. LocalStack (default) - Free, local, safe for development
+2. Real AWS - Set USE_REAL_AWS=true to test against actual AWS
+
+Usage:
+    # LocalStack (default)
+    pytest tests/integration/
+
+    # Real AWS
+    USE_REAL_AWS=true pytest tests/integration/
+
+    # Or use pytest marker
+    pytest tests/integration/ -m real_aws
 
 Requirements:
-    docker-compose -f docker/docker-compose.test.yml up -d
+    LocalStack: docker-compose -f docker/docker-compose.test.yml up -d
+    Real AWS: AWS credentials configured (AWS_PROFILE or env vars)
 """
 
+import json
 import os
-from typing import Any, AsyncGenerator, Dict, Generator, List
+import uuid
+from typing import Any, Dict, Generator
 
 import boto3
 import pytest
-import pytest_asyncio
 from botocore.config import Config
+from botocore.exceptions import ClientError, NoCredentialsError
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# Check if we should use real AWS
+USE_REAL_AWS = os.getenv("USE_REAL_AWS", "false").lower() in ("true", "1", "yes")
 
 # LocalStack configuration
 LOCALSTACK_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT", "http://localhost:4566")
 AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 
-# Boto3 config for LocalStack
-LOCALSTACK_CONFIG = Config(
+# Test resource prefix - helps identify and cleanup test resources
+TEST_PREFIX = f"cloud-opt-test-{uuid.uuid4().hex[:8]}"
+
+# Boto3 config
+AWS_CONFIG = Config(
     region_name=AWS_REGION,
     signature_version="v4",
     retries={"max_attempts": 3, "mode": "standard"},
 )
 
 
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+
 def is_localstack_available() -> bool:
     """Check if LocalStack is available."""
+    if USE_REAL_AWS:
+        return False
     try:
-        # Use EC2 describe_regions as a lightweight health check
-        # (STS may not be enabled in all LocalStack configurations)
         client = boto3.client(
             "ec2",
             endpoint_url=LOCALSTACK_ENDPOINT,
             aws_access_key_id="test",
             aws_secret_access_key="test",
-            config=LOCALSTACK_CONFIG,
+            config=AWS_CONFIG,
         )
         client.describe_regions()
         return True
@@ -46,56 +75,178 @@ def is_localstack_available() -> bool:
         return False
 
 
+def is_real_aws_available() -> bool:
+    """Check if real AWS credentials are available."""
+    try:
+        sts = boto3.client("sts", config=AWS_CONFIG)
+        sts.get_caller_identity()
+        return True
+    except (NoCredentialsError, ClientError):
+        return False
+
+
+def get_aws_mode() -> str:
+    """Get current AWS mode."""
+    if USE_REAL_AWS:
+        return "real_aws"
+    return "localstack"
+
+
+def create_client(service_name: str) -> Any:
+    """Create a boto3 client for the appropriate environment."""
+    if USE_REAL_AWS:
+        if not is_real_aws_available():
+            pytest.skip("Real AWS credentials not available")
+        return boto3.client(service_name, config=AWS_CONFIG)
+    else:
+        if not is_localstack_available():
+            pytest.skip(
+                "LocalStack not available - run: "
+                "docker-compose -f docker/docker-compose.test.yml up -d"
+            )
+        return boto3.client(
+            service_name,
+            endpoint_url=LOCALSTACK_ENDPOINT,
+            aws_access_key_id="test",
+            aws_secret_access_key="test",
+            config=AWS_CONFIG,
+        )
+
+
+def create_resource(service_name: str) -> Any:
+    """Create a boto3 resource for the appropriate environment."""
+    if USE_REAL_AWS:
+        if not is_real_aws_available():
+            pytest.skip("Real AWS credentials not available")
+        return boto3.resource(service_name, config=AWS_CONFIG)
+    else:
+        if not is_localstack_available():
+            pytest.skip("LocalStack not available")
+        return boto3.resource(
+            service_name,
+            endpoint_url=LOCALSTACK_ENDPOINT,
+            aws_access_key_id="test",
+            aws_secret_access_key="test",
+            config=AWS_CONFIG,
+        )
+
+
 # ============================================================================
-# EC2 Fixtures (Security Groups)
+# Pytest Configuration
+# ============================================================================
+
+
+def pytest_configure(config):
+    """Register custom markers."""
+    config.addinivalue_line("markers", "real_aws: mark test to run only with real AWS")
+    config.addinivalue_line(
+        "markers", "localstack_only: mark test to run only with LocalStack"
+    )
+
+
+@pytest.fixture(scope="session")
+def aws_mode() -> str:
+    """Return current AWS testing mode."""
+    mode = get_aws_mode()
+    print(f"\n{'='*60}")
+    print(f"AWS Testing Mode: {mode.upper()}")
+    if mode == "real_aws":
+        print("WARNING: Tests will create REAL AWS resources!")
+        print(f"Resource prefix: {TEST_PREFIX}")
+    print(f"{'='*60}\n")
+    return mode
+
+
+@pytest.fixture(scope="session")
+def test_prefix() -> str:
+    """Return unique test prefix for resource naming."""
+    return TEST_PREFIX
+
+
+# ============================================================================
+# EC2 Fixtures
 # ============================================================================
 
 
 @pytest.fixture(scope="function")
-def ec2_client() -> Generator[Any, None, None]:
-    """
-    Create a REAL EC2 client connected to LocalStack.
-
-    Cleans up all security groups after each test.
-    """
-    if not is_localstack_available():
-        pytest.skip(
-            "LocalStack not available - run: docker-compose -f docker/docker-compose.test.yml up -d"
-        )
-
-    client = boto3.client(
-        "ec2",
-        endpoint_url=LOCALSTACK_ENDPOINT,
-        aws_access_key_id="test",
-        aws_secret_access_key="test",
-        config=LOCALSTACK_CONFIG,
-    )
-
+def ec2_client(aws_mode: str) -> Generator[Any, None, None]:
+    """Create EC2 client for current environment."""
+    client = create_client("ec2")
     yield client
 
-    # Cleanup: Delete all non-default security groups
+    # Cleanup: Delete test security groups
     try:
-        response = client.describe_security_groups()
+        response = client.describe_security_groups(
+            Filters=[{"Name": "group-name", "Values": [f"{TEST_PREFIX}-*"]}]
+        )
         for sg in response.get("SecurityGroups", []):
             if sg["GroupName"] != "default":
                 try:
                     client.delete_security_group(GroupId=sg["GroupId"])
                 except Exception:
-                    pass  # Ignore cleanup errors
+                    pass
     except Exception:
         pass
 
 
 @pytest.fixture(scope="function")
 def vpc_id(ec2_client: Any) -> Generator[str, None, None]:
-    """Create a VPC for testing and return its ID."""
-    response = ec2_client.create_vpc(CidrBlock="10.0.0.0/16")
+    """Create a VPC for testing."""
+    response = ec2_client.create_vpc(
+        CidrBlock="10.0.0.0/16",
+        TagSpecifications=[
+            {
+                "ResourceType": "vpc",
+                "Tags": [{"Key": "Name", "Value": f"{TEST_PREFIX}-vpc"}],
+            }
+        ],
+    )
     vpc_id = response["Vpc"]["VpcId"]
+
+    # Wait for VPC to be available
+    waiter = ec2_client.get_waiter("vpc_available")
+    waiter.wait(VpcIds=[vpc_id])
 
     yield vpc_id
 
     # Cleanup
     try:
+        # Delete subnets first
+        subnets = ec2_client.describe_subnets(
+            Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
+        )
+        for subnet in subnets.get("Subnets", []):
+            try:
+                ec2_client.delete_subnet(SubnetId=subnet["SubnetId"])
+            except Exception:
+                pass
+
+        # Delete internet gateways
+        igws = ec2_client.describe_internet_gateways(
+            Filters=[{"Name": "attachment.vpc-id", "Values": [vpc_id]}]
+        )
+        for igw in igws.get("InternetGateways", []):
+            try:
+                ec2_client.detach_internet_gateway(
+                    InternetGatewayId=igw["InternetGatewayId"], VpcId=vpc_id
+                )
+                ec2_client.delete_internet_gateway(
+                    InternetGatewayId=igw["InternetGatewayId"]
+                )
+            except Exception:
+                pass
+
+        # Delete security groups (non-default)
+        sgs = ec2_client.describe_security_groups(
+            Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
+        )
+        for sg in sgs.get("SecurityGroups", []):
+            if sg["GroupName"] != "default":
+                try:
+                    ec2_client.delete_security_group(GroupId=sg["GroupId"])
+                except Exception:
+                    pass
+
         ec2_client.delete_vpc(VpcId=vpc_id)
     except Exception:
         pass
@@ -103,22 +254,25 @@ def vpc_id(ec2_client: Any) -> Generator[str, None, None]:
 
 @pytest.fixture(scope="function")
 def risky_security_group(
-    ec2_client: Any, vpc_id: str
+    ec2_client: Any, vpc_id: str, test_prefix: str
 ) -> Generator[Dict[str, Any], None, None]:
-    """
-    Create a security group with risky rules (0.0.0.0/0 on SSH).
+    """Create a security group with risky rules (0.0.0.0/0 on SSH)."""
+    sg_name = f"{test_prefix}-risky-sg"
 
-    This is REAL infrastructure for testing scanner detection.
-    """
-    # Create security group
     response = ec2_client.create_security_group(
-        GroupName="risky-test-sg",
+        GroupName=sg_name,
         Description="Test SG with risky rules",
         VpcId=vpc_id,
+        TagSpecifications=[
+            {
+                "ResourceType": "security-group",
+                "Tags": [{"Key": "Name", "Value": sg_name}],
+            }
+        ],
     )
     sg_id = response["GroupId"]
 
-    # Add risky ingress rule - SSH open to world
+    # Add risky ingress rules
     ec2_client.authorize_security_group_ingress(
         GroupId=sg_id,
         IpPermissions=[
@@ -129,14 +283,7 @@ def risky_security_group(
                 "IpRanges": [
                     {"CidrIp": "0.0.0.0/0", "Description": "SSH from anywhere"}
                 ],
-            }
-        ],
-    )
-
-    # Add another risky rule - RDP open to world
-    ec2_client.authorize_security_group_ingress(
-        GroupId=sg_id,
-        IpPermissions=[
+            },
             {
                 "IpProtocol": "tcp",
                 "FromPort": 3389,
@@ -144,34 +291,33 @@ def risky_security_group(
                 "IpRanges": [
                     {"CidrIp": "0.0.0.0/0", "Description": "RDP from anywhere"}
                 ],
-            }
+            },
         ],
     )
 
-    yield {
-        "GroupId": sg_id,
-        "GroupName": "risky-test-sg",
-        "VpcId": vpc_id,
-    }
+    yield {"GroupId": sg_id, "GroupName": sg_name, "VpcId": vpc_id}
 
 
 @pytest.fixture(scope="function")
 def safe_security_group(
-    ec2_client: Any, vpc_id: str
+    ec2_client: Any, vpc_id: str, test_prefix: str
 ) -> Generator[Dict[str, Any], None, None]:
-    """
-    Create a security group with safe rules (internal CIDR only).
+    """Create a security group with safe rules (internal CIDR only)."""
+    sg_name = f"{test_prefix}-safe-sg"
 
-    This is REAL infrastructure for testing scanner ignores safe rules.
-    """
     response = ec2_client.create_security_group(
-        GroupName="safe-test-sg",
+        GroupName=sg_name,
         Description="Test SG with safe rules",
         VpcId=vpc_id,
+        TagSpecifications=[
+            {
+                "ResourceType": "security-group",
+                "Tags": [{"Key": "Name", "Value": sg_name}],
+            }
+        ],
     )
     sg_id = response["GroupId"]
 
-    # Add safe ingress rule - internal network only
     ec2_client.authorize_security_group_ingress(
         GroupId=sg_id,
         IpPermissions=[
@@ -186,11 +332,7 @@ def safe_security_group(
         ],
     )
 
-    yield {
-        "GroupId": sg_id,
-        "GroupName": "safe-test-sg",
-        "VpcId": vpc_id,
-    }
+    yield {"GroupId": sg_id, "GroupName": sg_name, "VpcId": vpc_id}
 
 
 # ============================================================================
@@ -199,63 +341,80 @@ def safe_security_group(
 
 
 @pytest.fixture(scope="function")
-def iam_client() -> Generator[Any, None, None]:
-    """
-    Create a REAL IAM client connected to LocalStack.
-
-    Cleans up all test users and policies after each test.
-    """
-    if not is_localstack_available():
-        pytest.skip("LocalStack not available")
-
-    client = boto3.client(
-        "iam",
-        endpoint_url=LOCALSTACK_ENDPOINT,
-        aws_access_key_id="test",
-        aws_secret_access_key="test",
-        config=LOCALSTACK_CONFIG,
-    )
-
+def iam_client(aws_mode: str) -> Generator[Any, None, None]:
+    """Create IAM client for current environment."""
+    client = create_client("iam")
     yield client
 
     # Cleanup: Delete test users and policies
     try:
-        # Delete users
         for user in client.list_users().get("Users", []):
-            if user["UserName"].startswith("test-"):
-                # Delete MFA devices first
+            if user["UserName"].startswith(TEST_PREFIX):
+                # Delete MFA devices
                 for mfa in client.list_mfa_devices(UserName=user["UserName"]).get(
                     "MFADevices", []
                 ):
-                    client.deactivate_mfa_device(
-                        UserName=user["UserName"],
-                        SerialNumber=mfa["SerialNumber"],
-                    )
-                    client.delete_virtual_mfa_device(SerialNumber=mfa["SerialNumber"])
+                    try:
+                        client.deactivate_mfa_device(
+                            UserName=user["UserName"],
+                            SerialNumber=mfa["SerialNumber"],
+                        )
+                        client.delete_virtual_mfa_device(
+                            SerialNumber=mfa["SerialNumber"]
+                        )
+                    except Exception:
+                        pass
                 # Detach policies
                 for policy in client.list_attached_user_policies(
                     UserName=user["UserName"]
                 ).get("AttachedPolicies", []):
-                    client.detach_user_policy(
-                        UserName=user["UserName"], PolicyArn=policy["PolicyArn"]
-                    )
+                    try:
+                        client.detach_user_policy(
+                            UserName=user["UserName"], PolicyArn=policy["PolicyArn"]
+                        )
+                    except Exception:
+                        pass
+                # Delete inline policies
+                for policy_name in client.list_user_policies(
+                    UserName=user["UserName"]
+                ).get("PolicyNames", []):
+                    try:
+                        client.delete_user_policy(
+                            UserName=user["UserName"], PolicyName=policy_name
+                        )
+                    except Exception:
+                        pass
+                # Delete access keys
+                for key in client.list_access_keys(UserName=user["UserName"]).get(
+                    "AccessKeyMetadata", []
+                ):
+                    try:
+                        client.delete_access_key(
+                            UserName=user["UserName"], AccessKeyId=key["AccessKeyId"]
+                        )
+                    except Exception:
+                        pass
                 client.delete_user(UserName=user["UserName"])
 
-        # Delete policies
+        # Delete test policies
         for policy in client.list_policies(Scope="Local").get("Policies", []):
-            if policy["PolicyName"].startswith("test-"):
-                client.delete_policy(PolicyArn=policy["Arn"])
+            if policy["PolicyName"].startswith(TEST_PREFIX):
+                try:
+                    client.delete_policy(PolicyArn=policy["Arn"])
+                except Exception:
+                    pass
     except Exception:
         pass
 
 
 @pytest.fixture(scope="function")
-def user_without_mfa(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
+def user_without_mfa(
+    iam_client: Any, test_prefix: str
+) -> Generator[Dict[str, Any], None, None]:
     """Create an IAM user without MFA enabled."""
-    user_name = "test-user-no-mfa"
+    user_name = f"{test_prefix}-user-no-mfa"
 
     iam_client.create_user(UserName=user_name)
-
     user = iam_client.get_user(UserName=user_name)["User"]
 
     yield {
@@ -266,9 +425,11 @@ def user_without_mfa(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
 
 
 @pytest.fixture(scope="function")
-def user_with_mfa(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
+def user_with_mfa(
+    iam_client: Any, test_prefix: str
+) -> Generator[Dict[str, Any], None, None]:
     """Create an IAM user with MFA enabled."""
-    user_name = "test-user-with-mfa"
+    user_name = f"{test_prefix}-user-with-mfa"
 
     iam_client.create_user(UserName=user_name)
 
@@ -278,13 +439,14 @@ def user_with_mfa(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
     )
     mfa_serial = mfa_response["VirtualMFADevice"]["SerialNumber"]
 
-    # Enable MFA (LocalStack accepts any codes)
-    iam_client.enable_mfa_device(
-        UserName=user_name,
-        SerialNumber=mfa_serial,
-        AuthenticationCode1="123456",
-        AuthenticationCode2="654321",
-    )
+    # Enable MFA (LocalStack accepts any codes, real AWS needs TOTP)
+    if not USE_REAL_AWS:
+        iam_client.enable_mfa_device(
+            UserName=user_name,
+            SerialNumber=mfa_serial,
+            AuthenticationCode1="123456",
+            AuthenticationCode2="654321",
+        )
 
     user = iam_client.get_user(UserName=user_name)["User"]
 
@@ -297,22 +459,16 @@ def user_with_mfa(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
 
 
 @pytest.fixture(scope="function")
-def wildcard_policy(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
+def wildcard_policy(
+    iam_client: Any, test_prefix: str
+) -> Generator[Dict[str, Any], None, None]:
     """Create an IAM policy with wildcard permissions."""
-    policy_name = "test-wildcard-policy"
+    policy_name = f"{test_prefix}-wildcard-policy"
 
     policy_document = {
         "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": "*",
-                "Resource": "*",
-            }
-        ],
+        "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}],
     }
-
-    import json
 
     response = iam_client.create_policy(
         PolicyName=policy_name,
@@ -328,9 +484,11 @@ def wildcard_policy(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
 
 
 @pytest.fixture(scope="function")
-def least_privilege_policy(iam_client: Any) -> Generator[Dict[str, Any], None, None]:
+def least_privilege_policy(
+    iam_client: Any, test_prefix: str
+) -> Generator[Dict[str, Any], None, None]:
     """Create an IAM policy following least privilege."""
-    policy_name = "test-least-privilege-policy"
+    policy_name = f"{test_prefix}-least-privilege-policy"
 
     policy_document = {
         "Version": "2012-10-17",
@@ -345,8 +503,6 @@ def least_privilege_policy(iam_client: Any) -> Generator[Dict[str, Any], None, N
             }
         ],
     }
-
-    import json
 
     response = iam_client.create_policy(
         PolicyName=policy_name,
@@ -367,55 +523,86 @@ def least_privilege_policy(iam_client: Any) -> Generator[Dict[str, Any], None, N
 
 
 @pytest.fixture(scope="function")
-def s3_client() -> Generator[Any, None, None]:
-    """Create a REAL S3 client connected to LocalStack."""
-    if not is_localstack_available():
-        pytest.skip("LocalStack not available")
-
-    client = boto3.client(
-        "s3",
-        endpoint_url=LOCALSTACK_ENDPOINT,
-        aws_access_key_id="test",
-        aws_secret_access_key="test",
-        config=LOCALSTACK_CONFIG,
-    )
-
+def s3_client(aws_mode: str) -> Generator[Any, None, None]:
+    """Create S3 client for current environment."""
+    client = create_client("s3")
     yield client
 
-    # Cleanup: Delete all test buckets
+    # Cleanup: Delete test buckets
     try:
         for bucket in client.list_buckets().get("Buckets", []):
-            if bucket["Name"].startswith("test-"):
-                # Delete all objects first
+            if bucket["Name"].startswith(TEST_PREFIX.replace("-", "")):
                 try:
-                    objects = client.list_objects_v2(Bucket=bucket["Name"])
-                    for obj in objects.get("Contents", []):
-                        client.delete_object(Bucket=bucket["Name"], Key=obj["Key"])
+                    # Delete all objects
+                    paginator = client.get_paginator("list_objects_v2")
+                    for page in paginator.paginate(Bucket=bucket["Name"]):
+                        for obj in page.get("Contents", []):
+                            client.delete_object(Bucket=bucket["Name"], Key=obj["Key"])
+                    # Delete all versions (if versioning enabled)
+                    try:
+                        paginator = client.get_paginator("list_object_versions")
+                        for page in paginator.paginate(Bucket=bucket["Name"]):
+                            for version in page.get("Versions", []):
+                                client.delete_object(
+                                    Bucket=bucket["Name"],
+                                    Key=version["Key"],
+                                    VersionId=version["VersionId"],
+                                )
+                            for marker in page.get("DeleteMarkers", []):
+                                client.delete_object(
+                                    Bucket=bucket["Name"],
+                                    Key=marker["Key"],
+                                    VersionId=marker["VersionId"],
+                                )
+                    except Exception:
+                        pass
+                    client.delete_bucket(Bucket=bucket["Name"])
                 except Exception:
                     pass
-                client.delete_bucket(Bucket=bucket["Name"])
     except Exception:
         pass
 
 
 @pytest.fixture(scope="function")
-def unencrypted_bucket(s3_client: Any) -> Generator[str, None, None]:
+def unencrypted_bucket(
+    s3_client: Any, test_prefix: str, aws_mode: str
+) -> Generator[str, None, None]:
     """Create an S3 bucket without encryption."""
-    bucket_name = "test-unencrypted-bucket"
+    # S3 bucket names must be globally unique and lowercase
+    bucket_name = f"{test_prefix.replace('-', '')}-unencrypted"[:63]
 
-    s3_client.create_bucket(Bucket=bucket_name)
+    # Create bucket (region-specific for non-us-east-1)
+    if AWS_REGION == "us-east-1":
+        s3_client.create_bucket(Bucket=bucket_name)
+    else:
+        s3_client.create_bucket(
+            Bucket=bucket_name,
+            CreateBucketConfiguration={"LocationConstraint": AWS_REGION},
+        )
+
+    # For real AWS, explicitly disable default encryption if it exists
+    if aws_mode == "real_aws":
+        try:
+            s3_client.delete_bucket_encryption(Bucket=bucket_name)
+        except ClientError:
+            pass  # No encryption config exists
 
     yield bucket_name
 
 
 @pytest.fixture(scope="function")
-def encrypted_bucket(s3_client: Any) -> Generator[str, None, None]:
+def encrypted_bucket(s3_client: Any, test_prefix: str) -> Generator[str, None, None]:
     """Create an S3 bucket with SSE-S3 encryption."""
-    bucket_name = "test-encrypted-bucket"
+    bucket_name = f"{test_prefix.replace('-', '')}-encrypted"[:63]
 
-    s3_client.create_bucket(Bucket=bucket_name)
+    if AWS_REGION == "us-east-1":
+        s3_client.create_bucket(Bucket=bucket_name)
+    else:
+        s3_client.create_bucket(
+            Bucket=bucket_name,
+            CreateBucketConfiguration={"LocationConstraint": AWS_REGION},
+        )
 
-    # Enable encryption
     s3_client.put_bucket_encryption(
         Bucket=bucket_name,
         ServerSideEncryptionConfiguration={
@@ -429,11 +616,104 @@ def encrypted_bucket(s3_client: Any) -> Generator[str, None, None]:
 
 
 # ============================================================================
-# Test Account Fixture
+# Cost Explorer Fixtures (Real AWS only)
 # ============================================================================
 
 
 @pytest.fixture(scope="function")
-def aws_account_id() -> str:
-    """Return test AWS account ID."""
-    return "000000000000"  # LocalStack default account ID
+def ce_client(aws_mode: str) -> Generator[Any, None, None]:
+    """Create Cost Explorer client (Real AWS only)."""
+    if aws_mode != "real_aws":
+        pytest.skip("Cost Explorer requires real AWS")
+
+    client = create_client("ce")
+    yield client
+
+
+# ============================================================================
+# RDS Fixtures (Real AWS or LocalStack Pro)
+# ============================================================================
+
+
+@pytest.fixture(scope="function")
+def rds_client(aws_mode: str) -> Generator[Any, None, None]:
+    """Create RDS client."""
+    client = create_client("rds")
+
+    # Test if RDS is available
+    try:
+        client.describe_db_instances()
+    except ClientError as e:
+        if "not subscribed" in str(e) or "AccessDenied" in str(e):
+            pytest.skip("RDS not available in current environment")
+        raise
+
+    yield client
+
+
+# ============================================================================
+# CloudWatch Fixtures
+# ============================================================================
+
+
+@pytest.fixture(scope="function")
+def cloudwatch_client(aws_mode: str) -> Generator[Any, None, None]:
+    """Create CloudWatch client."""
+    client = create_client("cloudwatch")
+    yield client
+
+
+# ============================================================================
+# SSM Fixtures (Real AWS or LocalStack Pro)
+# ============================================================================
+
+
+@pytest.fixture(scope="function")
+def ssm_client(aws_mode: str) -> Generator[Any, None, None]:
+    """Create SSM client."""
+    client = create_client("ssm")
+
+    # Test if SSM is available
+    try:
+        client.describe_instance_information()
+    except ClientError as e:
+        if "not subscribed" in str(e) or "AccessDenied" in str(e):
+            pytest.skip("SSM not available in current environment")
+        raise
+
+    yield client
+
+
+# ============================================================================
+# ELB Fixtures (Real AWS or LocalStack Pro)
+# ============================================================================
+
+
+@pytest.fixture(scope="function")
+def elb_client(aws_mode: str) -> Generator[Any, None, None]:
+    """Create ELB client."""
+    client = create_client("elbv2")
+
+    # Test if ELB is available
+    try:
+        client.describe_load_balancers()
+    except ClientError as e:
+        if "not subscribed" in str(e) or "AccessDenied" in str(e):
+            pytest.skip("ELB not available in current environment")
+        raise
+
+    yield client
+
+
+# ============================================================================
+# Account Fixture
+# ============================================================================
+
+
+@pytest.fixture(scope="function")
+def aws_account_id(aws_mode: str) -> str:
+    """Return AWS account ID."""
+    if aws_mode == "real_aws":
+        sts = boto3.client("sts", config=AWS_CONFIG)
+        return sts.get_caller_identity()["Account"]
+    return "000000000000"  # LocalStack default
