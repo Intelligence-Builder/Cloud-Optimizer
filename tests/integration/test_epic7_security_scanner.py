@@ -18,7 +18,9 @@ from cloud_optimizer.integrations.aws.security_groups import SecurityGroupScanne
 
 
 def _get_default_vpc_id(ec2_client) -> str:
-    response = ec2_client.describe_vpcs(Filters=[{"Name": "isDefault", "Values": ["true"]}])
+    response = ec2_client.describe_vpcs(
+        Filters=[{"Name": "isDefault", "Values": ["true"]}]
+    )
     if not response.get("Vpcs"):
         raise RuntimeError("No default VPC available for creating test security group")
     return response["Vpcs"][0]["VpcId"]
@@ -65,7 +67,9 @@ async def test_security_group_scanner_flags_open_ssh() -> None:
         findings = await scanner.scan(account_id=account_id)
 
         matching = [
-            f for f in findings if f["resource_id"] == sg_id and f["severity"] == "critical"
+            f
+            for f in findings
+            if f["resource_id"] == sg_id and f["severity"] == "critical"
         ]
         assert matching, "Expected scanner to detect open SSH security group"
         assert matching[0]["finding_type"] == "overly_permissive_security_group"

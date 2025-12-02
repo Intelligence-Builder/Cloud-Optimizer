@@ -1,0 +1,136 @@
+# Remediation Templates Index
+version: 1.0.0
+description: Remediation guidance for security findings
+
+templates:
+  - template_id: "rem-001"
+    rule_id: "s3-bucket-public-read-prohibited"
+    title: "Remove public read access from S3 bucket"
+    description: "Remediate S3 bucket with public read access by enabling Block Public Access settings"
+    terraform: |
+      resource "aws_s3_bucket_public_access_block" "remediation" {
+        bucket = var.bucket_name
+        
+        block_public_acls       = true
+        block_public_policy     = true
+        ignore_public_acls      = true
+        restrict_public_buckets = true
+      }
+    cli: |
+      # Block all public access
+      aws s3api put-public-access-block \
+        --bucket BUCKET_NAME \
+        --public-access-block-configuration \
+        "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+      
+      # Remove public ACLs
+      aws s3api put-bucket-acl \
+        --bucket BUCKET_NAME \
+        --acl private
+    console_steps:
+      - "Navigate to S3 console"
+      - "Select the bucket"
+      - "Go to Permissions tab"
+      - "Under Block public access, click Edit"
+      - "Enable all four Block public access settings"
+      - "Click Save changes"
+      - "Review and remove any public bucket policies"
+
+  - template_id: "rem-002"
+    rule_id: "s3-bucket-encryption-disabled"
+    title: "Enable S3 bucket encryption"
+    description: "Enable default encryption for S3 bucket to protect data at rest"
+    terraform: |
+      resource "aws_s3_bucket_server_side_encryption_configuration" "remediation" {
+        bucket = var.bucket_name
+        
+        rule {
+          apply_server_side_encryption_by_default {
+            sse_algorithm     = "aws:kms"
+            kms_master_key_id = var.kms_key_arn
+          }
+          bucket_key_enabled = true
+        }
+      }
+    cli: |
+      # Enable encryption with AES-256
+      aws s3api put-bucket-encryption \
+        --bucket BUCKET_NAME \
+        --server-side-encryption-configuration '{
+          "Rules": [{
+            "ApplyServerSideEncryptionByDefault": {
+              "SSEAlgorithm": "AES256"
+            }
+          }]
+        }'
+      
+      # Or with KMS
+      aws s3api put-bucket-encryption \
+        --bucket BUCKET_NAME \
+        --server-side-encryption-configuration '{
+          "Rules": [{
+            "ApplyServerSideEncryptionByDefault": {
+              "SSEAlgorithm": "aws:kms",
+              "KMSMasterKeyID": "arn:aws:kms:region:account:key/key-id"
+            },
+            "BucketKeyEnabled": true
+          }]
+        }'
+    console_steps:
+      - "Navigate to S3 console"
+      - "Select the bucket"
+      - "Go to Properties tab"
+      - "Find Default encryption section"
+      - "Click Edit"
+      - "Select encryption type (AES-256 or AWS-KMS)"
+      - "If using KMS, select or create a key"
+      - "Click Save changes"
+
+  - template_id: "rem-003"
+    rule_id: "cloudtrail-not-enabled"
+    title: "Enable CloudTrail logging"
+    description: "Enable CloudTrail to log all API calls in the AWS account"
+    terraform: |
+      resource "aws_cloudtrail" "remediation" {
+        name                          = "remediation-trail"
+        s3_bucket_name               = var.cloudtrail_bucket
+        include_global_service_events = true
+        is_multi_region_trail        = true
+        enable_log_file_validation   = true
+        
+        event_selector {
+          read_write_type           = "All"
+          include_management_events = true
+          
+          data_resource {
+            type   = "AWS::S3::Object"
+            values = ["arn:aws:s3:::*/"]
+          }
+        }
+      }
+    cli: |
+      # Create S3 bucket for CloudTrail logs (if needed)
+      aws s3api create-bucket \
+        --bucket cloudtrail-logs-ACCOUNT_ID \
+        --region us-east-1
+      
+      # Create CloudTrail
+      aws cloudtrail create-trail \
+        --name remediation-trail \
+        --s3-bucket-name cloudtrail-logs-ACCOUNT_ID \
+        --is-multi-region-trail \
+        --enable-log-file-validation
+      
+      # Start logging
+      aws cloudtrail start-logging \
+        --name remediation-trail
+    console_steps:
+      - "Navigate to CloudTrail console"
+      - "Click Create trail"
+      - "Enter trail name"
+      - "Select 'Apply trail to all regions'"
+      - "Create or select S3 bucket for logs"
+      - "Enable log file validation"
+      - "Configure management events (All)"
+      - "Optionally configure data events"
+      - "Click Create trail"

@@ -52,4 +52,6 @@ def test_security_patterns_detect_entities_and_relationships() -> None:
     )
 
     assert any(match.output_type == "mitigates" for match in relationships)
-    assert all(match.category == PatternCategory.RELATIONSHIP for match in relationships)
+    assert all(
+        match.category == PatternCategory.RELATIONSHIP for match in relationships
+    )

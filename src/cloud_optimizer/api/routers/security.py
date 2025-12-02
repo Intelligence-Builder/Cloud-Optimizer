@@ -803,3 +803,345 @@ async def get_security_graph(
         metadata=metadata,
         timestamp=datetime.now(timezone.utc),
     )
+
+
+# ============================================================================
+# Security Analysis Endpoints (Epic 8.3)
+# ============================================================================
+
+
+class AnalyzeFindingsRequest(BaseModel):
+    """Request for comprehensive finding analysis."""
+
+    finding_ids: List[str] = Field(..., description="List of finding IDs to analyze")
+    include_explanations: bool = Field(default=True, description="Generate LLM explanations")
+    include_remediation: bool = Field(default=True, description="Generate remediation plans")
+    include_clusters: bool = Field(default=True, description="Correlate and cluster findings")
+    target_audience: str = Field(default="general", description="Target audience (general, technical, executive)")
+    prefer_terraform: bool = Field(default=True, description="Prefer Terraform in remediation examples")
+
+
+class AnalyzeFindingsResponse(BaseModel):
+    """Response from comprehensive finding analysis."""
+
+    finding_count: int
+    prioritized_findings: List[Dict[str, Any]]
+    explanations: List[Dict[str, Any]]
+    remediation_plans: List[Dict[str, Any]]
+    clusters: List[Dict[str, Any]]
+    summary: Dict[str, Any]
+
+
+class ScoreFindingsRequest(BaseModel):
+    """Request for finding scoring and prioritization."""
+
+    finding_ids: List[str] = Field(..., description="List of finding IDs to score")
+
+
+class ScoreFindingsResponse(BaseModel):
+    """Response from finding scoring."""
+
+    prioritized_findings: List[Dict[str, Any]]
+    summary: Dict[str, Any]
+
+
+class ExplainFindingRequest(BaseModel):
+    """Request for finding explanation."""
+
+    finding_id: str = Field(..., description="Finding ID to explain")
+    target_audience: str = Field(default="general", description="Target audience")
+    include_technical_details: bool = Field(default=True, description="Include technical details")
+
+
+class RemediationPlanRequest(BaseModel):
+    """Request for remediation plan."""
+
+    finding_id: str = Field(..., description="Finding ID")
+    prefer_terraform: bool = Field(default=True, description="Prefer Terraform examples")
+
+
+class CorrelateFindingsRequest(BaseModel):
+    """Request for finding correlation."""
+
+    finding_ids: List[str] = Field(..., description="Finding IDs to correlate")
+    min_cluster_size: int = Field(default=2, description="Minimum cluster size")
+
+
+class CorrelateFindingsResponse(BaseModel):
+    """Response from finding correlation."""
+
+    clusters: List[Dict[str, Any]]
+    cluster_summary: Dict[str, Any]
+
+
+async def get_findings_service(request: Request) -> Any:
+    """Get findings service from app state.
+
+    Returns:
+        FindingsService instance
+
+    Raises:
+        HTTPException: If service not available
+    """
+    if not hasattr(request.app.state, "findings_service"):
+        raise HTTPException(
+            status_code=503,
+            detail="Findings service not available",
+        )
+    return request.app.state.findings_service
+
+
+async def get_security_analysis_service(request: Request) -> Any:
+    """Get security analysis service from app state.
+
+    Returns:
+        SecurityAnalysisService instance
+
+    Raises:
+        HTTPException: If service not available
+    """
+    if not hasattr(request.app.state, "security_analysis_service"):
+        raise HTTPException(
+            status_code=503,
+            detail="Security analysis service not available",
+        )
+    return request.app.state.security_analysis_service
+
+
+@router.post("/analysis/comprehensive", response_model=AnalyzeFindingsResponse)
+async def analyze_findings_comprehensive(
+    request_data: AnalyzeFindingsRequest,
+    findings_service=Depends(get_findings_service),
+    analysis_service=Depends(get_security_analysis_service),
+) -> AnalyzeFindingsResponse:
+    """
+    Perform comprehensive security analysis on findings.
+
+    Includes:
+    - Risk scoring and prioritization
+    - LLM-powered explanations
+    - Remediation plan generation
+    - Finding correlation and clustering
+
+    This is the primary endpoint for end-to-end security analysis.
+    """
+    # Fetch findings
+    findings = []
+    for finding_id in request_data.finding_ids:
+        from uuid import UUID
+
+        finding = await findings_service.get_finding(UUID(finding_id))
+        if finding:
+            findings.append(finding)
+
+    if not findings:
+        raise HTTPException(
+            status_code=404,
+            detail="No findings found for the provided IDs",
+        )
+
+    # Perform comprehensive analysis
+    analysis = await analysis_service.analyze_findings(
+        findings=findings,
+        include_explanations=request_data.include_explanations,
+        include_remediation=request_data.include_remediation,
+        include_clusters=request_data.include_clusters,
+        target_audience=request_data.target_audience,
+        prefer_terraform=request_data.prefer_terraform,
+    )
+
+    return AnalyzeFindingsResponse(**analysis)
+
+
+@router.post("/analysis/score", response_model=ScoreFindingsResponse)
+async def score_findings(
+    request_data: ScoreFindingsRequest,
+    findings_service=Depends(get_findings_service),
+    analysis_service=Depends(get_security_analysis_service),
+) -> ScoreFindingsResponse:
+    """
+    Score and prioritize security findings.
+
+    Returns risk scores based on:
+    - Severity (0-40 points)
+    - Compliance impact (0-30 points)
+    - Resource type (0-20 points)
+    - Exposure level (0-10 points)
+    """
+    # Fetch findings
+    findings = []
+    for finding_id in request_data.finding_ids:
+        from uuid import UUID
+
+        finding = await findings_service.get_finding(UUID(finding_id))
+        if finding:
+            findings.append(finding)
+
+    if not findings:
+        raise HTTPException(
+            status_code=404,
+            detail="No findings found for the provided IDs",
+        )
+
+    # Score findings
+    prioritized = await analysis_service.score_and_prioritize(findings)
+
+    # Generate summary
+    priority_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for p in prioritized:
+        priority_counts[p.priority_rank] += 1
+
+    return ScoreFindingsResponse(
+        prioritized_findings=[p.to_dict() for p in prioritized],
+        summary={
+            "total_findings": len(prioritized),
+            "priority_distribution": priority_counts,
+        },
+    )
+
+
+@router.post("/analysis/explain")
+async def explain_finding(
+    request_data: ExplainFindingRequest,
+    findings_service=Depends(get_findings_service),
+    analysis_service=Depends(get_security_analysis_service),
+) -> Dict[str, Any]:
+    """
+    Generate human-readable explanation for a security finding.
+
+    Uses Claude AI to create contextual explanations tailored to
+    the target audience (general, technical, or executive).
+    """
+    from uuid import UUID
+
+    finding = await findings_service.get_finding(UUID(request_data.finding_id))
+
+    if not finding:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Finding {request_data.finding_id} not found",
+        )
+
+    explanation = await analysis_service.explain_finding(
+        finding=finding,
+        target_audience=request_data.target_audience,
+        include_technical_details=request_data.include_technical_details,
+    )
+
+    return explanation
+
+
+@router.post("/analysis/remediation")
+async def generate_remediation_plan(
+    request_data: RemediationPlanRequest,
+    findings_service=Depends(get_findings_service),
+    analysis_service=Depends(get_security_analysis_service),
+) -> Dict[str, Any]:
+    """
+    Generate step-by-step remediation plan for a security finding.
+
+    Includes:
+    - Detailed remediation steps
+    - Terraform and AWS CLI examples
+    - Prerequisites and rollback procedures
+    - Documentation references
+    """
+    from uuid import UUID
+
+    finding = await findings_service.get_finding(UUID(request_data.finding_id))
+
+    if not finding:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Finding {request_data.finding_id} not found",
+        )
+
+    plan = await analysis_service.generate_remediation_plan(
+        finding=finding,
+        prefer_terraform=request_data.prefer_terraform,
+    )
+
+    return plan.to_dict()
+
+
+@router.post("/analysis/correlate", response_model=CorrelateFindingsResponse)
+async def correlate_findings(
+    request_data: CorrelateFindingsRequest,
+    findings_service=Depends(get_findings_service),
+    analysis_service=Depends(get_security_analysis_service),
+) -> CorrelateFindingsResponse:
+    """
+    Correlate security findings and identify clusters.
+
+    Groups related findings by:
+    - Resource type
+    - AWS service
+    - Compliance framework
+    - Rule patterns
+
+    Useful for batch remediation planning.
+    """
+    # Fetch findings
+    findings = []
+    for finding_id in request_data.finding_ids:
+        from uuid import UUID
+
+        finding = await findings_service.get_finding(UUID(finding_id))
+        if finding:
+            findings.append(finding)
+
+    if not findings:
+        raise HTTPException(
+            status_code=404,
+            detail="No findings found for the provided IDs",
+        )
+
+    # Correlate findings
+    from ib_platform.security.correlation import FindingCorrelator
+
+    correlator = FindingCorrelator(min_cluster_size=request_data.min_cluster_size)
+    clusters = correlator.correlate_findings(findings)
+    cluster_summary = correlator.get_cluster_summary(clusters)
+
+    return CorrelateFindingsResponse(
+        clusters=[c.to_dict() for c in clusters],
+        cluster_summary=cluster_summary,
+    )
+
+
+@router.get("/analysis/top-findings")
+async def analyze_top_findings(
+    account_id: str,
+    top_n: int = 10,
+    target_audience: str = "executive",
+    findings_service=Depends(get_findings_service),
+    analysis_service=Depends(get_security_analysis_service),
+) -> Dict[str, Any]:
+    """
+    Analyze top N highest priority findings for an AWS account.
+
+    Provides executive-focused analysis suitable for leadership reporting.
+    """
+    from uuid import UUID
+
+    # Get all open findings for the account
+    findings = await findings_service.get_findings_by_account(
+        aws_account_id=UUID(account_id),
+        status="open",
+        limit=1000,
+    )
+
+    if not findings:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No findings found for account {account_id}",
+        )
+
+    # Analyze top findings
+    analysis = await analysis_service.analyze_top_findings(
+        findings=findings,
+        top_n=top_n,
+        target_audience=target_audience,
+    )
+
+    return analysis

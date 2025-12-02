@@ -1,0 +1,110 @@
+# Production environment overrides
+# Use with: helm install cloud-optimizer . -f values-prod.yaml
+
+replicaCount: 3
+
+image:
+  repository: cloud-optimizer
+  tag: "2.0.0"
+  pullPolicy: IfNotPresent
+
+# Enable autoscaling for production
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Production-grade resource allocation
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 1000m
+    memory: 1Gi
+
+# Production-grade probes with stricter requirements
+livenessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 2
+
+ingress:
+  enabled: true
+  className: "alb"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERT_ID"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/success-codes: '200'
+    # Add WAF ACL if needed
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: "arn:aws:wafv2:us-east-1:ACCOUNT_ID:regional/webacl/NAME/ID"
+  hosts:
+    - host: cloud-optimizer.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: cloud-optimizer-tls
+      hosts:
+        - cloud-optimizer.example.com
+
+database:
+  host: "postgres-prod.rds.amazonaws.com"
+  port: 5432
+  name: "cloud_optimizer"
+  user: "cloud_optimizer"
+
+config:
+  # Production logging
+  logLevel: "INFO"
+  debug: "false"
+
+  # Production Intelligence Builder URL
+  ibPlatformUrl: "https://ib-platform.example.com"
+  ibTenantId: "prod-tenant"
+
+  # AWS production region
+  awsDefaultRegion: "us-east-1"
+
+  # Feature flags - controlled rollout in production
+  enableSecurityDomain: "true"
+  enableCostDomain: "true"
+  enablePerformanceDomain: "true"
+  enableReliabilityDomain: "true"
+  enableOperationsDomain: "true"
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Anti-affinity to spread pods across nodes
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - cloud-optimizer
+          topologyKey: kubernetes.io/hostname

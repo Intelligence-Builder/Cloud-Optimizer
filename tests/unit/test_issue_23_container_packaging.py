@@ -26,7 +26,9 @@ def test_dockerfile_uses_multistage_build() -> None:
     """Dockerfile must contain separate builder and runtime stages."""
     lines = _load_dockerfile()
     from_statements = [line for line in lines if line.strip().startswith("FROM ")]
-    assert len(from_statements) >= 2, "Expected multi-stage build with at least 2 FROM statements"
+    assert (
+        len(from_statements) >= 2
+    ), "Expected multi-stage build with at least 2 FROM statements"
     assert "AS builder" in from_statements[0]
     assert "AS runtime" in from_statements[1]
 
@@ -40,7 +42,9 @@ def test_dockerfile_runs_as_non_root() -> None:
 def test_dockerfile_has_healthcheck_endpoint() -> None:
     """Health check must probe /health endpoint on port 8080."""
     contents = "\n".join(_load_dockerfile())
-    match = re.search(r"HEALTHCHECK.*curl.*http://localhost:8080/health", contents, re.DOTALL)
+    match = re.search(
+        r"HEALTHCHECK.*curl.*http://localhost:8080/health", contents, re.DOTALL
+    )
     assert match, "HEALTHCHECK for /health endpoint is required"
 
 

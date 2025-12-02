@@ -51,6 +51,7 @@ htmlcov/
 # Documentation
 docs/
 *.md
+!README.md
 LICENSE
 
 # Docker

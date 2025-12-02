@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 15
     jwt_refresh_token_expire_days: int = 7
 
+    # Encryption Settings
+    encryption_key: str = Field(
+        default="",
+        description="Fernet key for encrypting AWS credentials (generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')",
+    )
+
     @property
     def database_url(self) -> str:
         """Get async database URL for SQLAlchemy."""
@@ -73,6 +79,12 @@ class Settings(BaseSettings):
         description="Tenant ID for multi-tenancy",
     )
 
+    # AI/ML Configuration
+    anthropic_api_key: Optional[str] = Field(
+        default=None,
+        description="Anthropic API key for Claude integration",
+    )
+
     # AWS Configuration
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
@@ -90,6 +102,20 @@ class Settings(BaseSettings):
     enable_performance_domain: bool = False
     enable_reliability_domain: bool = False
     enable_opex_domain: bool = False
+
+    # Marketplace settings
+    marketplace_enabled: bool = Field(
+        default=True,
+        description="Enable AWS Marketplace integration",
+    )
+    marketplace_product_code: str = Field(
+        default="",
+        description="AWS Marketplace product code",
+    )
+    trial_mode: bool = Field(
+        default=False,
+        description="Enable trial mode with usage limits",
+    )
 
     @field_validator("log_level")
     @classmethod
@@ -116,6 +142,16 @@ class Settings(BaseSettings):
         if self.enable_opex_domain:
             domains.append("opex")
         return domains
+
+    @property
+    def marketplace_config(self) -> "MarketplaceConfig":
+        """Get marketplace configuration."""
+        from cloud_optimizer.marketplace.models import MarketplaceConfig
+
+        return MarketplaceConfig(
+            enabled=self.marketplace_enabled,
+            product_code=self.marketplace_product_code,
+        )
 
 
 @lru_cache

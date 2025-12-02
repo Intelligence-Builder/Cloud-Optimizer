@@ -1,6 +1,6 @@
 service: Lambda
 description: AWS Lambda - Serverless compute service
-best_practices:
+practices:
   - category: network_security
     title: Deploy Lambda in VPC When Accessing Private Resources
     description: |

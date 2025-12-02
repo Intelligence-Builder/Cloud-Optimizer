@@ -8,10 +8,11 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
+from alembic import context
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -20,7 +21,15 @@ from cloud_optimizer.config import get_settings
 from cloud_optimizer.database import Base
 
 # Import all models to register them with Base.metadata
-from cloud_optimizer.models import Session, Trial, TrialUsage, User  # noqa: F401
+from cloud_optimizer.models import (  # noqa: F401
+    AWSAccount,
+    Finding,
+    ScanJob,
+    Session,
+    Trial,
+    TrialUsage,
+    User,
+)
 
 # Alembic Config object
 config = context.config

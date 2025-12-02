@@ -39,7 +39,7 @@ def get_kb() -> KnowledgeBaseService:
 KBServiceDep = Annotated[KnowledgeBaseService, Depends(get_kb)]
 
 
-@router.get(
+@router.get(  # type: ignore[misc]
     "/frameworks",
     response_model=FrameworkListResponse,
     summary="List available compliance frameworks",
@@ -52,9 +52,7 @@ async def list_frameworks(kb: KBServiceDep) -> FrameworkListResponse:
         FrameworkListResponse with framework names and count
     """
     stats = kb.get_statistics()
-    framework_names = sorted(
-        [name for name in kb._frameworks.keys()]  # noqa: SLF001
-    )
+    framework_names = sorted(kb._frameworks.keys())  # noqa: SLF001
 
     return FrameworkListResponse(
         frameworks=framework_names,
@@ -62,7 +60,7 @@ async def list_frameworks(kb: KBServiceDep) -> FrameworkListResponse:
     )
 
 
-@router.get(
+@router.get(  # type: ignore[misc]
     "/frameworks/{framework_id}/controls",
     response_model=FrameworkControlsResponse,
     summary="Get framework controls",
@@ -116,7 +114,7 @@ async def get_framework_controls(
     )
 
 
-@router.get(
+@router.get(  # type: ignore[misc]
     "/services",
     response_model=ServiceListResponse,
     summary="List available AWS services",
@@ -129,9 +127,7 @@ async def list_services(kb: KBServiceDep) -> ServiceListResponse:
         ServiceListResponse with service names and count
     """
     stats = kb.get_statistics()
-    service_names = sorted(
-        [name for name in kb._services.keys()]  # noqa: SLF001
-    )
+    service_names = sorted(kb._services.keys())  # noqa: SLF001
 
     return ServiceListResponse(
         services=service_names,
@@ -139,7 +135,7 @@ async def list_services(kb: KBServiceDep) -> ServiceListResponse:
     )
 
 
-@router.get(
+@router.get(  # type: ignore[misc]
     "/services/{service_id}/practices",
     response_model=ServicePracticesResponse,
     summary="Get service best practices",
@@ -150,11 +146,11 @@ async def list_services(kb: KBServiceDep) -> ServiceListResponse:
 )
 async def get_service_practices(
     service_id: str,
-    category: Optional[str] = Query(
-        None,
-        description="Filter by category (e.g., security, cost, performance)",
-    ),
-    kb: KBServiceDep = Depends(get_kb),
+    kb: KBServiceDep,
+    category: Annotated[
+        Optional[str],
+        Query(description="Filter by category (e.g., security, cost, performance)"),
+    ] = None,
 ) -> ServicePracticesResponse:
     """Get best practices for a specific AWS service.
 
@@ -202,16 +198,18 @@ async def get_service_practices(
     )
 
 
-@router.get(
+@router.get(  # type: ignore[misc]
     "/search",
     response_model=SearchResultsResponse,
     summary="Search Knowledge Base",
     description="Search KB entries by keyword across all content types",
 )
 async def search_kb(
-    q: str = Query(..., description="Search query", min_length=1),
-    limit: int = Query(10, description="Maximum results to return", ge=1, le=100),
-    kb: KBServiceDep = Depends(get_kb),
+    kb: KBServiceDep,
+    q: Annotated[str, Query(description="Search query", min_length=1)],
+    limit: Annotated[
+        int, Query(description="Maximum results to return", ge=1, le=100)
+    ] = 10,
 ) -> SearchResultsResponse:
     """Search Knowledge Base entries by keyword.
 
@@ -252,7 +250,7 @@ async def search_kb(
     )
 
 
-@router.get(
+@router.get(  # type: ignore[misc]
     "/remediation/{rule_id}",
     response_model=RemediationTemplateResponse,
     summary="Get remediation template",
@@ -296,7 +294,7 @@ async def get_remediation(
     )
 
 
-@router.get(
+@router.get(  # type: ignore[misc]
     "/stats",
     response_model=KBStatisticsResponse,
     summary="Get Knowledge Base statistics",

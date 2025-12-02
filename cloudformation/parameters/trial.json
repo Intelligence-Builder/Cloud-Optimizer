@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "EnvironmentName",
+    "ParameterValue": "cloud-optimizer"
+  },
+  {
+    "ParameterKey": "DBInstanceClass",
+    "ParameterValue": "db.t3.micro"
+  },
+  {
+    "ParameterKey": "DBPassword",
+    "ParameterValue": "CHANGEME_SecurePassword123"
+  },
+  {
+    "ParameterKey": "AllocatedStorage",
+    "ParameterValue": "20"
+  },
+  {
+    "ParameterKey": "MultiAZ",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "ContainerImage",
+    "ParameterValue": "public.ecr.aws/docker/library/nginx:latest"
+  },
+  {
+    "ParameterKey": "ContainerCpu",
+    "ParameterValue": "256"
+  },
+  {
+    "ParameterKey": "ContainerMemory",
+    "ParameterValue": "512"
+  },
+  {
+    "ParameterKey": "DesiredCount",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "JWTSecretKey",
+    "ParameterValue": "CHANGEME_GenerateRandomString32CharsOrMore"
+  }
+]

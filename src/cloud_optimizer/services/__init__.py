@@ -8,6 +8,7 @@ from cloud_optimizer.services.auth import (
     PasswordPolicyError,
     UserExistsError,
 )
+from cloud_optimizer.services.compliance import ComplianceService
 from cloud_optimizer.services.intelligence_builder import (
     IntelligenceBuilderService,
     get_ib_service,
@@ -24,4 +25,5 @@ __all__ = [
     "IntelligenceBuilderService",
     "get_ib_service",
     "SecurityService",
+    "ComplianceService",
 ]

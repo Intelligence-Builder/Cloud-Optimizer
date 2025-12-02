@@ -1,6 +1,6 @@
 service: RDS
 description: Amazon Relational Database Service - Managed relational databases
-best_practices:
+practices:
   - category: encryption
     title: Enable Encryption at Rest
     description: |

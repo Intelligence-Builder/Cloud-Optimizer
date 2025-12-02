@@ -1,0 +1,147 @@
+# Default values for cloud-optimizer.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
+
+image:
+  repository: cloud-optimizer
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+  className: "alb"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+  hosts:
+    - host: cloud-optimizer.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: cloud-optimizer-tls
+  #    hosts:
+  #      - cloud-optimizer.example.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Liveness probe configuration
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe configuration
+readinessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Database configuration
+database:
+  host: "postgres-service"
+  port: 5432
+  name: "cloud_optimizer"
+  user: "cloud_optimizer"
+
+# Secret references - DO NOT put actual credentials here
+# Create these secrets separately using kubectl or a secret management tool
+secrets:
+  # Database password secret name
+  databasePasswordSecret: "cloud-optimizer-db-credentials"
+  # JWT secret key secret name
+  jwtSecretKey: "cloud-optimizer-jwt"
+  # Intelligence Builder credentials secret name
+  ibCredentials: "cloud-optimizer-ib-credentials"
+  # AWS credentials secret name
+  awsCredentials: "cloud-optimizer-aws-credentials"
+
+# Application configuration (non-sensitive)
+config:
+  # API configuration
+  apiHost: "0.0.0.0"
+  apiPort: "8000"
+
+  # JWT configuration
+  jwtAlgorithm: "HS256"
+  jwtAccessTokenExpireMinutes: "15"
+
+  # Intelligence Builder configuration
+  ibPlatformUrl: "https://ib-platform.example.com"
+  ibTenantId: ""
+
+  # AWS configuration
+  awsDefaultRegion: "us-east-1"
+
+  # Feature flags
+  enableSecurityDomain: "true"
+  enableCostDomain: "true"
+  enablePerformanceDomain: "true"
+  enableReliabilityDomain: "true"
+  enableOperationsDomain: "true"
+
+  # Logging
+  logLevel: "INFO"
+  debug: "false"

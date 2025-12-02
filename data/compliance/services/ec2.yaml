@@ -1,6 +1,6 @@
 service: EC2
 description: Amazon Elastic Compute Cloud - Virtual servers in the cloud
-best_practices:
+practices:
   - category: network_security
     title: Use IMDSv2 Only
     description: |

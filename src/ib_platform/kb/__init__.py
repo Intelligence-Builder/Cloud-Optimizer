@@ -15,7 +15,7 @@ from ib_platform.kb.models import (
     SecurityPattern,
     ServiceBestPractice,
 )
-from ib_platform.kb.service import KnowledgeBaseService
+from ib_platform.kb.service import KnowledgeBaseService, get_kb_service
 
 __all__ = [
     "ComplianceControl",
@@ -25,4 +25,5 @@ __all__ = [
     "KBEntry",
     "KBLoader",
     "KnowledgeBaseService",
+    "get_kb_service",
 ]

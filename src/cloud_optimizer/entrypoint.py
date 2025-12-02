@@ -12,12 +12,7 @@ from typing import Optional
 
 import structlog
 from sqlalchemy import create_engine, text
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_delay,
-    wait_exponential,
-)
+from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
 from alembic import command
 from alembic.config import Config

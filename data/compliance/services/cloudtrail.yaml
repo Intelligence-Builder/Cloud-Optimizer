@@ -1,6 +1,6 @@
 service: CloudTrail
 description: AWS CloudTrail - API activity logging and monitoring
-best_practices:
+practices:
   - category: logging
     title: Enable Multi-Region Trail
     description: |

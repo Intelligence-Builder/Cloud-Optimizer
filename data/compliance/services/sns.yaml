@@ -1,0 +1,518 @@
+service: SNS
+description: Amazon Simple Notification Service - Pub/sub messaging service
+practices:
+  - category: encryption
+    title: Enable Server-Side Encryption
+    description: |
+      Enable server-side encryption (SSE) for SNS topics using AWS KMS to protect messages
+      at rest. This ensures that messages stored temporarily in SNS are encrypted using
+      KMS keys, providing additional security for sensitive data.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable SSE when creating SNS topics. Use customer-managed KMS keys for additional
+      control over encryption and key policies. Ensure subscribers have decrypt permissions
+      on the KMS key to receive messages.
+    terraform_example: |
+      # KMS key for SNS
+      resource "aws_kms_key" "sns" {
+        description             = "KMS key for SNS topic encryption"
+        deletion_window_in_days = 30
+        enable_key_rotation     = true
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Sid    = "Enable IAM User Permissions"
+              Effect = "Allow"
+              Principal = {
+                AWS = "arn:aws:iam::123456789012:root"
+              }
+              Action   = "kms:*"
+              Resource = "*"
+            },
+            {
+              Sid    = "Allow SNS to use the key"
+              Effect = "Allow"
+              Principal = {
+                Service = "sns.amazonaws.com"
+              }
+              Action = [
+                "kms:Decrypt",
+                "kms:GenerateDataKey"
+              ]
+              Resource = "*"
+            },
+            {
+              Sid    = "Allow CloudWatch to use the key"
+              Effect = "Allow"
+              Principal = {
+                Service = "cloudwatch.amazonaws.com"
+              }
+              Action = [
+                "kms:Decrypt",
+                "kms:GenerateDataKey"
+              ]
+              Resource = "*"
+            }
+          ]
+        })
+      }
+
+      resource "aws_kms_alias" "sns" {
+        name          = "alias/sns-encryption"
+        target_key_id = aws_kms_key.sns.key_id
+      }
+
+      # SNS topic with encryption
+      resource "aws_sns_topic" "encrypted" {
+        name              = "secure-notifications"
+        kms_master_key_id = aws_kms_key.sns.id
+
+        tags = {
+          Name        = "secure-notifications"
+          Environment = "production"
+        }
+      }
+    cli_example: |
+      # Create encrypted topic
+      aws sns create-topic \
+        --name secure-notifications \
+        --attributes KmsMasterKeyId=arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+
+      # Enable encryption on existing topic
+      aws sns set-topic-attributes \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:secure-notifications \
+        --attribute-name KmsMasterKeyId \
+        --attribute-value arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+    console_steps:
+      - Navigate to SNS console at https://console.aws.amazon.com/sns/
+      - Click "Topics" > "Create topic"
+      - Choose topic type (Standard or FIFO)
+      - Enter topic name
+      - Expand "Encryption"
+      - Check "Enable encryption"
+      - Select KMS key (AWS managed or customer managed)
+      - Configure other settings
+      - Click "Create topic"
+
+  - category: access_control
+    title: Implement Topic Policies with Least Privilege
+    description: |
+      Use SNS topic policies to control who can publish to and subscribe to topics.
+      Implement least privilege by restricting actions to specific principals and
+      adding conditions based on source IP, VPC endpoint, or AWS service.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create topic policies that explicitly grant permissions to specific principals.
+      Deny public access unless required. Use condition keys to restrict publish/subscribe
+      based on context. Regularly review and audit topic policies.
+    terraform_example: |
+      resource "aws_sns_topic" "example" {
+        name = "application-alerts"
+      }
+
+      resource "aws_sns_topic_policy" "example" {
+        arn = aws_sns_topic.example.arn
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Sid    = "AllowCloudWatchToPublish"
+              Effect = "Allow"
+              Principal = {
+                Service = "cloudwatch.amazonaws.com"
+              }
+              Action   = "SNS:Publish"
+              Resource = aws_sns_topic.example.arn
+              Condition = {
+                StringEquals = {
+                  "aws:SourceAccount" = "123456789012"
+                }
+              }
+            },
+            {
+              Sid    = "AllowSpecificRolesToPublish"
+              Effect = "Allow"
+              Principal = {
+                AWS = [
+                  "arn:aws:iam::123456789012:role/AppRole"
+                ]
+              }
+              Action   = "SNS:Publish"
+              Resource = aws_sns_topic.example.arn
+            },
+            {
+              Sid    = "DenyPublishFromOutsideVPC"
+              Effect = "Deny"
+              Principal = "*"
+              Action   = "SNS:Publish"
+              Resource = aws_sns_topic.example.arn
+              Condition = {
+                StringNotEquals = {
+                  "aws:SourceVpce" = aws_vpc_endpoint.sns.id
+                }
+              }
+            },
+            {
+              Sid    = "DenyInsecureTransport"
+              Effect = "Deny"
+              Principal = "*"
+              Action = [
+                "SNS:Publish",
+                "SNS:Subscribe"
+              ]
+              Resource = aws_sns_topic.example.arn
+              Condition = {
+                Bool = {
+                  "aws:SecureTransport" = "false"
+                }
+              }
+            }
+          ]
+        })
+      }
+    cli_example: |
+      # Set topic policy
+      aws sns set-topic-attributes \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:application-alerts \
+        --attribute-name Policy \
+        --attribute-value file://topic-policy.json
+
+      # Get topic policy
+      aws sns get-topic-attributes \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:application-alerts \
+        --query 'Attributes.Policy'
+    console_steps:
+      - Navigate to SNS console
+      - Select topic
+      - Go to "Access policy" section
+      - Click "Edit"
+      - Use JSON editor to define policy
+      - Add statements for publishers and subscribers
+      - Add deny statements for security
+      - Add condition keys for context-based access
+      - Click "Save changes"
+
+  - category: logging
+    title: Enable Delivery Status Logging
+    description: |
+      Enable delivery status logging for SNS to track message delivery success and failures.
+      This provides visibility into message delivery patterns, helps troubleshoot issues,
+      and meets compliance requirements for message auditing.
+    compliance_frameworks:
+      - SOC2
+      - HIPAA
+    implementation: |
+      Configure delivery status logging for different protocol types (HTTP/HTTPS, Lambda,
+      SQS, Application, Firehose). Send logs to CloudWatch Logs for analysis. Create
+      alarms for delivery failures.
+    terraform_example: |
+      # IAM role for SNS delivery status logging
+      resource "aws_iam_role" "sns_delivery_status" {
+        name = "sns-delivery-status-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              Service = "sns.amazonaws.com"
+            }
+          }]
+        })
+      }
+
+      resource "aws_iam_role_policy" "sns_delivery_status" {
+        name = "sns-delivery-status-policy"
+        role = aws_iam_role.sns_delivery_status.id
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Effect = "Allow"
+            Action = [
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents"
+            ]
+            Resource = "arn:aws:logs:*:*:*"
+          }]
+        })
+      }
+
+      # SNS topic with delivery status logging
+      resource "aws_sns_topic" "with_logging" {
+        name = "notifications-with-logging"
+
+        # HTTP/HTTPS delivery status
+        http_success_feedback_role_arn    = aws_iam_role.sns_delivery_status.arn
+        http_success_feedback_sample_rate = 100
+        http_failure_feedback_role_arn    = aws_iam_role.sns_delivery_status.arn
+
+        # Lambda delivery status
+        lambda_success_feedback_role_arn    = aws_iam_role.sns_delivery_status.arn
+        lambda_success_feedback_sample_rate = 100
+        lambda_failure_feedback_role_arn    = aws_iam_role.sns_delivery_status.arn
+
+        # SQS delivery status
+        sqs_success_feedback_role_arn    = aws_iam_role.sns_delivery_status.arn
+        sqs_success_feedback_sample_rate = 100
+        sqs_failure_feedback_role_arn    = aws_iam_role.sns_delivery_status.arn
+      }
+
+      # CloudWatch alarm for delivery failures
+      resource "aws_cloudwatch_log_metric_filter" "sns_failures" {
+        name           = "sns-delivery-failures"
+        log_group_name = "/aws/sns/us-east-1/123456789012/notifications-with-logging/Failure"
+        pattern        = ""
+
+        metric_transformation {
+          name      = "SNSDeliveryFailures"
+          namespace = "Messaging/SNS"
+          value     = "1"
+        }
+      }
+
+      resource "aws_cloudwatch_metric_alarm" "sns_failures" {
+        alarm_name          = "sns-delivery-failures-alert"
+        comparison_operator = "GreaterThanThreshold"
+        evaluation_periods  = "1"
+        metric_name         = "SNSDeliveryFailures"
+        namespace           = "Messaging/SNS"
+        period              = "300"
+        statistic           = "Sum"
+        threshold           = "10"
+        alarm_description   = "Alert on SNS delivery failures"
+        alarm_actions       = [aws_sns_topic.ops_alerts.arn]
+      }
+    cli_example: |
+      # Enable delivery status logging
+      aws sns set-topic-attributes \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:notifications \
+        --attribute-name HTTPSuccessFeedbackRoleArn \
+        --attribute-value arn:aws:iam::123456789012:role/sns-delivery-status-role
+
+      aws sns set-topic-attributes \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:notifications \
+        --attribute-name HTTPFailureFeedbackRoleArn \
+        --attribute-value arn:aws:iam::123456789012:role/sns-delivery-status-role
+
+      # View delivery logs
+      aws logs tail /aws/sns/us-east-1/123456789012/notifications/Failure --follow
+    console_steps:
+      - First, create IAM role with CloudWatch Logs permissions
+      - Navigate to SNS console
+      - Select topic
+      - Go to "Delivery status logging" section
+      - Click "Edit"
+      - For each protocol (HTTP, Lambda, SQS, etc.)
+      - Select IAM role for success and failure logging
+      - Set success sample rate (0-100%)
+      - Click "Save changes"
+      - View logs in CloudWatch Logs console
+
+  - category: network_security
+    title: Use Private Topics with VPC Endpoints
+    description: |
+      Create VPC endpoints for SNS to publish and subscribe to topics privately from
+      within your VPC. This prevents SNS traffic from traversing the internet and
+      provides better security for sensitive notifications.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Create interface VPC endpoints for SNS in private subnets. Update security groups
+      to allow HTTPS traffic. Configure topic policies to restrict access to VPC endpoint.
+      Use VPC endpoint DNS names for private access.
+    terraform_example: |
+      # VPC endpoint for SNS
+      resource "aws_vpc_endpoint" "sns" {
+        vpc_id              = aws_vpc.main.id
+        service_name        = "com.amazonaws.us-east-1.sns"
+        vpc_endpoint_type   = "Interface"
+        subnet_ids          = [aws_subnet.private_a.id, aws_subnet.private_b.id]
+        security_group_ids  = [aws_security_group.vpc_endpoints.id]
+        private_dns_enabled = true
+
+        tags = {
+          Name = "sns-endpoint"
+        }
+      }
+
+      # Security group for VPC endpoint
+      resource "aws_security_group" "vpc_endpoints" {
+        name        = "vpc-endpoints-sg"
+        description = "Security group for VPC endpoints"
+        vpc_id      = aws_vpc.main.id
+
+        ingress {
+          from_port   = 443
+          to_port     = 443
+          protocol    = "tcp"
+          cidr_blocks = [aws_vpc.main.cidr_block]
+          description = "HTTPS from VPC"
+        }
+
+        tags = {
+          Name = "vpc-endpoints-sg"
+        }
+      }
+
+      # Topic policy restricting to VPC endpoint
+      resource "aws_sns_topic_policy" "vpc_only" {
+        arn = aws_sns_topic.example.arn
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Sid    = "DenyPublishFromOutsideVPC"
+            Effect = "Deny"
+            Principal = "*"
+            Action = [
+              "SNS:Publish",
+              "SNS:Subscribe"
+            ]
+            Resource = aws_sns_topic.example.arn
+            Condition = {
+              StringNotEquals = {
+                "aws:SourceVpce" = aws_vpc_endpoint.sns.id
+              }
+            }
+          }]
+        })
+      }
+    cli_example: |
+      # Create VPC endpoint
+      aws ec2 create-vpc-endpoint \
+        --vpc-id vpc-12345678 \
+        --vpc-endpoint-type Interface \
+        --service-name com.amazonaws.us-east-1.sns \
+        --subnet-ids subnet-12345678 subnet-87654321 \
+        --security-group-ids sg-12345678 \
+        --private-dns-enabled
+
+      # Test publishing through VPC endpoint
+      aws sns publish \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:private-topic \
+        --message "Test message" \
+        --endpoint-url https://vpce-12345678-abcdefgh.sns.us-east-1.vpce.amazonaws.com
+    console_steps:
+      - Navigate to VPC console
+      - Go to "Endpoints"
+      - Click "Create endpoint"
+      - Select "AWS services"
+      - Search for "sns"
+      - Select SNS service
+      - Choose VPC
+      - Select private subnets
+      - Select security group allowing HTTPS from VPC
+      - Enable private DNS
+      - Click "Create endpoint"
+
+  - category: access_control
+    title: Implement Subscription Confirmation Controls
+    description: |
+      Implement controls for subscription confirmations to prevent unauthorized subscriptions.
+      Validate subscription endpoints and use subscription filters to control message
+      delivery. Monitor subscription activity for anomalies.
+    compliance_frameworks:
+      - SOC2
+    implementation: |
+      Enable subscription confirmation requirements. Validate subscription endpoints
+      before confirming. Use subscription filter policies to limit which messages are
+      delivered to each subscription. Regularly audit topic subscriptions.
+    terraform_example: |
+      resource "aws_sns_topic" "example" {
+        name = "controlled-notifications"
+      }
+
+      # Email subscription (requires confirmation)
+      resource "aws_sns_topic_subscription" "email" {
+        topic_arn = aws_sns_topic.example.arn
+        protocol  = "email"
+        endpoint  = "alerts@example.com"
+
+        # Subscription filter policy
+        filter_policy = jsonencode({
+          severity = ["critical", "high"]
+          environment = ["production"]
+        })
+      }
+
+      # SQS subscription with filter
+      resource "aws_sns_topic_subscription" "sqs" {
+        topic_arn = aws_sns_topic.example.arn
+        protocol  = "sqs"
+        endpoint  = aws_sqs_queue.alerts.arn
+
+        filter_policy = jsonencode({
+          eventType = ["error", "warning"]
+        })
+
+        # Enable raw message delivery for SQS
+        raw_message_delivery = true
+      }
+
+      # Lambda subscription
+      resource "aws_sns_topic_subscription" "lambda" {
+        topic_arn = aws_sns_topic.example.arn
+        protocol  = "lambda"
+        endpoint  = aws_lambda_function.processor.arn
+
+        filter_policy = jsonencode({
+          source = ["application", "infrastructure"]
+        })
+      }
+
+      # Grant SNS permission to invoke Lambda
+      resource "aws_lambda_permission" "sns" {
+        statement_id  = "AllowExecutionFromSNS"
+        action        = "lambda:InvokeFunction"
+        function_name = aws_lambda_function.processor.function_name
+        principal     = "sns.amazonaws.com"
+        source_arn    = aws_sns_topic.example.arn
+      }
+    cli_example: |
+      # Create subscription (requires confirmation for email)
+      aws sns subscribe \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:controlled-notifications \
+        --protocol email \
+        --notification-endpoint alerts@example.com
+
+      # Set filter policy on subscription
+      aws sns set-subscription-attributes \
+        --subscription-arn arn:aws:sns:us-east-1:123456789012:controlled-notifications:12345678-1234-1234-1234-123456789012 \
+        --attribute-name FilterPolicy \
+        --attribute-value '{"severity":["critical","high"]}'
+
+      # List subscriptions
+      aws sns list-subscriptions-by-topic \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:controlled-notifications
+
+      # Confirm subscription manually
+      aws sns confirm-subscription \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:controlled-notifications \
+        --token <token-from-confirmation-message>
+    console_steps:
+      - Navigate to SNS console
+      - Select topic
+      - Go to "Subscriptions" section
+      - Click "Create subscription"
+      - Select protocol (Email, SQS, Lambda, etc.)
+      - Enter endpoint
+      - Optionally add filter policy
+      - Click "Create subscription"
+      - For email/HTTP - confirm subscription via link
+      - Regularly review and remove unused subscriptions

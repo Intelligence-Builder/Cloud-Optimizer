@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Application Load Balancer for Cloud Optimizer'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name to prefix resources
+    Type: String
+    Default: cloud-optimizer
+
+  VPC:
+    Description: VPC ID
+    Type: String
+
+  PublicSubnet1:
+    Description: Public Subnet 1 ID
+    Type: String
+
+  PublicSubnet2:
+    Description: Public Subnet 2 ID
+    Type: String
+
+  ALBSecurityGroup:
+    Description: Security Group for ALB
+    Type: String
+
+Resources:
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvironmentName}-alb
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-alb
+
+  # Target Group
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${EnvironmentName}-tg
+      Port: 8000
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-tg
+
+  # HTTP Listener
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  LoadBalancerDNS:
+    Description: DNS name of the load balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${EnvironmentName}-alb-dns
+
+  LoadBalancerArn:
+    Description: ARN of the load balancer
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub ${EnvironmentName}-alb-arn
+
+  TargetGroupArn:
+    Description: ARN of the target group
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-target-group-arn
+
+  LoadBalancerURL:
+    Description: URL of the application
+    Value: !Sub http://${ApplicationLoadBalancer.DNSName}
+    Export:
+      Name: !Sub ${EnvironmentName}-app-url

@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cloud-optimizer.fullname" . }}
+  labels:
+    {{- include "cloud-optimizer.labels" . | nindent 4 }}
+data:
+  # Database configuration
+  DATABASE_HOST: {{ .Values.database.host | quote }}
+  DATABASE_PORT: {{ .Values.database.port | quote }}
+  DATABASE_NAME: {{ .Values.database.name | quote }}
+  DATABASE_USER: {{ .Values.database.user | quote }}
+
+  # API configuration
+  API_HOST: {{ .Values.config.apiHost | quote }}
+  API_PORT: {{ .Values.config.apiPort | quote }}
+
+  # JWT configuration
+  JWT_ALGORITHM: {{ .Values.config.jwtAlgorithm | quote }}
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.config.jwtAccessTokenExpireMinutes | quote }}
+
+  # Intelligence Builder configuration
+  IB_PLATFORM_URL: {{ .Values.config.ibPlatformUrl | quote }}
+  IB_TENANT_ID: {{ .Values.config.ibTenantId | quote }}
+
+  # AWS configuration
+  AWS_DEFAULT_REGION: {{ .Values.config.awsDefaultRegion | quote }}
+
+  # Feature flags
+  ENABLE_SECURITY_DOMAIN: {{ .Values.config.enableSecurityDomain | quote }}
+  ENABLE_COST_DOMAIN: {{ .Values.config.enableCostDomain | quote }}
+  ENABLE_PERFORMANCE_DOMAIN: {{ .Values.config.enablePerformanceDomain | quote }}
+  ENABLE_RELIABILITY_DOMAIN: {{ .Values.config.enableReliabilityDomain | quote }}
+  ENABLE_OPERATIONS_DOMAIN: {{ .Values.config.enableOperationsDomain | quote }}
+
+  # Application configuration
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  DEBUG: {{ .Values.config.debug | quote }}

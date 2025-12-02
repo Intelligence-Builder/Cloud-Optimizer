@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Security Groups for Cloud Optimizer - ALB, ECS, and RDS security groups'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name to prefix resources
+    Type: String
+    Default: cloud-optimizer
+
+  VPC:
+    Description: VPC ID
+    Type: String
+
+Resources:
+  # Application Load Balancer Security Group
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${EnvironmentName}-alb-sg
+      GroupDescription: Security group for Application Load Balancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS from anywhere
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-alb-sg
+
+  # ECS Service Security Group
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${EnvironmentName}-ecs-sg
+      GroupDescription: Security group for ECS tasks
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: Allow traffic from ALB on port 8000
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ecs-sg
+
+  # RDS Security Group
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${EnvironmentName}-rds-sg
+      GroupDescription: Security group for RDS PostgreSQL
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          Description: Allow PostgreSQL from ECS tasks
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-rds-sg
+
+  # Allow ECS to reach internet (for pulling images, etc.)
+  ECSSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ECSSecurityGroup
+      IpProtocol: -1
+      CidrIp: 0.0.0.0/0
+      Description: Allow all outbound traffic
+
+Outputs:
+  ALBSecurityGroup:
+    Description: Security Group ID for ALB
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-alb-sg
+
+  ECSSecurityGroup:
+    Description: Security Group ID for ECS
+    Value: !Ref ECSSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-ecs-sg
+
+  RDSSecurityGroup:
+    Description: Security Group ID for RDS
+    Value: !Ref RDSSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-rds-sg

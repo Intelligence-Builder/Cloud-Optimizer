@@ -1,0 +1,131 @@
+# Security Patterns for Encryption
+patterns:
+  - pattern_id: "enc-001"
+    name: "S3 Encryption at Rest"
+    category: encryption
+    description: "Implement comprehensive encryption at rest for S3 buckets using AWS KMS"
+    applicable_services:
+      - "S3"
+      - "KMS"
+    compliance_frameworks:
+      - "CIS"
+      - "PCI-DSS"
+      - "HIPAA"
+      - "SOC2"
+    implementation_steps:
+      - "Create or identify KMS key for S3 encryption"
+      - "Configure S3 bucket default encryption"
+      - "Update bucket policy to enforce encryption"
+      - "Enable CloudTrail logging for encryption events"
+      - "Monitor encryption compliance with Config rules"
+    code_examples:
+      terraform: |
+        # KMS key for S3 encryption
+        resource "aws_kms_key" "s3" {
+          description             = "KMS key for S3 bucket encryption"
+          deletion_window_in_days = 10
+          enable_key_rotation     = true
+        }
+        
+        # S3 bucket with encryption
+        resource "aws_s3_bucket_server_side_encryption_configuration" "example" {
+          bucket = aws_s3_bucket.example.id
+          
+          rule {
+            apply_server_side_encryption_by_default {
+              sse_algorithm     = "aws:kms"
+              kms_master_key_id = aws_kms_key.s3.arn
+            }
+            bucket_key_enabled = true
+          }
+        }
+        
+        # Bucket policy to enforce encryption
+        resource "aws_s3_bucket_policy" "enforce_encryption" {
+          bucket = aws_s3_bucket.example.id
+          
+          policy = jsonencode({
+            Version = "2012-10-17"
+            Statement = [
+              {
+                Sid       = "DenyUnencryptedObjectUploads"
+                Effect    = "Deny"
+                Principal = "*"
+                Action    = "s3:PutObject"
+                Resource  = "${aws_s3_bucket.example.arn}/*"
+                Condition = {
+                  StringNotEquals = {
+                    "s3:x-amz-server-side-encryption" = "aws:kms"
+                  }
+                }
+              }
+            ]
+          })
+        }
+      cli: |
+        # Create KMS key
+        aws kms create-key \
+          --description "S3 encryption key" \
+          --key-policy file://key-policy.json
+        
+        # Enable bucket encryption
+        aws s3api put-bucket-encryption \
+          --bucket my-bucket \
+          --server-side-encryption-configuration '{
+            "Rules": [{
+              "ApplyServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "aws:kms",
+                "KMSMasterKeyID": "arn:aws:kms:region:account:key/key-id"
+              },
+              "BucketKeyEnabled": true
+            }]
+          }'
+
+  - pattern_id: "enc-002"
+    name: "RDS Encryption at Rest"
+    category: encryption
+    description: "Enable encryption at rest for RDS databases using AWS KMS"
+    applicable_services:
+      - "RDS"
+      - "KMS"
+    compliance_frameworks:
+      - "PCI-DSS"
+      - "HIPAA"
+      - "SOC2"
+    implementation_steps:
+      - "Create KMS key for RDS encryption"
+      - "Enable encryption when creating new RDS instance"
+      - "For existing instances, create encrypted snapshot and restore"
+      - "Enable automated backups with encryption"
+      - "Configure parameter groups for encryption in transit"
+    code_examples:
+      terraform: |
+        resource "aws_kms_key" "rds" {
+          description             = "KMS key for RDS encryption"
+          deletion_window_in_days = 10
+          enable_key_rotation     = true
+        }
+        
+        resource "aws_db_instance" "example" {
+          identifier           = "mydb"
+          engine              = "postgres"
+          engine_version      = "14.7"
+          instance_class      = "db.t3.micro"
+          allocated_storage   = 20
+          
+          # Encryption at rest
+          storage_encrypted   = true
+          kms_key_id         = aws_kms_key.rds.arn
+          
+          # Encryption in transit
+          ca_cert_identifier = "rds-ca-rsa2048-g1"
+        }
+      cli: |
+        # Create encrypted RDS instance
+        aws rds create-db-instance \
+          --db-instance-identifier mydb \
+          --db-instance-class db.t3.micro \
+          --engine postgres \
+          --allocated-storage 20 \
+          --storage-encrypted \
+          --kms-key-id arn:aws:kms:region:account:key/key-id

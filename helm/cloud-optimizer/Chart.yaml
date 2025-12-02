@@ -1,0 +1,17 @@
+apiVersion: v2
+name: cloud-optimizer
+description: A Helm chart for Cloud Optimizer - AWS security scanning SaaS platform
+type: application
+version: 0.1.0
+appVersion: "2.0.0"
+keywords:
+  - cloud-optimizer
+  - security
+  - aws
+  - compliance
+home: https://github.com/your-org/cloud-optimizer
+sources:
+  - https://github.com/your-org/cloud-optimizer
+maintainers:
+  - name: Cloud Optimizer Team
+    email: team@cloud-optimizer.io

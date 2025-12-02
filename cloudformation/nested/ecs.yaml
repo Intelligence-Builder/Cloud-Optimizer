@@ -1,0 +1,251 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ECS Fargate service for Cloud Optimizer'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name to prefix resources
+    Type: String
+    Default: cloud-optimizer
+
+  PrivateSubnet1:
+    Description: Private Subnet 1 ID
+    Type: String
+
+  PrivateSubnet2:
+    Description: Private Subnet 2 ID
+    Type: String
+
+  ECSSecurityGroup:
+    Description: Security Group for ECS tasks
+    Type: String
+
+  TargetGroupArn:
+    Description: ARN of the target group
+    Type: String
+
+  ContainerImage:
+    Description: Docker image to deploy
+    Type: String
+    Default: public.ecr.aws/docker/library/nginx:latest
+
+  ContainerCpu:
+    Description: CPU units for the container (256 = 0.25 vCPU)
+    Type: Number
+    Default: 256
+    AllowedValues:
+      - 256
+      - 512
+      - 1024
+      - 2048
+      - 4096
+
+  ContainerMemory:
+    Description: Memory for the container in MB
+    Type: Number
+    Default: 512
+    AllowedValues:
+      - 512
+      - 1024
+      - 2048
+      - 4096
+      - 8192
+      - 16384
+
+  DesiredCount:
+    Description: Number of tasks to run
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 10
+
+  DBEndpoint:
+    Description: RDS endpoint address
+    Type: String
+
+  DBPort:
+    Description: RDS port
+    Type: String
+    Default: '5432'
+
+  DBName:
+    Description: Database name
+    Type: String
+
+  DBUsername:
+    Description: Database username
+    Type: String
+
+  DBPassword:
+    Description: Database password
+    Type: String
+    NoEcho: true
+
+  JWTSecretKey:
+    Description: JWT secret key for authentication
+    Type: String
+    NoEcho: true
+
+Resources:
+  # CloudWatch Log Group
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${EnvironmentName}
+      RetentionInDays: 7
+
+  # ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${EnvironmentName}-cluster
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+          Base: 1
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-cluster
+
+  # ECS Task Execution Role
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${EnvironmentName}-task-execution-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-task-execution-role
+
+  # ECS Task Role (for application permissions)
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${EnvironmentName}-task-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudOptimizerAppPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                  - iam:Get*
+                  - iam:List*
+                  - cloudwatch:Get*
+                  - cloudwatch:List*
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-task-role
+
+  # ECS Task Definition
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${EnvironmentName}-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: !Ref ContainerCpu
+      Memory: !Ref ContainerMemory
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: !Sub ${EnvironmentName}-container
+          Image: !Ref ContainerImage
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          Environment:
+            - Name: DATABASE_HOST
+              Value: !Ref DBEndpoint
+            - Name: DATABASE_PORT
+              Value: !Ref DBPort
+            - Name: DATABASE_NAME
+              Value: !Ref DBName
+            - Name: DATABASE_USER
+              Value: !Ref DBUsername
+            - Name: DATABASE_PASSWORD
+              Value: !Ref DBPassword
+            - Name: JWT_SECRET_KEY
+              Value: !Ref JWTSecretKey
+            - Name: API_HOST
+              Value: 0.0.0.0
+            - Name: API_PORT
+              Value: '8000'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-task
+
+  # ECS Service
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub ${EnvironmentName}-service
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+      LoadBalancers:
+        - ContainerName: !Sub ${EnvironmentName}-container
+          ContainerPort: 8000
+          TargetGroupArn: !Ref TargetGroupArn
+      HealthCheckGracePeriodSeconds: 60
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-service
+
+Outputs:
+  ECSClusterName:
+    Description: Name of the ECS cluster
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub ${EnvironmentName}-cluster-name
+
+  ECSServiceName:
+    Description: Name of the ECS service
+    Value: !GetAtt ECSService.Name
+    Export:
+      Name: !Sub ${EnvironmentName}-service-name
+
+  TaskDefinitionArn:
+    Description: ARN of the task definition
+    Value: !Ref TaskDefinition
+    Export:
+      Name: !Sub ${EnvironmentName}-task-definition-arn

@@ -1,6 +1,6 @@
 service: KMS
 description: AWS Key Management Service - Managed encryption key service
-best_practices:
+practices:
   - category: encryption
     title: Enable Automatic Key Rotation
     description: |

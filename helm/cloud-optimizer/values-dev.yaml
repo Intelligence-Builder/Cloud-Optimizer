@@ -1,0 +1,61 @@
+# Development environment overrides
+# Use with: helm install cloud-optimizer . -f values-dev.yaml
+
+replicaCount: 1
+
+image:
+  repository: cloud-optimizer
+  tag: dev
+  pullPolicy: Always
+
+# Disable autoscaling in development
+autoscaling:
+  enabled: false
+
+# Lower resource requirements for development
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+ingress:
+  enabled: true
+  className: "alb"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+  hosts:
+    - host: cloud-optimizer-dev.internal.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+database:
+  host: "postgres-dev"
+  port: 5432
+  name: "cloud_optimizer_dev"
+  user: "cloud_optimizer"
+
+config:
+  # Enable debug mode in development
+  logLevel: "DEBUG"
+  debug: "true"
+
+  # Development-specific Intelligence Builder URL
+  ibPlatformUrl: "https://ib-platform-dev.example.com"
+  ibTenantId: "dev-tenant"
+
+  # AWS development region
+  awsDefaultRegion: "us-east-1"
+
+  # All feature flags enabled for development testing
+  enableSecurityDomain: "true"
+  enableCostDomain: "true"
+  enablePerformanceDomain: "true"
+  enableReliabilityDomain: "true"
+  enableOperationsDomain: "true"

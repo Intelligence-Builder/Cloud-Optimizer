@@ -1,290 +1,37 @@
+# CIS AWS Foundations Benchmark Controls
 framework: CIS
-version: "8.0"
-description: Center for Internet Security Controls - Critical Security Controls
+version: 1.5.0
+description: CIS Amazon Web Services Foundations Benchmark
+
 controls:
-  - control_id: CIS.1
-    name: Inventory and Control of Enterprise Assets
-    description: |
-      Actively manage (inventory, track, and correct) all enterprise assets
-      connected to the infrastructure. Only authorized assets should be given
-      access and unauthorized or unmanaged assets should be found and prevented
-      from gaining access.
+  - control_id: "1.1"
+    name: "Maintain current contact details"
+    description: "Ensure contact email and telephone details for AWS accounts are current and map to more than one individual in your organization."
     requirements:
-      - Maintain accurate inventory of all authorized assets
-      - Identify and remove unauthorized assets
-      - Use asset management tools for discovery and tracking
-      - Update asset inventory within specified timeframes
+      - "Maintain current contact details"
+      - "Map contacts to multiple individuals"
+      - "Regularly review and update contact information"
     aws_services:
-      - Config
-      - Systems Manager
-      - Resource Groups
-      - Tag Editor
-      - Compute Optimizer
-      - Cost Explorer
+      - "IAM"
+      - "Organizations"
     implementation_guidance: |
-      1. Enable AWS Config in all regions and accounts
-      2. Use Config aggregators for multi-account visibility
-      3. Implement Systems Manager Inventory for detailed asset data
-      4. Create Resource Groups for logical asset organization
-      5. Use Tag Editor to enforce consistent tagging strategy
-      6. Implement mandatory tags (Owner, Environment, CostCenter)
-      7. Create Config rules to detect untagged resources
-      8. Use Compute Optimizer for rightsizing recommendations
-      9. Enable Cost Explorer for resource utilization tracking
-      10. Create automated asset discovery using Lambda
-      11. Implement quarterly asset inventory reviews
-      12. Use CloudFormation drift detection for unauthorized changes
+      1. Navigate to AWS Console > My Account
+      2. Review and update contact details
+      3. Ensure multiple contacts are listed
+      4. Set up alerts for contact changes
 
-  - control_id: CIS.2
-    name: Inventory and Control of Software Assets
-    description: |
-      Actively manage (inventory, track, and correct) all software on the network
-      so that only authorized software is installed and can execute. Unauthorized
-      and unmanaged software should be prevented from installation or execution.
+  - control_id: "2.1.1"
+    name: "Ensure S3 bucket encryption is enabled"
+    description: "Amazon S3 default encryption provides a way to set the default encryption behavior for an S3 bucket."
     requirements:
-      - Maintain inventory of authorized software
-      - Ensure only approved software is installed
-      - Use application allowlisting where feasible
-      - Remove or quarantine unauthorized software
+      - "Enable default encryption on S3 buckets"
+      - "Use AES-256 or KMS encryption"
+      - "Verify encryption settings"
     aws_services:
-      - Systems Manager
-      - Inspector
-      - ECR
-      - CodeArtifact
-      - Lambda
-      - Config
+      - "S3"
+      - "KMS"
     implementation_guidance: |
-      1. Use Systems Manager Inventory to track installed software
-      2. Implement Systems Manager State Manager for approved software
-      3. Enable Inspector for software vulnerability scanning
-      4. Use ECR image scanning for container software validation
-      5. Implement CodeArtifact for approved package repositories
-      6. Create Lambda functions for unauthorized software detection
-      7. Use Config rules to enforce approved AMI usage
-      8. Implement EC2 Image Builder for standardized images
-      9. Enable GuardDuty for malware detection
-      10. Create software allowlist in SSM Parameter Store
-      11. Implement automated remediation for unapproved software
-      12. Conduct monthly software inventory audits
-
-  - control_id: CIS.3
-    name: Data Protection
-    description: |
-      Develop processes and technical controls to identify, classify, securely
-      handle, retain, and dispose of data. Encryption and data loss prevention
-      technologies should be employed to protect sensitive data.
-    requirements:
-      - Classify data based on sensitivity levels
-      - Encrypt sensitive data at rest and in transit
-      - Implement data loss prevention controls
-      - Securely dispose of data per retention policies
-    aws_services:
-      - KMS
-      - Macie
-      - S3
-      - RDS
-      - DynamoDB
-      - Certificate Manager
-    implementation_guidance: |
-      1. Use Amazon Macie for automated data classification
-      2. Implement KMS for encryption key management
-      3. Enable S3 default encryption for all buckets
-      4. Configure RDS and DynamoDB encryption at rest
-      5. Use Certificate Manager for TLS certificates
-      6. Enable S3 versioning and object lock for data protection
-      7. Implement S3 lifecycle policies for data retention
-      8. Use CloudTrail for data access auditing
-      9. Enable S3 Block Public Access organization-wide
-      10. Implement VPC endpoints to prevent data exfiltration
-      11. Use Macie findings for DLP policy enforcement
-      12. Conduct quarterly data classification reviews
-
-  - control_id: CIS.4
-    name: Secure Configuration of Enterprise Assets and Software
-    description: |
-      Establish and maintain secure configurations for enterprise assets and
-      software. Configuration standards should be based on industry-accepted
-      hardening guides and continuously monitored for compliance.
-    requirements:
-      - Develop secure configuration standards
-      - Implement configuration management tools
-      - Deploy systems from approved secure baseline images
-      - Monitor and remediate configuration drift
-    aws_services:
-      - Systems Manager
-      - Config
-      - EC2 Image Builder
-      - CloudFormation
-      - Service Catalog
-    implementation_guidance: |
-      1. Create hardened AMIs using EC2 Image Builder
-      2. Use Systems Manager State Manager for configuration enforcement
-      3. Implement AWS Config conformance packs (CIS benchmarks)
-      4. Deploy infrastructure using CloudFormation templates
-      5. Use Service Catalog for approved configurations
-      6. Enable IMDSv2 for EC2 metadata security
-      7. Implement CIS benchmark compliance checking
-      8. Use Config rules for continuous compliance monitoring
-      9. Enable automated remediation for configuration drift
-      10. Create secure baseline templates in Systems Manager
-      11. Disable unnecessary services in user data scripts
-      12. Conduct quarterly configuration audits
-
-  - control_id: CIS.5
-    name: Account Management
-    description: |
-      Use processes and tools to assign and manage authorization to credentials
-      for user accounts and assets. This includes multi-factor authentication,
-      password policies, and account lifecycle management.
-    requirements:
-      - Implement centralized account management
-      - Enforce strong authentication (MFA)
-      - Use unique credentials for each individual
-      - Disable or remove inactive accounts promptly
-    aws_services:
-      - IAM
-      - AWS SSO
-      - Directory Service
-      - Cognito
-      - Secrets Manager
-      - Organizations
-    implementation_guidance: |
-      1. Implement AWS SSO for centralized identity management
-      2. Enforce MFA for all user accounts (IAM and SSO)
-      3. Create IAM password policy with complexity requirements
-      4. Use AWS Organizations for multi-account governance
-      5. Implement service control policies (SCPs) for guardrails
-      6. Enable IAM Access Analyzer for credential exposure detection
-      7. Use Secrets Manager for automated credential rotation
-      8. Create IAM roles instead of long-term access keys
-      9. Implement 90-day access key rotation policy
-      10. Use Config rules to detect inactive users (90 days)
-      11. Conduct quarterly access reviews and certification
-      12. Disable root account access keys permanently
-
-  - control_id: CIS.6
-    name: Access Control Management
-    description: |
-      Use processes and tools to create, assign, manage, and revoke access
-      credentials and privileges for accounts. Follow least privilege principle
-      and separation of duties.
-    requirements:
-      - Implement role-based access control (RBAC)
-      - Enforce principle of least privilege
-      - Separate duties for sensitive functions
-      - Review and certify access permissions regularly
-    aws_services:
-      - IAM
-      - Organizations
-      - Resource Access Manager
-      - Access Analyzer
-      - CloudTrail
-    implementation_guidance: |
-      1. Create IAM roles based on job functions
-      2. Use IAM policies with least privilege permissions
-      3. Implement IAM permission boundaries for delegation
-      4. Use Organizations SCPs for preventive controls
-      5. Enable IAM Access Analyzer for policy validation
-      6. Implement resource-based policies for fine-grained control
-      7. Use IAM policy simulator for testing permissions
-      8. Create session policies for temporary access restrictions
-      9. Enable CloudTrail for access activity monitoring
-      10. Use IAM credential reports for access reviews
-      11. Implement automated access certification workflows
-      12. Conduct quarterly privilege escalation path reviews
-
-  - control_id: CIS.8
-    name: Audit Log Management
-    description: |
-      Collect, alert, review, and retain audit logs of events that could help
-      detect, understand, or recover from an attack. Ensure logs are protected
-      from unauthorized access and tampering.
-    requirements:
-      - Enable comprehensive logging across all systems
-      - Centralize log collection and storage
-      - Protect logs from unauthorized modification or deletion
-      - Retain logs for sufficient duration (minimum 90 days)
-    aws_services:
-      - CloudTrail
-      - CloudWatch Logs
-      - S3
-      - Athena
-      - VPC Flow Logs
-      - GuardDuty
-    implementation_guidance: |
-      1. Enable CloudTrail in all regions and accounts
-      2. Configure CloudTrail for management and data events
-      3. Store CloudTrail logs in S3 with versioning enabled
-      4. Enable CloudTrail log file validation
-      5. Use CloudWatch Logs for centralized log aggregation
-      6. Enable VPC Flow Logs for network traffic logging
-      7. Configure S3 access logging for audit trail
-      8. Use Athena to query and analyze CloudTrail logs
-      9. Enable GuardDuty for intelligent threat detection
-      10. Implement S3 Object Lock for log immutability
-      11. Retain logs for minimum one year in S3
-      12. Create CloudWatch metric filters for security events
-
-  - control_id: CIS.13
-    name: Network Monitoring and Defense
-    description: |
-      Operate processes and tooling to establish and maintain comprehensive
-      network monitoring and defense against security threats across the
-      enterprise's network infrastructure.
-    requirements:
-      - Monitor network traffic for malicious activity
-      - Deploy network intrusion detection/prevention systems
-      - Filter network traffic based on security policies
-      - Analyze network traffic patterns for anomalies
-    aws_services:
-      - VPC Flow Logs
-      - Network Firewall
-      - GuardDuty
-      - WAF
-      - Shield
-      - Transit Gateway
-    implementation_guidance: |
-      1. Enable VPC Flow Logs for all VPCs and subnets
-      2. Deploy AWS Network Firewall for stateful inspection
-      3. Enable GuardDuty for network threat detection
-      4. Implement AWS WAF for web application protection
-      5. Enable AWS Shield Standard (free) or Advanced
-      6. Use Transit Gateway Network Manager for visibility
-      7. Configure Security Groups as stateful firewalls
-      8. Implement Network ACLs for subnet-level filtering
-      9. Enable DNS query logging in Route 53 Resolver
-      10. Use VPC Traffic Mirroring for deep packet inspection
-      11. Create CloudWatch alarms for network anomalies
-      12. Conduct quarterly network security assessments
-
-  - control_id: CIS.16
-    name: Application Software Security
-    description: |
-      Manage security lifecycle of in-house developed, hosted, or acquired
-      software to prevent, detect, and remediate security weaknesses before
-      deployment or execution.
-    requirements:
-      - Implement secure software development lifecycle (SDLC)
-      - Perform security testing before deployment
-      - Scan code for vulnerabilities and security flaws
-      - Maintain inventory of application dependencies
-    aws_services:
-      - CodePipeline
-      - CodeBuild
-      - CodeGuru
-      - Inspector
-      - ECR
-      - Lambda
-    implementation_guidance: |
-      1. Implement CI/CD pipelines using CodePipeline
-      2. Use CodeBuild for automated security testing
-      3. Enable CodeGuru Reviewer for code quality analysis
-      4. Implement SAST scanning in build pipelines
-      5. Use ECR image scanning for container vulnerabilities
-      6. Enable Inspector for application vulnerability assessment
-      7. Implement dependency scanning (OWASP, Snyk)
-      8. Use Lambda layers for shared security libraries
-      9. Create security gates in deployment pipelines
-      10. Implement automated rollback for failed security checks
-      11. Store security findings in Security Hub
-      12. Conduct quarterly application security assessments
+      1. Navigate to S3 bucket properties
+      2. Enable default encryption
+      3. Choose encryption key (AES-256 or KMS)
+      4. Verify encryption is applied to new objects

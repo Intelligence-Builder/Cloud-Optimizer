@@ -104,7 +104,16 @@ def create_app() -> FastAPI:
     )
 
     # Register routers
-    from cloud_optimizer.api.routers import auth, health, kb, security, trial
+    from cloud_optimizer.api.routers import (
+        auth,
+        aws_accounts,
+        chat,
+        findings,
+        health,
+        kb,
+        security,
+        trial,
+    )
 
     # Health endpoints (no prefix for Kubernetes compatibility)
     app.include_router(
@@ -134,6 +143,24 @@ def create_app() -> FastAPI:
         kb.router,
         prefix="/api/v1/kb",
         tags=["Knowledge Base"],
+    )
+
+    app.include_router(
+        aws_accounts.router,
+        prefix="/api/v1/aws-accounts",
+        tags=["AWS Accounts"],
+    )
+
+    app.include_router(
+        findings.router,
+        prefix="/api/v1/findings",
+        tags=["Findings"],
+    )
+
+    app.include_router(
+        chat.router,
+        prefix="/api/v1/chat",
+        tags=["Chat"],
     )
 
     return app

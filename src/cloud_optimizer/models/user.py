@@ -15,6 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from cloud_optimizer.database import Base
 
 if TYPE_CHECKING:
+    from cloud_optimizer.models.aws_account import AWSAccount
     from cloud_optimizer.models.session import Session
     from cloud_optimizer.models.trial import Trial
 
@@ -79,6 +80,11 @@ class User(Base):
         "Trial",
         back_populates="user",
         uselist=False,
+        cascade="all, delete-orphan",
+    )
+    aws_accounts: Mapped[list["AWSAccount"]] = relationship(
+        "AWSAccount",
+        back_populates="user",
         cascade="all, delete-orphan",
     )
 

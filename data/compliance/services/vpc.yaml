@@ -1,6 +1,6 @@
 service: VPC
 description: Amazon Virtual Private Cloud - Isolated cloud network
-best_practices:
+practices:
   - category: network_security
     title: Use Private Subnets for Internal Resources
     description: |

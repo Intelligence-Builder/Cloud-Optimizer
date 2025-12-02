@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'RDS PostgreSQL database for Cloud Optimizer'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name to prefix resources
+    Type: String
+    Default: cloud-optimizer
+
+  PrivateSubnet1:
+    Description: Private Subnet 1 ID
+    Type: String
+
+  PrivateSubnet2:
+    Description: Private Subnet 2 ID
+    Type: String
+
+  RDSSecurityGroup:
+    Description: Security Group for RDS
+    Type: String
+
+  DBInstanceClass:
+    Description: Database instance type
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+      - db.t4g.micro
+      - db.t4g.small
+      - db.t4g.medium
+
+  DBName:
+    Description: Database name
+    Type: String
+    Default: cloudguardian
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+
+  DBUsername:
+    Description: Database master username
+    Type: String
+    Default: cloudguardian
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+
+  DBPassword:
+    Description: Database master password
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: '[a-zA-Z0-9]*'
+
+  AllocatedStorage:
+    Description: Database storage size in GB
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 100
+
+  MultiAZ:
+    Description: Enable Multi-AZ deployment
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+
+Resources:
+  # DB Subnet Group
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub ${EnvironmentName}-db-subnet-group
+      DBSubnetGroupDescription: Subnet group for Cloud Optimizer RDS
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-db-subnet-group
+
+  # RDS PostgreSQL Instance
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub ${EnvironmentName}-db
+      DBName: !Ref DBName
+      Engine: postgres
+      EngineVersion: '15.5'
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref AllocatedStorage
+      StorageType: gp2
+      StorageEncrypted: true
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      MultiAZ: !Ref MultiAZ
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      EnableCloudwatchLogsExports:
+        - postgresql
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-db
+
+Outputs:
+  DBInstanceEndpoint:
+    Description: RDS instance endpoint address
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${EnvironmentName}-db-endpoint
+
+  DBInstancePort:
+    Description: RDS instance port
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: !Sub ${EnvironmentName}-db-port
+
+  DBName:
+    Description: Database name
+    Value: !Ref DBName
+    Export:
+      Name: !Sub ${EnvironmentName}-db-name
+
+  DBUsername:
+    Description: Database username
+    Value: !Ref DBUsername
+    Export:
+      Name: !Sub ${EnvironmentName}-db-username

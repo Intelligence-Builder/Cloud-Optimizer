@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-
 # Response schemas
 
 
@@ -120,7 +119,9 @@ class KBStatisticsResponse(BaseModel):
     services: int = Field(..., description="Number of services")
     total_practices: int = Field(..., description="Total number of practices")
     patterns: int = Field(..., description="Number of security patterns")
-    remediation_templates: int = Field(..., description="Number of remediation templates")
+    remediation_templates: int = Field(
+        ..., description="Number of remediation templates"
+    )
 
 
 class FrameworkControlsResponse(BaseModel):

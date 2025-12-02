@@ -1,6 +1,6 @@
 service: IAM
 description: AWS Identity and Access Management - Access control and authentication
-best_practices:
+practices:
   - category: access_control
     title: Enable MFA for Root Account and Privileged Users
     description: |

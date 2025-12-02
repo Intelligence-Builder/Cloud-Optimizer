@@ -1,6 +1,6 @@
 service: CloudWatch
 description: Amazon CloudWatch - Monitoring and observability service
-best_practices:
+practices:
   - category: logging
     title: Create Alarm for Root Account Login
     description: |

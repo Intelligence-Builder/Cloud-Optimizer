@@ -16,11 +16,7 @@ from cloud_optimizer.api.schemas.trial import (
 )
 from cloud_optimizer.database import AsyncSessionDep
 from cloud_optimizer.middleware.auth import CurrentUser
-from cloud_optimizer.services.trial import (
-    TrialError,
-    TrialExtensionError,
-    TrialService,
-)
+from cloud_optimizer.services.trial import TrialError, TrialExtensionError, TrialService
 
 router = APIRouter()
 
