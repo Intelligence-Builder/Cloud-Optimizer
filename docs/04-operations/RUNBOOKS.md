@@ -34,9 +34,9 @@
 **Steps:**
 1. Check active queries:
    ```sql
-   SELECT pid, now() - query_start as duration, query 
-   FROM pg_stat_activity 
-   WHERE state != 'idle' 
+   SELECT pid, now() - query_start as duration, query
+   FROM pg_stat_activity
+   WHERE state != 'idle'
    ORDER BY duration DESC;
    ```
 2. Kill stuck queries if necessary:
