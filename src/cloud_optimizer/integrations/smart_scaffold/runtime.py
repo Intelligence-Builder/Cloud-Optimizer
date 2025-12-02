@@ -82,10 +82,8 @@ class LocalIBService:
         relationship_id = f"rel-{len(self._relationships) + 1:06d}"
         record = {
             "relationship_id": relationship_id,
-            "source_id": rel_data.get("source_id")
-            or rel_data.get("from_entity_id"),
-            "target_id": rel_data.get("target_id")
-            or rel_data.get("to_entity_id"),
+            "source_id": rel_data.get("source_id") or rel_data.get("from_entity_id"),
+            "target_id": rel_data.get("target_id") or rel_data.get("to_entity_id"),
             "relationship_type": rel_data.get("relationship_type", "").lower(),
             "metadata": rel_data.get("metadata", {}),
         }
@@ -100,13 +98,9 @@ class LocalIBService:
     ) -> Dict[str, Any]:
         entities = list(self._entities.values())
         if entity_type:
-            entities = [
-                e for e in entities if e.get("entity_type") == entity_type
-            ]
+            entities = [e for e in entities if e.get("entity_type") == entity_type]
         if filters:
-            entities = [
-                e for e in entities if _matches_filters(e, filters)
-            ]
+            entities = [e for e in entities if _matches_filters(e, filters)]
         return {"total": len(entities), "entities": entities[:limit]}
 
     async def query_relationships(
@@ -115,13 +109,13 @@ class LocalIBService:
         relationships = list(self._relationships)
         if relationship_type:
             relationships = [
-                r for r in relationships if r.get("relationship_type") == relationship_type
+                r
+                for r in relationships
+                if r.get("relationship_type") == relationship_type
             ]
         filters = {k: v for k, v in filters.items() if k not in {"limit"}}
         if filters:
-            relationships = [
-                r for r in relationships if _matches_filters(r, filters)
-            ]
+            relationships = [r for r in relationships if _matches_filters(r, filters)]
         return {"total": len(relationships), "relationships": relationships}
 
     async def search_entities(
@@ -134,14 +128,10 @@ class LocalIBService:
         """Basic text search implementation for hybrid workflows."""
         entities = list(self._entities.values())
         if entity_types:
-            entities = [
-                e for e in entities if e.get("entity_type") in entity_types
-            ]
+            entities = [e for e in entities if e.get("entity_type") in entity_types]
         if query_text:
             lowered = query_text.lower()
-            entities = [
-                e for e in entities if lowered in (e.get("name", "").lower())
-            ]
+            entities = [e for e in entities if lowered in (e.get("name", "").lower())]
         return {"total": len(entities), "entities": entities[:limit]}
 
     async def get_entity_by_id(self, entity_id: str) -> Optional[Dict[str, Any]]:
@@ -297,13 +287,17 @@ async def ib_service_manager(
 
 async def _create_sdk_service(options: Dict[str, Any]) -> "IBSDKService":
     """Create the SDK-backed service adapter, with HTTP fallback."""
-    base_url = options.get("base_url") or os.getenv("IB_PLATFORM_URL", "http://localhost:8000")
+    base_url = options.get("base_url") or os.getenv(
+        "IB_PLATFORM_URL", "http://localhost:8000"
+    )
     api_key = options.get("api_key") or os.getenv("IB_API_KEY")
     tenant_id = options.get("tenant_id")
     timeout = int(options.get("timeout", 30))
 
     if not api_key:
-        raise RuntimeError("IB API key required for sdk backend. Provide --ib-option api_key=... or set IB_API_KEY.")
+        raise RuntimeError(
+            "IB API key required for sdk backend. Provide --ib-option api_key=... or set IB_API_KEY."
+        )
 
     service = IBSDKService(
         base_url=base_url,
@@ -399,9 +393,7 @@ class IBSDKService:
         )
         relationships = result.get("relationships", [])
         return {
-            "relationships": [
-                _serialize_relationship(rel) for rel in relationships
-            ],
+            "relationships": [_serialize_relationship(rel) for rel in relationships],
             "total": result.get("total", len(relationships)),
         }
 
@@ -432,9 +424,7 @@ def _serialize_entity(entity: Any) -> Dict[str, Any]:
     if isinstance(entity, dict):
         return entity
     return {
-        "entity_id": str(
-            getattr(entity, "entity_id", getattr(entity, "id", ""))
-        ),
+        "entity_id": str(getattr(entity, "entity_id", getattr(entity, "id", ""))),
         "entity_type": getattr(entity, "entity_type", ""),
         "name": getattr(entity, "name", ""),
         "properties": getattr(entity, "properties", {}),
@@ -499,7 +489,9 @@ class IBHTTPService:
 
     async def create_entity(self, entity_data: Dict[str, Any]) -> Dict[str, Any]:
         payload = self._build_entity_payload(entity_data)
-        response = await self._client.post("/v1/knowledge/entities/", json=payload, headers=self._headers())
+        response = await self._client.post(
+            "/v1/knowledge/entities/", json=payload, headers=self._headers()
+        )
         response.raise_for_status()
         data = response.json()
         return {
@@ -510,7 +502,9 @@ class IBHTTPService:
 
     async def create_relationship(self, rel_data: Dict[str, Any]) -> Dict[str, Any]:
         payload = self._build_relationship_payload(rel_data)
-        response = await self._client.post("/v1/knowledge/relationships/", json=payload, headers=self._headers())
+        response = await self._client.post(
+            "/v1/knowledge/relationships/", json=payload, headers=self._headers()
+        )
         response.raise_for_status()
         data = response.json()
         return {
@@ -528,7 +522,9 @@ class IBHTTPService:
         params = {"limit": limit, "offset": 0}
         if entity_type:
             params["entity_type"] = entity_type
-        response = await self._client.get("/v1/knowledge/entities/", headers=self._headers(), params=params)
+        response = await self._client.get(
+            "/v1/knowledge/entities/", headers=self._headers(), params=params
+        )
         response.raise_for_status()
         data = response.json()
         return {
@@ -544,7 +540,9 @@ class IBHTTPService:
         **_: Any,
     ) -> Dict[str, Any]:
         entity_type = entity_types[0] if entity_types else None
-        return await self.query_entities(entity_type=entity_type, limit=limit, query_text=query_text)
+        return await self.query_entities(
+            entity_type=entity_type, limit=limit, query_text=query_text
+        )
 
     async def query_relationships(
         self,
@@ -554,7 +552,11 @@ class IBHTTPService:
     ) -> Dict[str, Any]:
         relationships = await self._fetch_all_relationships()
         if relationship_type:
-            filtered = [rel for rel in relationships if rel.get("relationship_type") == relationship_type]
+            filtered = [
+                rel
+                for rel in relationships
+                if rel.get("relationship_type") == relationship_type
+            ]
         else:
             filtered = relationships
         return {
@@ -585,8 +587,14 @@ class IBHTTPService:
         properties = entity_data.get("properties") or {}
         for key, value in properties.items():
             metadata.setdefault(key, value)
-        name = entity_data.get("name") or properties.get("name") or entity_data.get("id", "Unnamed Entity")
-        tags = properties.get("tags") if isinstance(properties.get("tags"), list) else []
+        name = (
+            entity_data.get("name")
+            or properties.get("name")
+            or entity_data.get("id", "Unnamed Entity")
+        )
+        tags = (
+            properties.get("tags") if isinstance(properties.get("tags"), list) else []
+        )
         return {
             "entity_type": entity_data.get("entity_type", "entity"),
             "name": name,
@@ -603,7 +611,9 @@ class IBHTTPService:
         if not source_id or not target_id:
             raise ValueError("Relationship requires source_id and target_id")
         payload = {
-            "relationship_type": rel_data.get("relationship_type") or rel_data.get("type") or "relates_to",
+            "relationship_type": rel_data.get("relationship_type")
+            or rel_data.get("type")
+            or "relates_to",
             "from_entity_id": source_id,
             "to_entity_id": target_id,
             "metadata": metadata,

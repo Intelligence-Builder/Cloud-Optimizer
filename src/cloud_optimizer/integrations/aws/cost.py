@@ -48,9 +48,7 @@ class CostExplorerScanner(BaseAWSScanner):
         Returns:
             List of cost optimization findings
         """
-        logger.info(
-            f"Starting cost optimization scan for account {account_id}"
-        )
+        logger.info(f"Starting cost optimization scan for account {account_id}")
         findings: List[Dict[str, Any]] = []
 
         try:
@@ -61,9 +59,7 @@ class CostExplorerScanner(BaseAWSScanner):
             findings.extend(self._find_cost_anomalies(ce_client, account_id))
 
             # 2. Get RI recommendations
-            findings.extend(
-                self._get_ri_recommendations(ce_client, account_id)
-            )
+            findings.extend(self._get_ri_recommendations(ce_client, account_id))
 
             # 3. Get rightsizing recommendations
             findings.extend(
@@ -159,9 +155,11 @@ class CostExplorerScanner(BaseAWSScanner):
 
             for rec in response.get("Recommendations", []):
                 for detail in rec.get("RecommendationDetails", []):
-                    instance_type = detail.get("InstanceDetails", {}).get(
-                        "EC2InstanceDetails", {}
-                    ).get("InstanceType", "unknown")
+                    instance_type = (
+                        detail.get("InstanceDetails", {})
+                        .get("EC2InstanceDetails", {})
+                        .get("InstanceType", "unknown")
+                    )
 
                     estimated_savings = float(
                         detail.get("EstimatedMonthlySavingsAmount", 0)
@@ -215,13 +213,13 @@ class CostExplorerScanner(BaseAWSScanner):
 
                 if target_options:
                     target = target_options[0]
-                    target_type = target.get("ResourceDetails", {}).get(
-                        "EC2ResourceDetails", {}
-                    ).get("InstanceType", "unknown")
-
-                    estimated_savings = float(
-                        target.get("EstimatedMonthlySavings", 0)
+                    target_type = (
+                        target.get("ResourceDetails", {})
+                        .get("EC2ResourceDetails", {})
+                        .get("InstanceType", "unknown")
                     )
+
+                    estimated_savings = float(target.get("EstimatedMonthlySavings", 0))
 
                     if estimated_savings > 0:
                         findings.append(
@@ -265,7 +263,9 @@ class CostExplorerScanner(BaseAWSScanner):
 
                 # Check if volume has been idle for threshold days
                 if create_time:
-                    days_idle = (datetime.utcnow() - create_time.replace(tzinfo=None)).days
+                    days_idle = (
+                        datetime.utcnow() - create_time.replace(tzinfo=None)
+                    ).days
                     if days_idle >= self.IDLE_DAYS_THRESHOLD:
                         findings.append(
                             self._create_idle_resource_finding(
@@ -318,7 +318,9 @@ class CostExplorerScanner(BaseAWSScanner):
         root_cause_str = ""
         if root_causes:
             cause = root_causes[0]
-            root_cause_str = f"{cause.get('Service', 'Unknown')} - {cause.get('Region', 'Unknown')}"
+            root_cause_str = (
+                f"{cause.get('Service', 'Unknown')} - {cause.get('Region', 'Unknown')}"
+            )
 
         return {
             "finding_type": "cost_anomaly",

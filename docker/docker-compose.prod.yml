@@ -1,0 +1,132 @@
+version: '3.8'
+
+# Production Docker Compose configuration for Cloud Optimizer
+# Includes PostgreSQL, Redis, and the Cloud Optimizer application
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cloud-optimizer-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-cloud_optimizer}
+      POSTGRES_USER: ${DATABASE_USER:-cloud_optimizer}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-securepass123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-cloud_optimizer}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cloud-optimizer-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: cloud-optimizer-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secure_password}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cloud-optimizer-network
+
+  # Cloud Optimizer Application
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cloud-optimizer-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Application
+      APP_NAME: ${APP_NAME:-Cloud Optimizer}
+      APP_VERSION: ${APP_VERSION:-2.0.0}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+      # Database
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-cloud_optimizer}
+      DATABASE_USER: ${DATABASE_USER:-cloud_optimizer}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-securepass123}
+
+      # JWT
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      JWT_REFRESH_TOKEN_EXPIRE_DAYS: ${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+
+      # Intelligence-Builder Platform
+      IB_PLATFORM_URL: ${IB_PLATFORM_URL:-http://localhost:8000}
+      IB_API_KEY: ${IB_API_KEY}
+      IB_TENANT_ID: ${IB_TENANT_ID:-default}
+
+      # AWS Configuration
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+
+      # API Configuration
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      API_RELOAD: false
+
+      # Feature Flags
+      ENABLE_SECURITY_DOMAIN: ${ENABLE_SECURITY_DOMAIN:-true}
+      ENABLE_COST_DOMAIN: ${ENABLE_COST_DOMAIN:-false}
+      ENABLE_PERFORMANCE_DOMAIN: ${ENABLE_PERFORMANCE_DOMAIN:-false}
+      ENABLE_RELIABILITY_DOMAIN: ${ENABLE_RELIABILITY_DOMAIN:-false}
+      ENABLE_OPEX_DOMAIN: ${ENABLE_OPEX_DOMAIN:-false}
+
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      # Mount compliance data if it exists
+      - ${COMPLIANCE_DATA_PATH:-./data/compliance}:/app/data/compliance:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cloud-optimizer-network
+
+# Volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+    name: cloud-optimizer-postgres-data
+  redis_data:
+    driver: local
+    name: cloud-optimizer-redis-data
+
+# Network for service communication
+networks:
+  cloud-optimizer-network:
+    driver: bridge
+    name: cloud-optimizer-network

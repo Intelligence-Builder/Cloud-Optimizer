@@ -1,0 +1,442 @@
+service: IAM
+description: AWS Identity and Access Management - Access control and authentication
+best_practices:
+  - category: access_control
+    title: Enable MFA for Root Account and Privileged Users
+    description: |
+      Enable Multi-Factor Authentication (MFA) for the AWS root account and all users with
+      administrative privileges. MFA adds an extra layer of security by requiring a second
+      form of authentication beyond just a password.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable virtual MFA (Google Authenticator, Authy) or hardware MFA devices for the root
+      account and all IAM users with elevated permissions. Enforce MFA through IAM policies
+      for sensitive operations.
+    terraform_example: |
+      # Policy requiring MFA for sensitive actions
+      resource "aws_iam_policy" "require_mfa" {
+        name        = "RequireMFAPolicy"
+        description = "Deny actions without MFA"
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Sid    = "DenyAllExceptListedIfNoMFA"
+              Effect = "Deny"
+              NotAction = [
+                "iam:CreateVirtualMFADevice",
+                "iam:EnableMFADevice",
+                "iam:GetUser",
+                "iam:ListMFADevices",
+                "iam:ListVirtualMFADevices",
+                "iam:ResyncMFADevice",
+                "sts:GetSessionToken"
+              ]
+              Resource = "*"
+              Condition = {
+                BoolIfExists = {
+                  "aws:MultiFactorAuthPresent" = "false"
+                }
+              }
+            }
+          ]
+        })
+      }
+
+      # Attach to admin group
+      resource "aws_iam_group_policy_attachment" "admin_mfa" {
+        group      = aws_iam_group.admins.name
+        policy_arn = aws_iam_policy.require_mfa.arn
+      }
+    cli_example: |
+      # Enable virtual MFA for user
+      aws iam create-virtual-mfa-device \
+        --virtual-mfa-device-name user-mfa \
+        --outfile QRCode.png \
+        --bootstrap-method QRCodePNG
+
+      # Enable MFA device for user
+      aws iam enable-mfa-device \
+        --user-name john.doe \
+        --serial-number arn:aws:iam::123456789012:mfa/user-mfa \
+        --authentication-code-1 123456 \
+        --authentication-code-2 789012
+
+      # List MFA devices for user
+      aws iam list-mfa-devices --user-name john.doe
+    console_steps:
+      - Sign in to AWS Console as root or IAM user
+      - Navigate to IAM dashboard
+      - For root account - Click "Add MFA" in security recommendations
+      - For IAM users - Select user, go to "Security credentials" tab
+      - Click "Assign MFA device"
+      - Choose device type (Virtual MFA device recommended)
+      - Scan QR code with authenticator app
+      - Enter two consecutive MFA codes
+      - Click "Assign MFA"
+
+  - category: access_control
+    title: Implement Least Privilege Access
+    description: |
+      Grant users and services only the minimum permissions needed to perform their tasks.
+      Use AWS managed policies when appropriate, and create custom policies for specific
+      use cases. Regularly review and refine permissions.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Start with no permissions and add only what's needed. Use IAM Access Analyzer to
+      identify unused permissions. Implement permission boundaries for delegated administration.
+      Use AWS managed policies as a starting point but refine to actual needs.
+    terraform_example: |
+      # Custom policy with least privilege
+      resource "aws_iam_policy" "s3_specific_bucket" {
+        name        = "S3SpecificBucketAccess"
+        description = "Allow access to specific S3 bucket only"
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Effect = "Allow"
+              Action = [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:ListBucket"
+              ]
+              Resource = [
+                "arn:aws:s3:::my-specific-bucket",
+                "arn:aws:s3:::my-specific-bucket/*"
+              ]
+            }
+          ]
+        })
+      }
+
+      # Permission boundary
+      resource "aws_iam_policy" "permission_boundary" {
+        name = "DeveloperBoundary"
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Effect = "Allow"
+              Action = [
+                "ec2:*",
+                "s3:*",
+                "lambda:*",
+                "dynamodb:*"
+              ]
+              Resource = "*"
+            },
+            {
+              Effect = "Deny"
+              Action = [
+                "iam:*",
+                "organizations:*",
+                "account:*"
+              ]
+              Resource = "*"
+            }
+          ]
+        })
+      }
+
+      # User with permission boundary
+      resource "aws_iam_user" "developer" {
+        name                 = "developer"
+        permissions_boundary = aws_iam_policy.permission_boundary.arn
+      }
+    cli_example: |
+      # Create policy from JSON file
+      aws iam create-policy \
+        --policy-name S3SpecificBucketAccess \
+        --policy-document file://policy.json
+
+      # Attach policy to user
+      aws iam attach-user-policy \
+        --user-name developer \
+        --policy-arn arn:aws:iam::123456789012:policy/S3SpecificBucketAccess
+
+      # Create user with permission boundary
+      aws iam create-user \
+        --user-name developer \
+        --permissions-boundary arn:aws:iam::123456789012:policy/DeveloperBoundary
+
+      # Use IAM Access Analyzer
+      aws accessanalyzer create-analyzer \
+        --analyzer-name my-analyzer \
+        --type ACCOUNT
+    console_steps:
+      - Navigate to IAM console
+      - Click "Policies" > "Create policy"
+      - Use visual editor or JSON to define minimal permissions
+      - Add specific resources (not "*" unless necessary)
+      - Name and create policy
+      - Attach to users, groups, or roles
+      - Use IAM Access Analyzer to review permissions
+      - Regularly audit using Access Advisor to remove unused permissions
+
+  - category: access_control
+    title: Rotate Access Keys Regularly
+    description: |
+      Implement a process to rotate IAM access keys at least every 90 days. Old or unused
+      access keys should be deactivated and deleted. Prefer temporary credentials from
+      IAM roles over long-term access keys.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Set up credential reports to identify old access keys. Use IAM roles with temporary
+      credentials for applications running on AWS. For external access, implement key rotation
+      procedures and monitor key age with CloudWatch alarms.
+    terraform_example: |
+      # CloudWatch alarm for old access keys
+      resource "aws_cloudwatch_event_rule" "old_access_keys" {
+        name        = "detect-old-access-keys"
+        description = "Detect access keys older than 90 days"
+
+        event_pattern = jsonencode({
+          source      = ["aws.iam"]
+          detail-type = ["AWS API Call via CloudTrail"]
+          detail = {
+            eventName = ["CreateAccessKey"]
+          }
+        })
+      }
+
+      # Lambda to check key age
+      resource "aws_lambda_function" "check_key_age" {
+        filename      = "check_key_age.zip"
+        function_name = "check-access-key-age"
+        role          = aws_iam_role.lambda_exec.arn
+        handler       = "index.handler"
+        runtime       = "python3.11"
+
+        environment {
+          variables = {
+            MAX_KEY_AGE_DAYS = "90"
+          }
+        }
+      }
+
+      # EventBridge target
+      resource "aws_cloudwatch_event_target" "lambda" {
+        rule      = aws_cloudwatch_event_rule.old_access_keys.name
+        target_id = "CheckKeyAge"
+        arn       = aws_lambda_function.check_key_age.arn
+      }
+    cli_example: |
+      # Generate credential report
+      aws iam generate-credential-report
+
+      # Get credential report
+      aws iam get-credential-report --output text | base64 -d > credentials.csv
+
+      # List access keys for user
+      aws iam list-access-keys --user-name john.doe
+
+      # Create new access key
+      aws iam create-access-key --user-name john.doe
+
+      # Delete old access key
+      aws iam delete-access-key \
+        --user-name john.doe \
+        --access-key-id AKIAIOSFODNN7EXAMPLE
+
+      # Deactivate access key (safer than deletion)
+      aws iam update-access-key \
+        --user-name john.doe \
+        --access-key-id AKIAIOSFODNN7EXAMPLE \
+        --status Inactive
+    console_steps:
+      - Navigate to IAM console
+      - Click "Users"
+      - Select user
+      - Go to "Security credentials" tab
+      - Under "Access keys" section, view key age
+      - Click "Create access key" for new key
+      - Update application with new key
+      - Test application
+      - Click "Make inactive" for old key
+      - After verification period, click "Delete" for old key
+      - Download credential report regularly to audit all keys
+
+  - category: access_control
+    title: Use IAM Roles Instead of IAM Users
+    description: |
+      Prefer IAM roles over IAM users for programmatic access. Roles provide temporary
+      credentials and don't require long-term access key management. Use roles for
+      EC2 instances, Lambda functions, and cross-account access.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Create IAM roles for specific use cases (EC2, Lambda, cross-account). Use AWS STS
+      to assume roles and get temporary credentials. Eliminate IAM users for applications
+      running on AWS infrastructure.
+    terraform_example: |
+      # Role for EC2 instance
+      resource "aws_iam_role" "ec2_app_role" {
+        name = "ec2-app-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              Service = "ec2.amazonaws.com"
+            }
+          }]
+        })
+      }
+
+      # Role for Lambda function
+      resource "aws_iam_role" "lambda_role" {
+        name = "lambda-execution-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              Service = "lambda.amazonaws.com"
+            }
+          }]
+        })
+      }
+
+      # Cross-account access role
+      resource "aws_iam_role" "cross_account" {
+        name = "cross-account-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              AWS = "arn:aws:iam::111111111111:root"
+            }
+            Condition = {
+              StringEquals = {
+                "sts:ExternalId" = "unique-external-id"
+              }
+            }
+          }]
+        })
+      }
+    cli_example: |
+      # Assume role and get temporary credentials
+      aws sts assume-role \
+        --role-arn arn:aws:iam::123456789012:role/cross-account-role \
+        --role-session-name my-session \
+        --external-id unique-external-id
+
+      # Use temporary credentials
+      export AWS_ACCESS_KEY_ID=RoleAccessKeyID
+      export AWS_SECRET_ACCESS_KEY=RoleSecretKey
+      export AWS_SESSION_TOKEN=RoleSessionToken
+
+      # Get caller identity
+      aws sts get-caller-identity
+    console_steps:
+      - Navigate to IAM console
+      - Click "Roles" > "Create role"
+      - Select trusted entity type (AWS service, another AWS account, etc.)
+      - Select use case or enter account ID
+      - Add permissions policies
+      - Optionally set permissions boundary
+      - Add tags
+      - Name the role and create
+      - Applications assume role using AWS SDK or CLI
+
+  - category: logging
+    title: Enable CloudTrail for IAM Activity Logging
+    description: |
+      Ensure CloudTrail is enabled to log all IAM API calls. This provides an audit trail
+      of who did what, when, and from where. Essential for security investigations and
+      compliance requirements.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable CloudTrail in all regions with log file validation. Send logs to S3 bucket
+      with encryption and strict access controls. Integrate with CloudWatch Logs for
+      real-time monitoring and alerting.
+    terraform_example: |
+      # S3 bucket for CloudTrail logs
+      resource "aws_s3_bucket" "cloudtrail" {
+        bucket = "my-cloudtrail-logs"
+      }
+
+      # CloudTrail configuration
+      resource "aws_cloudtrail" "main" {
+        name                          = "main-trail"
+        s3_bucket_name                = aws_s3_bucket.cloudtrail.id
+        include_global_service_events = true
+        is_multi_region_trail         = true
+        enable_log_file_validation    = true
+
+        event_selector {
+          read_write_type           = "All"
+          include_management_events = true
+
+          data_resource {
+            type   = "AWS::S3::Object"
+            values = ["arn:aws:s3:::*/"]
+          }
+        }
+
+        cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+        cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail_cloudwatch.arn
+      }
+
+      # CloudWatch Log Group for CloudTrail
+      resource "aws_cloudwatch_log_group" "cloudtrail" {
+        name              = "/aws/cloudtrail/main"
+        retention_in_days = 90
+      }
+    cli_example: |
+      # Create trail
+      aws cloudtrail create-trail \
+        --name main-trail \
+        --s3-bucket-name my-cloudtrail-logs \
+        --is-multi-region-trail \
+        --enable-log-file-validation
+
+      # Start logging
+      aws cloudtrail start-logging --name main-trail
+
+      # Get trail status
+      aws cloudtrail get-trail-status --name main-trail
+
+      # Lookup recent IAM events
+      aws cloudtrail lookup-events \
+        --lookup-attributes AttributeKey=ResourceType,AttributeValue=AWS::IAM::User \
+        --max-results 10
+    console_steps:
+      - Navigate to CloudTrail console
+      - Click "Create trail"
+      - Enter trail name
+      - Create new S3 bucket or use existing
+      - Enable log file validation
+      - Enable for all regions
+      - Optionally enable CloudWatch Logs
+      - Configure event selectors (management events, data events)
+      - Review and create trail
+      - Verify trail is logging by checking status

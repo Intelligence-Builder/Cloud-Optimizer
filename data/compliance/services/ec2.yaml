@@ -1,0 +1,357 @@
+service: EC2
+description: Amazon Elastic Compute Cloud - Virtual servers in the cloud
+best_practices:
+  - category: network_security
+    title: Use IMDSv2 Only
+    description: |
+      Require Instance Metadata Service Version 2 (IMDSv2) to protect against SSRF vulnerabilities
+      and unauthorized access to instance metadata. IMDSv2 uses session-oriented requests that
+      provide better security than IMDSv1.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Configure EC2 instances to require IMDSv2 by setting the HttpTokens parameter to "required".
+      This prevents applications from using the less secure IMDSv1 protocol.
+    terraform_example: |
+      resource "aws_instance" "example" {
+        ami           = "ami-0c55b159cbfafe1f0"
+        instance_type = "t3.micro"
+
+        metadata_options {
+          http_endpoint               = "enabled"
+          http_tokens                 = "required"  # Require IMDSv2
+          http_put_response_hop_limit = 1
+          instance_metadata_tags      = "enabled"
+        }
+
+        tags = {
+          Name = "secure-instance"
+        }
+      }
+    cli_example: |
+      # For new instances
+      aws ec2 run-instances \
+        --image-id ami-0c55b159cbfafe1f0 \
+        --instance-type t3.micro \
+        --metadata-options "HttpTokens=required,HttpPutResponseHopLimit=1,HttpEndpoint=enabled"
+
+      # For existing instances
+      aws ec2 modify-instance-metadata-options \
+        --instance-id i-1234567890abcdef0 \
+        --http-tokens required \
+        --http-endpoint enabled
+    console_steps:
+      - Navigate to EC2 console at https://console.aws.amazon.com/ec2/
+      - Select "Instances" from the left menu
+      - Select the instance to modify
+      - Click "Actions" > "Instance settings" > "Modify instance metadata options"
+      - Under "IMDSv2", select "Required"
+      - Set "Metadata response hop limit" to 1
+      - Click "Save"
+
+  - category: encryption
+    title: Enable EBS Encryption by Default
+    description: |
+      Enable EBS encryption by default at the account level to ensure all new EBS volumes
+      and snapshots are automatically encrypted. This protects data at rest without requiring
+      manual encryption configuration for each volume.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable EBS encryption by default in each AWS region. Use customer-managed KMS keys for
+      additional control over encryption keys and access policies.
+    terraform_example: |
+      # Enable default EBS encryption
+      resource "aws_ebs_encryption_by_default" "example" {
+        enabled = true
+      }
+
+      # Set default KMS key for EBS encryption
+      resource "aws_ebs_default_kms_key" "example" {
+        key_arn = aws_kms_key.ebs.arn
+      }
+
+      # Create encrypted volume
+      resource "aws_ebs_volume" "example" {
+        availability_zone = "us-east-1a"
+        size              = 100
+        encrypted         = true
+        kms_key_id        = aws_kms_key.ebs.arn
+
+        tags = {
+          Name = "encrypted-volume"
+        }
+      }
+    cli_example: |
+      # Enable EBS encryption by default
+      aws ec2 enable-ebs-encryption-by-default --region us-east-1
+
+      # Set default KMS key
+      aws ec2 modify-ebs-default-kms-key-id \
+        --kms-key-id arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+
+      # Create encrypted volume
+      aws ec2 create-volume \
+        --availability-zone us-east-1a \
+        --size 100 \
+        --encrypted \
+        --kms-key-id arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+    console_steps:
+      - Navigate to EC2 console
+      - Click "EC2 Dashboard" in the left menu
+      - Under "Account attributes", click "EBS encryption"
+      - Click "Manage"
+      - Check "Enable" for "Always encrypt new EBS volumes"
+      - Optionally select a default KMS key
+      - Click "Update EBS encryption"
+
+  - category: network_security
+    title: Use Restrictive Security Groups
+    description: |
+      Implement least privilege security group rules. Only allow necessary inbound traffic,
+      avoid 0.0.0.0/0 for sensitive ports, and use security group references instead of
+      IP CIDR blocks where possible.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create security groups with minimal required access. Use separate security groups for
+      different tiers (web, app, database). Regularly audit and remove unused rules.
+    terraform_example: |
+      resource "aws_security_group" "web" {
+        name        = "web-tier-sg"
+        description = "Security group for web tier"
+        vpc_id      = aws_vpc.main.id
+
+        # Allow HTTPS from anywhere (public web servers only)
+        ingress {
+          from_port   = 443
+          to_port     = 443
+          protocol    = "tcp"
+          cidr_blocks = ["0.0.0.0/0"]
+          description = "HTTPS from internet"
+        }
+
+        # Allow HTTP (redirect to HTTPS)
+        ingress {
+          from_port   = 80
+          to_port     = 80
+          protocol    = "tcp"
+          cidr_blocks = ["0.0.0.0/0"]
+          description = "HTTP from internet"
+        }
+
+        # Allow all outbound
+        egress {
+          from_port   = 0
+          to_port     = 0
+          protocol    = "-1"
+          cidr_blocks = ["0.0.0.0/0"]
+        }
+
+        tags = {
+          Name = "web-tier-sg"
+        }
+      }
+
+      resource "aws_security_group" "app" {
+        name        = "app-tier-sg"
+        description = "Security group for application tier"
+        vpc_id      = aws_vpc.main.id
+
+        # Only allow traffic from web tier
+        ingress {
+          from_port       = 8080
+          to_port         = 8080
+          protocol        = "tcp"
+          security_groups = [aws_security_group.web.id]
+          description     = "Application port from web tier"
+        }
+
+        egress {
+          from_port   = 0
+          to_port     = 0
+          protocol    = "-1"
+          cidr_blocks = ["0.0.0.0/0"]
+        }
+
+        tags = {
+          Name = "app-tier-sg"
+        }
+      }
+    cli_example: |
+      # Create security group
+      aws ec2 create-security-group \
+        --group-name web-tier-sg \
+        --description "Security group for web tier" \
+        --vpc-id vpc-12345678
+
+      # Add HTTPS rule
+      aws ec2 authorize-security-group-ingress \
+        --group-id sg-12345678 \
+        --protocol tcp \
+        --port 443 \
+        --cidr 0.0.0.0/0
+
+      # Review security group rules
+      aws ec2 describe-security-groups \
+        --group-ids sg-12345678
+    console_steps:
+      - Navigate to EC2 console
+      - Click "Security Groups" under "Network & Security"
+      - Click "Create security group"
+      - Enter name and description
+      - Select VPC
+      - Add inbound rules with specific ports and sources
+      - Add outbound rules (default allows all)
+      - Click "Create security group"
+      - Attach to instances via "Actions" > "Change security groups"
+
+  - category: logging
+    title: Enable Detailed Monitoring
+    description: |
+      Enable detailed (1-minute) CloudWatch monitoring for EC2 instances to get granular
+      metrics for performance analysis, capacity planning, and anomaly detection.
+    compliance_frameworks:
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Enable detailed monitoring on production and critical instances. Create CloudWatch
+      alarms for key metrics like CPU utilization, disk I/O, and network traffic.
+    terraform_example: |
+      resource "aws_instance" "example" {
+        ami           = "ami-0c55b159cbfafe1f0"
+        instance_type = "t3.micro"
+        monitoring    = true  # Enable detailed monitoring
+
+        tags = {
+          Name = "monitored-instance"
+        }
+      }
+
+      # CloudWatch alarm for CPU
+      resource "aws_cloudwatch_metric_alarm" "cpu" {
+        alarm_name          = "high-cpu-utilization"
+        comparison_operator = "GreaterThanThreshold"
+        evaluation_periods  = "2"
+        metric_name         = "CPUUtilization"
+        namespace           = "AWS/EC2"
+        period              = "60"
+        statistic           = "Average"
+        threshold           = "80"
+        alarm_description   = "This metric monitors ec2 cpu utilization"
+        alarm_actions       = [aws_sns_topic.alerts.arn]
+
+        dimensions = {
+          InstanceId = aws_instance.example.id
+        }
+      }
+    cli_example: |
+      # Enable monitoring on existing instance
+      aws ec2 monitor-instances --instance-ids i-1234567890abcdef0
+
+      # Launch instance with detailed monitoring
+      aws ec2 run-instances \
+        --image-id ami-0c55b159cbfafe1f0 \
+        --instance-type t3.micro \
+        --monitoring Enabled=true
+    console_steps:
+      - Navigate to EC2 console
+      - Select "Instances"
+      - Select the instance
+      - Click "Actions" > "Monitor and troubleshoot" > "Manage detailed monitoring"
+      - Check "Enable"
+      - Click "Save"
+
+  - category: access_control
+    title: Use IAM Roles Instead of Access Keys
+    description: |
+      Attach IAM roles to EC2 instances instead of storing access keys on the instance.
+      This eliminates the need to manage and rotate credentials while providing secure,
+      temporary credentials automatically.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create IAM roles with least privilege permissions and attach them to EC2 instances
+      via instance profiles. Never store AWS credentials in code or on instances.
+    terraform_example: |
+      # Create IAM role for EC2
+      resource "aws_iam_role" "ec2_role" {
+        name = "ec2-app-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              Service = "ec2.amazonaws.com"
+            }
+          }]
+        })
+      }
+
+      # Attach policy to role
+      resource "aws_iam_role_policy_attachment" "s3_read" {
+        role       = aws_iam_role.ec2_role.name
+        policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+      }
+
+      # Create instance profile
+      resource "aws_iam_instance_profile" "ec2_profile" {
+        name = "ec2-app-profile"
+        role = aws_iam_role.ec2_role.name
+      }
+
+      # Attach to instance
+      resource "aws_instance" "example" {
+        ami                  = "ami-0c55b159cbfafe1f0"
+        instance_type        = "t3.micro"
+        iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+
+        tags = {
+          Name = "app-server"
+        }
+      }
+    cli_example: |
+      # Create role
+      aws iam create-role \
+        --role-name ec2-app-role \
+        --assume-role-policy-document file://ec2-trust-policy.json
+
+      # Attach policy
+      aws iam attach-role-policy \
+        --role-name ec2-app-role \
+        --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+      # Create instance profile
+      aws iam create-instance-profile --instance-profile-name ec2-app-profile
+
+      # Add role to instance profile
+      aws iam add-role-to-instance-profile \
+        --instance-profile-name ec2-app-profile \
+        --role-name ec2-app-role
+
+      # Associate with instance
+      aws ec2 associate-iam-instance-profile \
+        --instance-id i-1234567890abcdef0 \
+        --iam-instance-profile Name=ec2-app-profile
+    console_steps:
+      - Navigate to IAM console
+      - Create a new role with EC2 as trusted entity
+      - Attach required policies
+      - Go to EC2 console
+      - Select instance
+      - Click "Actions" > "Security" > "Modify IAM role"
+      - Select the created role
+      - Click "Update IAM role"

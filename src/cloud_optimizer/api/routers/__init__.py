@@ -1,5 +1,5 @@
 """API routers for Cloud Optimizer endpoints."""
 
-from cloud_optimizer.api.routers import security
+from cloud_optimizer.api.routers import auth, health, security, trial
 
-__all__ = ["security"]
+__all__ = ["auth", "health", "security", "trial"]

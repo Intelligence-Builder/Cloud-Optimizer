@@ -478,7 +478,9 @@ class ParallelValidator:
     ) -> Dict[str, Any]:
         if hasattr(self.ib_service, "search_entities"):
             return await self.ib_service.search_entities(
-                query_text=query, entity_types=[entity_type] if entity_type else None, limit=limit
+                query_text=query,
+                entity_types=[entity_type] if entity_type else None,
+                limit=limit,
             )
         return await self.ib_service.query_entities(
             entity_type=entity_type,
@@ -486,9 +488,7 @@ class ParallelValidator:
             query_text=query,
         )
 
-    def _results_match(
-        self, ss_result: List[Any], ib_result: Dict[str, Any]
-    ) -> bool:
+    def _results_match(self, ss_result: List[Any], ib_result: Dict[str, Any]) -> bool:
         ib_entities = ib_result.get("entities", [])
         return len(ss_result) == len(ib_entities)
 

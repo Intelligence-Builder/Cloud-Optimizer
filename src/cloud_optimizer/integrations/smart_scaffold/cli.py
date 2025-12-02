@@ -101,9 +101,7 @@ async def _load_ss_exports(
         return list(entities), list(relationships)
 
     entities = load_json_records(entity_path or DEFAULT_ENTITY_EXPORT)
-    relationships = (
-        load_json_records(relationship_path) if relationship_path else []
-    )
+    relationships = load_json_records(relationship_path) if relationship_path else []
     return entities, relationships
 
 
@@ -344,7 +342,9 @@ async def _run_full_migration_cli(argv: Optional[List[str]]) -> None:
             )
             validation = await validator.validate_all()
             validation_summary = validation.to_dict()
-            logger.info("Validation result: %s", json.dumps(validation_summary, indent=2))
+            logger.info(
+                "Validation result: %s", json.dumps(validation_summary, indent=2)
+            )
 
     if validation_summary:
         print(json.dumps(validation_summary, indent=2))
@@ -502,10 +502,14 @@ def run_cleanup_cli(argv: Optional[List[str]] = None) -> None:
 
 
 async def _run_cleanup_cli(argv: Optional[List[str]]) -> None:
-    parser = argparse.ArgumentParser(description="Cleanup or reset migration artifacts.")
+    parser = argparse.ArgumentParser(
+        description="Cleanup or reset migration artifacts."
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    clean_ib = subparsers.add_parser("ib-entities", help="Delete migrated entities/relationships via IB API.")
+    clean_ib = subparsers.add_parser(
+        "ib-entities", help="Delete migrated entities/relationships via IB API."
+    )
     clean_ib.add_argument(
         "--entity-ids",
         type=Path,
@@ -513,8 +517,14 @@ async def _run_cleanup_cli(argv: Optional[List[str]]) -> None:
     )
     _add_common_ib_args(clean_ib)
 
-    clean_temp = subparsers.add_parser("temp-files", help="Clear migration evidence (mapping, validation outputs).")
-    clean_temp.add_argument("--pattern", default="*.json", help="Glob for temp files to delete (default: *.json).")
+    clean_temp = subparsers.add_parser(
+        "temp-files", help="Clear migration evidence (mapping, validation outputs)."
+    )
+    clean_temp.add_argument(
+        "--pattern",
+        default="*.json",
+        help="Glob for temp files to delete (default: *.json).",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "temp-files":
@@ -539,7 +549,9 @@ def _cleanup_temp_files(pattern: str) -> None:
 async def _cleanup_ib_entities(args: argparse.Namespace) -> None:
     mapping_path = args.entity_ids or PATHS["temp"] / "entity_mapping.live.json"
     if not mapping_path.exists():
-        raise SystemExit(f"No mapping file found at {mapping_path}. Provide --entity-ids explicitly.")
+        raise SystemExit(
+            f"No mapping file found at {mapping_path}. Provide --entity-ids explicitly."
+        )
 
     mapping_data = json.loads(mapping_path.read_text(encoding="utf-8"))
     entity_ids = list(mapping_data.values())

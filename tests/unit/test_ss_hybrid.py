@@ -68,7 +68,9 @@ async def test_create_entity_dual_writes():
     ss_kg = MockSSKG()
     hybrid = HybridKnowledgeGraph(ss_kg, ib_service, dual_write=True)
 
-    result = await hybrid.create_entity({"entity_type": "context_record", "name": "ctx"})
+    result = await hybrid.create_entity(
+        {"entity_type": "context_record", "name": "ctx"}
+    )
 
     assert result["entity_id"] == "ib-1"
     assert ss_kg.entities[0]["name"] == "ctx"
@@ -80,7 +82,11 @@ async def test_create_relationship_dual_writes():
     ss_kg = MockSSKG()
     hybrid = HybridKnowledgeGraph(ss_kg, ib_service, dual_write=True)
 
-    rel = {"relationship_type": "references", "source_id": "ctx-1", "target_id": "issue-1"}
+    rel = {
+        "relationship_type": "references",
+        "source_id": "ctx-1",
+        "target_id": "issue-1",
+    }
     await hybrid.create_relationship(rel)
 
     assert ib_service.created_relationships[0] == rel

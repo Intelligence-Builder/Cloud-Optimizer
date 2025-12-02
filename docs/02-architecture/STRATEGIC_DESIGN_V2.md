@@ -849,6 +849,57 @@ def require_permission(permission: str):
 
 ---
 
+## Multi-Tenancy & Deployment Modes
+
+The system supports two distinct deployment modes:
+
+### 1. Single-Tenant (Container/On-Prem) - **MVP Priority**
+Designed for AWS Marketplace and Air-Gapped deployments.
+- **Isolation:** The AWS Account / VPC *is* the boundary.
+- **Auth:** Simple Basic Auth or Single User (Admin).
+- **Database:** Embedded PostgreSQL or single RDS instance.
+- **Middleware:** Tenant context is hardcoded (e.g., `tenant_id="default"`).
+- **Pros:** Zero data exfiltration risk, simple to deploy, high compliance.
+
+### 2. Multi-Tenant (SaaS) - **Future**
+Designed for the hosted SaaS offering.
+- **Isolation:** Row-Level Security (RLS) and logical separation.
+- **Auth:** JWT with User/Tenant mapping.
+- **Database:** Shared cluster with RLS policies.
+
+---
+
+### Tenant Isolation Model (SaaS Mode)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Single Database                          │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐  ┌─────────────────┐                   │
+│  │   Tenant A      │  │   Tenant B      │  ... (RLS)        │
+│  │   tenant_id=A   │  │   tenant_id=B   │                   │
+│  └─────────────────┘  └─────────────────┘                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Isolation Mechanism (SaaS Mode)
+
+1. **JWT Token** contains `tenant_id` claim
+2. **Middleware** extracts tenant_id and sets PostgreSQL session variable
+3. **Row-Level Security (RLS)** policies filter all queries automatically
+4. **Application code** never needs to add tenant filters manually
+
+```python
+# Middleware sets context
+await conn.execute("SET app.current_tenant_id = $1", tenant_id)
+
+# RLS policy handles filtering
+CREATE POLICY tenant_isolation ON findings
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+```
+
+---
+
 ## 9. Performance Architecture
 
 ### 9.1 Caching Strategy
@@ -1515,6 +1566,73 @@ class MFAService:
                 )
 
         return MFAVerifyResult(success=False)
+```
+
+### 15.3 Edge Protection
+
+To protect the application from external threats, we employ a multi-layered edge security strategy.
+
+#### AWS WAF (Web Application Firewall)
+Attached to the Application Load Balancer (ALB).
+- **Managed Rules:**
+    - `AWSManagedRulesCommonRuleSet` (OWASP Top 10)
+    - `AWSManagedRulesKnownBadInputsRuleSet`
+    - `AWSManagedRulesSQLiRuleSet`
+- **Custom Rules:**
+    - Rate limiting per IP (2000 requests/5 min)
+    - Geo-blocking (if compliance requires)
+
+#### AWS Shield
+- **Standard:** Enabled by default for DDoS protection (L3/L4).
+- **Advanced:** Considered for Enterprise tier tenants for cost protection and 24/7 SRT access.
+
+---
+
+## 16. Reliability & Disaster Recovery
+
+### 16.1 Availability Targets
+- **RTO (Recovery Time Objective):** 4 hours
+- **RPO (Recovery Point Objective):** 1 hour
+- **SLA:** 99.9% uptime during business hours
+
+### 16.2 Backup Strategy
+- **Database (RDS):**
+    - Automated daily snapshots (retention: 30 days).
+    - Transaction logs (WAL) archived every 5 minutes (Point-in-Time Recovery).
+- **Configuration:**
+    - Infrastructure as Code (Terraform) stored in Git.
+    - Secrets stored in AWS Secrets Manager (replicated).
+
+### 16.3 Disaster Recovery Plan
+In the event of a region-wide failure (e.g., us-east-1 down):
+1. **Infrastructure:** Deploy Terraform stack to DR region (e.g., us-west-2).
+2. **Database:** Restore RDS from cross-region snapshot.
+3. **DNS:** Update Route53 failover record to point to DR ALB.
+
+---
+
+## 17. Observability & Monitoring
+
+### 17.1 Telemetry Standards
+We adhere to the **OpenTelemetry** standard for all observability data.
+
+| Type | Tool | Retention |
+|------|------|-----------|
+| **Metrics** | CloudWatch Metrics | 15 months |
+| **Logs** | CloudWatch Logs | 30 days (Hot), 1 year (Glacier) |
+| **Traces** | AWS X-Ray | 30 days |
+
+### 17.2 Key Metrics (SLIs)
+1. **Availability:** `% of successful requests (2xx/3xx/4xx)`
+2. **Latency:** `p95 response time < 500ms`
+3. **Throughput:** `Requests per second`
+4. **Saturation:** `DB CPU Usage`, `Connection Pool Usage`
+
+### 17.3 Distributed Tracing
+All services must propagate the `traceparent` header.
+```python
+# Middleware automatically captures trace context
+FastAPIInstrumentor.instrument_app(app)
 ```
 
 ### 15.2 Session Management

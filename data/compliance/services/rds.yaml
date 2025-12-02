@@ -1,0 +1,374 @@
+service: RDS
+description: Amazon Relational Database Service - Managed relational databases
+best_practices:
+  - category: encryption
+    title: Enable Encryption at Rest
+    description: |
+      Enable encryption at rest for all RDS database instances and clusters using AWS KMS.
+      Encryption must be enabled at database creation time and cannot be added later.
+      Encrypted databases protect data, automated backups, read replicas, and snapshots.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable storage encryption when creating the RDS instance. Use customer-managed KMS keys
+      for additional control. Note that you cannot enable encryption on an existing unencrypted
+      database - you must create a new encrypted instance and migrate data.
+    terraform_example: |
+      resource "aws_db_instance" "example" {
+        identifier           = "mydb"
+        engine               = "postgres"
+        engine_version       = "14.7"
+        instance_class       = "db.t3.micro"
+        allocated_storage    = 20
+        storage_type         = "gp3"
+        storage_encrypted    = true
+        kms_key_id           = aws_kms_key.rds.arn
+
+        username = "admin"
+        password = random_password.db_password.result
+
+        # Additional security settings
+        publicly_accessible    = false
+        deletion_protection    = true
+        skip_final_snapshot    = false
+        final_snapshot_identifier = "mydb-final-snapshot"
+
+        tags = {
+          Name = "production-database"
+        }
+      }
+    cli_example: |
+      aws rds create-db-instance \
+        --db-instance-identifier mydb \
+        --db-instance-class db.t3.micro \
+        --engine postgres \
+        --master-username admin \
+        --master-user-password MySecurePassword123! \
+        --allocated-storage 20 \
+        --storage-encrypted \
+        --kms-key-id arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012 \
+        --no-publicly-accessible \
+        --backup-retention-period 7
+    console_steps:
+      - Navigate to RDS console at https://console.aws.amazon.com/rds/
+      - Click "Create database"
+      - Choose database creation method (Standard create)
+      - Select engine type and version
+      - Under "Settings", configure DB instance identifier and credentials
+      - Under "Storage", check "Enable encryption"
+      - Select KMS key (AWS managed or customer managed)
+      - Configure remaining settings
+      - Click "Create database"
+
+  - category: backup
+    title: Enable Automated Backups
+    description: |
+      Configure automated backups with appropriate retention periods. RDS can retain automated
+      backups for up to 35 days and enables point-in-time recovery within the retention window.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Set backup retention period to at least 7 days for production databases. Consider 30 days
+      for critical data. Configure backup window during low-traffic periods and enable backup
+      encryption.
+    terraform_example: |
+      resource "aws_db_instance" "example" {
+        identifier          = "mydb"
+        engine              = "mysql"
+        engine_version      = "8.0"
+        instance_class      = "db.t3.micro"
+        allocated_storage   = 20
+
+        username = "admin"
+        password = random_password.db_password.result
+
+        # Backup configuration
+        backup_retention_period   = 30
+        backup_window             = "03:00-04:00"  # UTC
+        maintenance_window        = "mon:04:00-mon:05:00"
+        delete_automated_backups  = false
+
+        # Enable automated minor version upgrades
+        auto_minor_version_upgrade = true
+
+        tags = {
+          Name = "production-db"
+        }
+      }
+    cli_example: |
+      # Enable automated backups
+      aws rds modify-db-instance \
+        --db-instance-identifier mydb \
+        --backup-retention-period 30 \
+        --preferred-backup-window "03:00-04:00" \
+        --apply-immediately
+
+      # Create manual snapshot
+      aws rds create-db-snapshot \
+        --db-instance-identifier mydb \
+        --db-snapshot-identifier mydb-snapshot-$(date +%Y%m%d)
+    console_steps:
+      - Navigate to RDS console
+      - Select "Databases"
+      - Choose your database instance
+      - Click "Modify"
+      - Scroll to "Backup"
+      - Set "Backup retention period" (1-35 days)
+      - Optionally configure "Backup window"
+      - Click "Continue"
+      - Choose "Apply immediately" or "Apply during maintenance window"
+      - Click "Modify DB instance"
+
+  - category: network_security
+    title: Deploy in Private Subnets
+    description: |
+      Deploy RDS instances in private subnets within a VPC and never enable public accessibility.
+      Use security groups to control access from application tiers only.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create a DB subnet group spanning multiple availability zones in private subnets.
+      Configure security groups to allow inbound traffic only from application servers.
+      Use VPN or Direct Connect for administrative access.
+    terraform_example: |
+      # DB subnet group in private subnets
+      resource "aws_db_subnet_group" "example" {
+        name       = "main-db-subnet-group"
+        subnet_ids = [
+          aws_subnet.private_a.id,
+          aws_subnet.private_b.id
+        ]
+
+        tags = {
+          Name = "Main DB subnet group"
+        }
+      }
+
+      # Security group for RDS
+      resource "aws_security_group" "rds" {
+        name        = "rds-sg"
+        description = "Security group for RDS database"
+        vpc_id      = aws_vpc.main.id
+
+        # Only allow access from application tier
+        ingress {
+          from_port       = 5432
+          to_port         = 5432
+          protocol        = "tcp"
+          security_groups = [aws_security_group.app.id]
+          description     = "PostgreSQL from app tier"
+        }
+
+        tags = {
+          Name = "rds-sg"
+        }
+      }
+
+      # RDS instance in private subnet
+      resource "aws_db_instance" "example" {
+        identifier             = "mydb"
+        engine                 = "postgres"
+        instance_class         = "db.t3.micro"
+        allocated_storage      = 20
+
+        username = "admin"
+        password = random_password.db_password.result
+
+        db_subnet_group_name   = aws_db_subnet_group.example.name
+        vpc_security_group_ids = [aws_security_group.rds.id]
+        publicly_accessible    = false
+
+        tags = {
+          Name = "private-database"
+        }
+      }
+    cli_example: |
+      # Create DB subnet group
+      aws rds create-db-subnet-group \
+        --db-subnet-group-name main-db-subnet-group \
+        --db-subnet-group-description "Main DB subnet group" \
+        --subnet-ids subnet-12345678 subnet-87654321
+
+      # Create security group
+      aws ec2 create-security-group \
+        --group-name rds-sg \
+        --description "Security group for RDS" \
+        --vpc-id vpc-12345678
+
+      # Add ingress rule
+      aws ec2 authorize-security-group-ingress \
+        --group-id sg-rds123 \
+        --protocol tcp \
+        --port 5432 \
+        --source-group sg-app456
+    console_steps:
+      - Navigate to RDS console
+      - Create DB subnet group in VPC section
+      - Select private subnets in multiple AZs
+      - When creating database, select the VPC
+      - Choose the DB subnet group
+      - Set "Public access" to "No"
+      - Select appropriate security group
+      - Ensure security group only allows access from app tier
+
+  - category: logging
+    title: Enable Enhanced Monitoring
+    description: |
+      Enable Enhanced Monitoring to collect metrics from the operating system in real-time.
+      This provides deeper visibility into database performance beyond standard CloudWatch metrics.
+    compliance_frameworks:
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Enable Enhanced Monitoring with at least 60-second granularity. Create an IAM role
+      that allows RDS to send metrics to CloudWatch Logs. Monitor key metrics like CPU,
+      memory, disk I/O, and network traffic.
+    terraform_example: |
+      # IAM role for enhanced monitoring
+      resource "aws_iam_role" "rds_monitoring" {
+        name = "rds-enhanced-monitoring-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              Service = "monitoring.rds.amazonaws.com"
+            }
+          }]
+        })
+      }
+
+      resource "aws_iam_role_policy_attachment" "rds_monitoring" {
+        role       = aws_iam_role.rds_monitoring.name
+        policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+      }
+
+      # RDS instance with enhanced monitoring
+      resource "aws_db_instance" "example" {
+        identifier     = "mydb"
+        engine         = "postgres"
+        instance_class = "db.t3.micro"
+        allocated_storage = 20
+
+        username = "admin"
+        password = random_password.db_password.result
+
+        # Enable enhanced monitoring
+        enabled_cloudwatch_logs_exports = ["postgresql"]
+        monitoring_interval             = 60
+        monitoring_role_arn             = aws_iam_role.rds_monitoring.arn
+
+        tags = {
+          Name = "monitored-database"
+        }
+      }
+    cli_example: |
+      # Enable enhanced monitoring on existing instance
+      aws rds modify-db-instance \
+        --db-instance-identifier mydb \
+        --monitoring-interval 60 \
+        --monitoring-role-arn arn:aws:iam::123456789012:role/rds-enhanced-monitoring-role \
+        --apply-immediately
+
+      # Enable CloudWatch Logs export
+      aws rds modify-db-instance \
+        --db-instance-identifier mydb \
+        --cloudwatch-logs-export-configuration '{"EnableLogTypes":["postgresql"]}' \
+        --apply-immediately
+    console_steps:
+      - Navigate to RDS console
+      - Select your database instance
+      - Click "Modify"
+      - Scroll to "Monitoring"
+      - Check "Enable Enhanced monitoring"
+      - Set granularity (60 seconds recommended)
+      - Select monitoring role
+      - Under "Log exports", enable desired log types
+      - Click "Continue" and "Modify DB instance"
+
+  - category: access_control
+    title: Use IAM Database Authentication
+    description: |
+      Enable IAM database authentication to manage database access using IAM users and roles
+      instead of database passwords. This provides centralized access control and eliminates
+      the need to store database credentials.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Enable IAM database authentication on the RDS instance. Grant IAM users or roles
+      permission to connect to the database. Applications use temporary authentication tokens
+      instead of passwords. Supported for MySQL, PostgreSQL, and Aurora.
+    terraform_example: |
+      resource "aws_db_instance" "example" {
+        identifier     = "mydb"
+        engine         = "postgres"
+        engine_version = "14.7"
+        instance_class = "db.t3.micro"
+        allocated_storage = 20
+
+        username = "admin"
+        password = random_password.db_password.result
+
+        # Enable IAM authentication
+        iam_database_authentication_enabled = true
+
+        tags = {
+          Name = "iam-auth-db"
+        }
+      }
+
+      # IAM policy for database access
+      resource "aws_iam_policy" "db_access" {
+        name        = "rds-db-access"
+        description = "Allow IAM authentication to RDS"
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Effect = "Allow"
+            Action = [
+              "rds-db:connect"
+            ]
+            Resource = [
+              "arn:aws:rds-db:us-east-1:123456789012:dbuser:${aws_db_instance.example.resource_id}/db_user"
+            ]
+          }]
+        })
+      }
+    cli_example: |
+      # Enable IAM authentication
+      aws rds modify-db-instance \
+        --db-instance-identifier mydb \
+        --enable-iam-database-authentication \
+        --apply-immediately
+
+      # Generate authentication token (15-minute validity)
+      aws rds generate-db-auth-token \
+        --hostname mydb.abcdefg.us-east-1.rds.amazonaws.com \
+        --port 5432 \
+        --region us-east-1 \
+        --username db_user
+    console_steps:
+      - Navigate to RDS console
+      - Select your database instance
+      - Click "Modify"
+      - Scroll to "Database authentication"
+      - Check "Enable IAM DB authentication"
+      - Click "Continue"
+      - Choose when to apply changes
+      - Click "Modify DB instance"
+      - Create IAM policies granting rds-db:connect permission
+      - Create database user and grant rds_iam role

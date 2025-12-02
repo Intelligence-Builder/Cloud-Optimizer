@@ -1,0 +1,261 @@
+framework: GDPR
+version: "2016/679"
+description: General Data Protection Regulation - EU Data Protection Law
+controls:
+  - control_id: Art.5
+    name: Principles Relating to Processing
+    description: |
+      Personal data must be processed lawfully, fairly, and transparently. Data
+      must be collected for specified purposes, adequate and relevant, accurate,
+      stored only as long as necessary, and processed securely.
+    requirements:
+      - Ensure lawfulness, fairness, and transparency of processing
+      - Limit collection to specified, explicit, and legitimate purposes
+      - Minimize data collection to what is necessary
+      - Maintain accuracy and keep data up to date
+      - Implement data retention and deletion policies
+      - Ensure appropriate security of personal data
+    aws_services:
+      - S3
+      - DynamoDB
+      - RDS
+      - Macie
+      - CloudWatch
+      - Lambda
+    implementation_guidance: |
+      1. Implement data classification using S3 object tags
+      2. Use Amazon Macie to discover and classify personal data
+      3. Configure S3 lifecycle policies for automatic data deletion
+      4. Enable versioning and soft-delete for data accuracy
+      5. Use DynamoDB TTL for automatic expiration of personal data
+      6. Implement data retention policies in RDS with automated backups
+      7. Create Lambda functions for automated data purging
+      8. Use CloudWatch Events to trigger retention workflows
+      9. Implement audit logs for all data processing activities
+      10. Document data processing purposes in metadata/tags
+      11. Create data maps showing where personal data resides
+      12. Conduct quarterly data minimization reviews
+
+  - control_id: Art.25
+    name: Data Protection by Design and Default
+    description: |
+      Implement appropriate technical and organizational measures to ensure
+      data protection principles are integrated into processing activities.
+      Default settings should provide highest level of data protection.
+    requirements:
+      - Integrate data protection into system design and development
+      - Implement privacy-enhancing technologies by default
+      - Apply pseudonymization and encryption where appropriate
+      - Minimize data processing to what is necessary
+    aws_services:
+      - KMS
+      - Secrets Manager
+      - CloudFormation
+      - Service Catalog
+      - Organizations
+      - Control Tower
+    implementation_guidance: |
+      1. Enable encryption by default using KMS for all storage
+      2. Use CloudFormation templates with encryption enabled
+      3. Create Service Catalog products with privacy controls
+      4. Implement Organizations SCPs enforcing encryption
+      5. Use Control Tower guardrails for privacy compliance
+      6. Enable S3 Block Public Access by default
+      7. Implement default security group deny-all rules
+      8. Use Secrets Manager for credential encryption
+      9. Enable automatic key rotation in KMS
+      10. Implement pseudonymization using Lambda and KMS
+      11. Use VPC endpoints to keep data within AWS network
+      12. Create privacy-focused reference architectures
+
+  - control_id: Art.32
+    name: Security of Processing
+    description: |
+      Implement appropriate technical and organizational measures to ensure
+      security of personal data. This includes encryption, confidentiality,
+      integrity, availability, and resilience of systems.
+    requirements:
+      - Implement pseudonymization and encryption of personal data
+      - Ensure ongoing confidentiality, integrity, and availability
+      - Restore availability after physical or technical incident
+      - Regularly test and evaluate security effectiveness
+    aws_services:
+      - KMS
+      - CloudHSM
+      - WAF
+      - Shield
+      - GuardDuty
+      - Backup
+    implementation_guidance: |
+      1. Use AWS KMS for encryption at rest of all personal data
+      2. Implement CloudHSM for sensitive key material storage
+      3. Enable S3 server-side encryption with KMS keys
+      4. Configure RDS and DynamoDB encryption at rest
+      5. Use EBS encryption for all volumes containing personal data
+      6. Implement AWS WAF to protect web applications
+      7. Enable AWS Shield for DDoS protection
+      8. Use GuardDuty for threat detection and monitoring
+      9. Implement AWS Backup for disaster recovery
+      10. Create cross-region replication for data resilience
+      11. Conduct quarterly penetration testing
+      12. Perform annual security assessments and audits
+
+  - control_id: Art.33
+    name: Data Breach Notification
+    description: |
+      Personal data breaches must be notified to supervisory authority without
+      undue delay and within 72 hours of becoming aware. High-risk breaches
+      must also be communicated to affected individuals.
+    requirements:
+      - Detect and document personal data breaches
+      - Notify supervisory authority within 72 hours
+      - Communicate to data subjects when high risk exists
+      - Maintain records of all data breaches
+    aws_services:
+      - GuardDuty
+      - Security Hub
+      - EventBridge
+      - SNS
+      - Lambda
+      - Systems Manager
+    implementation_guidance: |
+      1. Enable GuardDuty for automated threat detection
+      2. Centralize findings in AWS Security Hub
+      3. Create EventBridge rules for security event triggers
+      4. Configure SNS for immediate breach notifications
+      5. Implement Lambda functions for automated incident response
+      6. Use Systems Manager for incident runbook automation
+      7. Create CloudWatch alarms for data access anomalies
+      8. Implement Macie for sensitive data exposure detection
+      9. Enable CloudTrail logging for forensic investigation
+      10. Create incident response procedures in SSM documents
+      11. Maintain breach notification templates in S3
+      12. Conduct quarterly breach response tabletop exercises
+
+  - control_id: Art.35
+    name: Data Protection Impact Assessment
+    description: |
+      Conduct Data Protection Impact Assessments (DPIA) when processing is
+      likely to result in high risk to rights and freedoms. Assessment must
+      describe processing, necessity, risks, and safeguards.
+    requirements:
+      - Identify processing operations requiring DPIA
+      - Assess necessity and proportionality of processing
+      - Evaluate risks to data subjects rights and freedoms
+      - Document measures to address identified risks
+    aws_services:
+      - Well-Architected Tool
+      - Audit Manager
+      - Config
+      - Inspector
+      - CloudFormation
+    implementation_guidance: |
+      1. Use AWS Well-Architected Tool for security reviews
+      2. Implement Audit Manager for compliance assessments
+      3. Create custom frameworks in Audit Manager for DPIA
+      4. Use Config to evaluate resource configurations
+      5. Run Inspector assessments for vulnerability analysis
+      6. Document architecture decisions in CloudFormation templates
+      7. Create DPIA templates as SSM documents
+      8. Use tagging to identify high-risk processing systems
+      9. Implement automated risk scoring using Lambda
+      10. Store DPIA documentation in S3 with encryption
+      11. Review DPIAs quarterly or when processing changes
+      12. Maintain DPIA register in DynamoDB with audit trail
+
+  - control_id: Art.30
+    name: Records of Processing Activities
+    description: |
+      Maintain comprehensive records of all processing activities. Records must
+      include purposes, categories of data subjects and personal data, recipients,
+      transfers, and retention periods.
+    requirements:
+      - Document all processing activities and purposes
+      - Record categories of data subjects and personal data
+      - Identify recipients of personal data
+      - Document international data transfers
+      - Specify retention periods for different data categories
+    aws_services:
+      - CloudTrail
+      - Config
+      - Macie
+      - Glue
+      - Athena
+      - QuickSight
+    implementation_guidance: |
+      1. Enable CloudTrail for all API activity logging
+      2. Use Config to record resource configurations
+      3. Implement Macie for data discovery and classification
+      4. Create AWS Glue Data Catalog for data inventory
+      5. Use Athena to query processing activity records
+      6. Build QuickSight dashboards for processing visibility
+      7. Tag resources with data classification and purpose
+      8. Implement automated data mapping using Lambda
+      9. Store processing records in S3 with versioning
+      10. Create processing activity register in DynamoDB
+      11. Document retention policies in metadata
+      12. Conduct annual reviews of processing records
+
+  - control_id: Art.15
+    name: Data Subject Access Rights
+    description: |
+      Data subjects have the right to obtain confirmation of processing,
+      access to their personal data, and information about the processing.
+      Requests must be fulfilled within one month.
+    requirements:
+      - Provide confirmation of whether personal data is processed
+      - Grant access to personal data being processed
+      - Provide information about processing purposes and recipients
+      - Respond to access requests within one month
+    aws_services:
+      - Lambda
+      - API Gateway
+      - DynamoDB
+      - S3
+      - SES
+      - Step Functions
+    implementation_guidance: |
+      1. Create API Gateway endpoint for access request submissions
+      2. Implement Lambda functions for data retrieval workflows
+      3. Use Step Functions to orchestrate multi-system searches
+      4. Query DynamoDB and RDS for subject personal data
+      5. Search S3 using Athena for unstructured data
+      6. Use Macie to locate personal data across accounts
+      7. Generate PDF reports using Lambda and S3
+      8. Send responses via SES with secure document links
+      9. Implement request tracking in DynamoDB
+      10. Create CloudWatch alarms for SLA monitoring (30 days)
+      11. Use KMS to encrypt generated data packages
+      12. Maintain audit trail of all access requests
+
+  - control_id: Art.17
+    name: Right to Erasure (Right to be Forgotten)
+    description: |
+      Data subjects have the right to request deletion of their personal data
+      without undue delay when processing is no longer necessary or consent
+      is withdrawn. Controllers must comply unless legal grounds exist.
+    requirements:
+      - Delete personal data when no longer necessary
+      - Process erasure requests without undue delay
+      - Inform third parties of erasure requests
+      - Verify identity before processing deletion
+    aws_services:
+      - Lambda
+      - DynamoDB
+      - S3
+      - RDS
+      - EventBridge
+      - Step Functions
+    implementation_guidance: |
+      1. Create Lambda functions for automated data deletion
+      2. Implement Step Functions for multi-system erasure workflows
+      3. Use DynamoDB streams to cascade deletions
+      4. Configure S3 lifecycle policies for automated deletion
+      5. Implement RDS stored procedures for data purging
+      6. Use EventBridge to trigger third-party notifications
+      7. Enable S3 versioning with MFA delete protection
+      8. Create audit logs for all deletion activities
+      9. Implement identity verification using Cognito
+      10. Use tags to mark data for deletion pending verification
+      11. Create automated backup before deletion
+      12. Maintain deletion request register with timestamps

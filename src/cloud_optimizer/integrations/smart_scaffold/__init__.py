@@ -17,12 +17,12 @@ from cloud_optimizer.integrations.smart_scaffold.context_sync import (
     SyncResult,
     WorkflowCoordinator,
 )
-from cloud_optimizer.integrations.smart_scaffold.hybrid import HybridKnowledgeGraph
 from cloud_optimizer.integrations.smart_scaffold.entity_migrator import (
     EntityMigrator,
     EntityTypeMapping,
     MigrationResult,
 )
+from cloud_optimizer.integrations.smart_scaffold.hybrid import HybridKnowledgeGraph
 from cloud_optimizer.integrations.smart_scaffold.relationship_migrator import (
     RelationshipMigrationResult,
     RelationshipMigrator,

@@ -1,0 +1,536 @@
+service: CloudWatch
+description: Amazon CloudWatch - Monitoring and observability service
+best_practices:
+  - category: logging
+    title: Create Alarm for Root Account Login
+    description: |
+      Create a CloudWatch alarm to detect and alert on any use of the AWS root account.
+      Root account usage should be extremely rare and limited to account-level tasks that
+      require root credentials. Any unexpected root usage could indicate a security breach.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create a metric filter on CloudTrail logs in CloudWatch Logs to detect root account
+      activity. Create an alarm that triggers when root usage is detected. Send notifications
+      to security team via SNS topic.
+    terraform_example: |
+      # SNS topic for security alerts
+      resource "aws_sns_topic" "security_alerts" {
+        name = "security-alerts"
+      }
+
+      resource "aws_sns_topic_subscription" "security_email" {
+        topic_arn = aws_sns_topic.security_alerts.arn
+        protocol  = "email"
+        endpoint  = "security-team@example.com"
+      }
+
+      # Metric filter for root account usage
+      resource "aws_cloudwatch_log_metric_filter" "root_login" {
+        name           = "root-account-login"
+        log_group_name = aws_cloudwatch_log_group.cloudtrail.name
+        pattern        = '{ $.userIdentity.type = "Root" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != "AwsServiceEvent" }'
+
+        metric_transformation {
+          name      = "RootAccountLoginCount"
+          namespace = "Security/IAM"
+          value     = "1"
+        }
+      }
+
+      # Alarm for root account usage
+      resource "aws_cloudwatch_metric_alarm" "root_login" {
+        alarm_name          = "root-account-login-alert"
+        comparison_operator = "GreaterThanOrEqualToThreshold"
+        evaluation_periods  = "1"
+        metric_name         = "RootAccountLoginCount"
+        namespace           = "Security/IAM"
+        period              = "60"
+        statistic           = "Sum"
+        threshold           = "1"
+        alarm_description   = "Alert when root account is used"
+        alarm_actions       = [aws_sns_topic.security_alerts.arn]
+        treat_missing_data  = "notBreaching"
+      }
+    cli_example: |
+      # Create SNS topic
+      aws sns create-topic --name security-alerts
+
+      # Subscribe email to topic
+      aws sns subscribe \
+        --topic-arn arn:aws:sns:us-east-1:123456789012:security-alerts \
+        --protocol email \
+        --notification-endpoint security-team@example.com
+
+      # Create metric filter
+      aws logs put-metric-filter \
+        --log-group-name /aws/cloudtrail/organization \
+        --filter-name root-account-login \
+        --filter-pattern '{ $.userIdentity.type = "Root" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != "AwsServiceEvent" }' \
+        --metric-transformations \
+          metricName=RootAccountLoginCount,metricNamespace=Security/IAM,metricValue=1
+
+      # Create alarm
+      aws cloudwatch put-metric-alarm \
+        --alarm-name root-account-login-alert \
+        --alarm-description "Alert when root account is used" \
+        --metric-name RootAccountLoginCount \
+        --namespace Security/IAM \
+        --statistic Sum \
+        --period 60 \
+        --evaluation-periods 1 \
+        --threshold 1 \
+        --comparison-operator GreaterThanOrEqualToThreshold \
+        --alarm-actions arn:aws:sns:us-east-1:123456789012:security-alerts
+    console_steps:
+      - Navigate to CloudWatch console at https://console.aws.amazon.com/cloudwatch/
+      - Go to "Logs" > "Log groups"
+      - Select CloudTrail log group
+      - Click "Create metric filter"
+      - Enter filter pattern for root usage
+      - Test pattern with log data
+      - Click "Assign metric"
+      - Enter metric name and namespace
+      - Click "Create filter"
+      - Click "Create alarm"
+      - Configure threshold and actions
+      - Add SNS topic for notifications
+
+  - category: logging
+    title: Monitor Critical API Calls
+    description: |
+      Create metric filters and alarms for security-sensitive API calls such as IAM policy
+      changes, security group modifications, network ACL changes, and VPC configuration
+      updates. This provides early detection of unauthorized or suspicious changes.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create comprehensive metric filters for security-related API calls. Group related
+      events and create appropriate alarms. Use CloudWatch Insights for complex queries
+      and pattern detection across multiple event types.
+    terraform_example: |
+      # IAM policy changes
+      resource "aws_cloudwatch_log_metric_filter" "iam_policy_changes" {
+        name           = "iam-policy-changes"
+        log_group_name = aws_cloudwatch_log_group.cloudtrail.name
+        pattern        = '{ ($.eventName = DeleteGroupPolicy) || ($.eventName = DeleteRolePolicy) || ($.eventName = DeleteUserPolicy) || ($.eventName = PutGroupPolicy) || ($.eventName = PutRolePolicy) || ($.eventName = PutUserPolicy) || ($.eventName = CreatePolicy) || ($.eventName = DeletePolicy) || ($.eventName = CreatePolicyVersion) || ($.eventName = DeletePolicyVersion) || ($.eventName = AttachRolePolicy) || ($.eventName = DetachRolePolicy) || ($.eventName = AttachUserPolicy) || ($.eventName = DetachUserPolicy) || ($.eventName = AttachGroupPolicy) || ($.eventName = DetachGroupPolicy) }'
+
+        metric_transformation {
+          name      = "IAMPolicyChanges"
+          namespace = "Security/IAM"
+          value     = "1"
+        }
+      }
+
+      resource "aws_cloudwatch_metric_alarm" "iam_policy_changes" {
+        alarm_name          = "iam-policy-changes-alert"
+        comparison_operator = "GreaterThanOrEqualToThreshold"
+        evaluation_periods  = "1"
+        metric_name         = "IAMPolicyChanges"
+        namespace           = "Security/IAM"
+        period              = "300"
+        statistic           = "Sum"
+        threshold           = "1"
+        alarm_description   = "Alert on IAM policy changes"
+        alarm_actions       = [aws_sns_topic.security_alerts.arn]
+      }
+
+      # Security group changes
+      resource "aws_cloudwatch_log_metric_filter" "security_group_changes" {
+        name           = "security-group-changes"
+        log_group_name = aws_cloudwatch_log_group.cloudtrail.name
+        pattern        = '{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup) }'
+
+        metric_transformation {
+          name      = "SecurityGroupChanges"
+          namespace = "Security/EC2"
+          value     = "1"
+        }
+      }
+
+      resource "aws_cloudwatch_metric_alarm" "security_group_changes" {
+        alarm_name          = "security-group-changes-alert"
+        comparison_operator = "GreaterThanOrEqualToThreshold"
+        evaluation_periods  = "1"
+        metric_name         = "SecurityGroupChanges"
+        namespace           = "Security/EC2"
+        period              = "300"
+        statistic           = "Sum"
+        threshold           = "1"
+        alarm_description   = "Alert on security group changes"
+        alarm_actions       = [aws_sns_topic.security_alerts.arn]
+      }
+
+      # Network ACL changes
+      resource "aws_cloudwatch_log_metric_filter" "nacl_changes" {
+        name           = "nacl-changes"
+        log_group_name = aws_cloudwatch_log_group.cloudtrail.name
+        pattern        = '{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }'
+
+        metric_transformation {
+          name      = "NACLChanges"
+          namespace = "Security/VPC"
+          value     = "1"
+        }
+      }
+
+      resource "aws_cloudwatch_metric_alarm" "nacl_changes" {
+        alarm_name          = "nacl-changes-alert"
+        comparison_operator = "GreaterThanOrEqualToThreshold"
+        evaluation_periods  = "1"
+        metric_name         = "NACLChanges"
+        namespace           = "Security/VPC"
+        period              = "300"
+        statistic           = "Sum"
+        threshold           = "1"
+        alarm_description   = "Alert on Network ACL changes"
+        alarm_actions       = [aws_sns_topic.security_alerts.arn]
+      }
+    cli_example: |
+      # Create metric filter for IAM changes
+      aws logs put-metric-filter \
+        --log-group-name /aws/cloudtrail/organization \
+        --filter-name iam-policy-changes \
+        --filter-pattern '{ ($.eventName = DeleteGroupPolicy) || ($.eventName = DeleteRolePolicy) || ($.eventName = DeleteUserPolicy) || ($.eventName = PutGroupPolicy) || ($.eventName = PutRolePolicy) || ($.eventName = PutUserPolicy) }' \
+        --metric-transformations \
+          metricName=IAMPolicyChanges,metricNamespace=Security/IAM,metricValue=1
+
+      # Use CloudWatch Insights for complex queries
+      aws logs start-query \
+        --log-group-name /aws/cloudtrail/organization \
+        --start-time $(date -u -d '24 hours ago' +%s) \
+        --end-time $(date -u +%s) \
+        --query-string 'fields @timestamp, eventName, userIdentity.arn, errorCode
+          | filter eventSource = "iam.amazonaws.com"
+          | filter eventName like /Policy/
+          | sort @timestamp desc'
+    console_steps:
+      - Navigate to CloudWatch console
+      - Go to "Logs" > "Log groups"
+      - Select CloudTrail log group
+      - Create metric filters for each event category
+      - Test patterns with sample log data
+      - Create alarms for each metric
+      - Configure SNS notifications
+      - Use CloudWatch Insights for ad-hoc queries
+
+  - category: logging
+    title: Set Log Retention Policies
+    description: |
+      Configure appropriate retention periods for CloudWatch Log groups based on compliance
+      requirements and data retention policies. Balance compliance needs with storage costs.
+      Ensure critical security logs are retained for sufficient time.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Set retention policies for all log groups. Use longer retention for security and
+      audit logs (90-365 days). Consider exporting to S3 with Glacier for long-term
+      archival. Automate retention policy enforcement with AWS Config or Lambda.
+    terraform_example: |
+      # CloudTrail logs - long retention
+      resource "aws_cloudwatch_log_group" "cloudtrail" {
+        name              = "/aws/cloudtrail/organization"
+        retention_in_days = 365
+        kms_key_id        = aws_kms_key.cloudwatch.arn
+      }
+
+      # Application logs - medium retention
+      resource "aws_cloudwatch_log_group" "application" {
+        name              = "/aws/application/myapp"
+        retention_in_days = 90
+      }
+
+      # Lambda logs - short retention
+      resource "aws_cloudwatch_log_group" "lambda" {
+        name              = "/aws/lambda/my-function"
+        retention_in_days = 30
+      }
+
+      # Export to S3 for long-term archival
+      resource "aws_cloudwatch_log_subscription_filter" "s3_export" {
+        name            = "s3-export"
+        log_group_name  = aws_cloudwatch_log_group.cloudtrail.name
+        filter_pattern  = ""
+        destination_arn = aws_kinesis_firehose_delivery_stream.s3_export.arn
+        role_arn        = aws_iam_role.cloudwatch_to_firehose.arn
+      }
+
+      # Lambda to enforce retention policies
+      resource "aws_lambda_function" "enforce_retention" {
+        filename      = "enforce_retention.zip"
+        function_name = "cloudwatch-enforce-retention"
+        role          = aws_iam_role.lambda_role.arn
+        handler       = "index.handler"
+        runtime       = "python3.11"
+
+        environment {
+          variables = {
+            DEFAULT_RETENTION_DAYS = "30"
+            SECURITY_RETENTION_DAYS = "365"
+          }
+        }
+      }
+
+      # EventBridge rule to trigger retention enforcement
+      resource "aws_cloudwatch_event_rule" "enforce_retention" {
+        name                = "enforce-log-retention"
+        description         = "Enforce log retention policies"
+        schedule_expression = "rate(1 day)"
+      }
+    cli_example: |
+      # Set retention policy
+      aws logs put-retention-policy \
+        --log-group-name /aws/lambda/my-function \
+        --retention-in-days 30
+
+      # List all log groups with retention
+      aws logs describe-log-groups --query 'logGroups[*].[logGroupName,retentionInDays]' --output table
+
+      # Find log groups without retention policy
+      aws logs describe-log-groups \
+        --query 'logGroups[?retentionInDays==`null`].logGroupName' \
+        --output table
+
+      # Batch update retention
+      for log_group in $(aws logs describe-log-groups --query 'logGroups[?retentionInDays==`null`].logGroupName' --output text); do
+        aws logs put-retention-policy \
+          --log-group-name "$log_group" \
+          --retention-in-days 30
+      done
+    console_steps:
+      - Navigate to CloudWatch console
+      - Go to "Logs" > "Log groups"
+      - Select log group
+      - Click "Actions" > "Edit retention setting"
+      - Choose retention period:
+        - Security logs: 365 days or custom
+        - Application logs: 90 days
+        - Debug logs: 7-30 days
+      - Click "Save"
+      - Repeat for all log groups
+      - Use AWS Config rule to monitor compliance
+
+  - category: logging
+    title: Use Metric Filters for Application Insights
+    description: |
+      Create metric filters to extract valuable metrics from application logs. Track
+      error rates, response times, business metrics, and custom application events.
+      Use these metrics for alarms, dashboards, and operational insights.
+    compliance_frameworks:
+      - SOC2
+    implementation: |
+      Parse application logs with metric filters to extract structured data. Create
+      custom metrics for error rates, latencies, and business KPIs. Build CloudWatch
+      dashboards to visualize these metrics alongside infrastructure metrics.
+    terraform_example: |
+      # Metric filter for application errors
+      resource "aws_cloudwatch_log_metric_filter" "app_errors" {
+        name           = "application-errors"
+        log_group_name = aws_cloudwatch_log_group.application.name
+        pattern        = "[time, request_id, level = ERROR*, ...]"
+
+        metric_transformation {
+          name      = "ApplicationErrors"
+          namespace = "Application/MyApp"
+          value     = "1"
+          unit      = "Count"
+        }
+      }
+
+      # Metric filter for response time
+      resource "aws_cloudwatch_log_metric_filter" "response_time" {
+        name           = "response-time"
+        log_group_name = aws_cloudwatch_log_group.application.name
+        pattern        = "[time, request_id, level, method, path, status_code, response_time]"
+
+        metric_transformation {
+          name      = "ResponseTime"
+          namespace = "Application/MyApp"
+          value     = "$response_time"
+          unit      = "Milliseconds"
+        }
+      }
+
+      # Alarm for high error rate
+      resource "aws_cloudwatch_metric_alarm" "high_error_rate" {
+        alarm_name          = "high-application-error-rate"
+        comparison_operator = "GreaterThanThreshold"
+        evaluation_periods  = "2"
+        metric_name         = "ApplicationErrors"
+        namespace           = "Application/MyApp"
+        period              = "300"
+        statistic           = "Sum"
+        threshold           = "10"
+        alarm_description   = "Alert when error rate is high"
+        alarm_actions       = [aws_sns_topic.ops_alerts.arn]
+        treat_missing_data  = "notBreaching"
+      }
+
+      # Alarm for slow response time
+      resource "aws_cloudwatch_metric_alarm" "slow_response" {
+        alarm_name          = "slow-response-time"
+        comparison_operator = "GreaterThanThreshold"
+        evaluation_periods  = "3"
+        metric_name         = "ResponseTime"
+        namespace           = "Application/MyApp"
+        period              = "60"
+        statistic           = "Average"
+        threshold           = "1000"
+        alarm_description   = "Alert when average response time > 1s"
+        alarm_actions       = [aws_sns_topic.ops_alerts.arn]
+      }
+
+      # Dashboard
+      resource "aws_cloudwatch_dashboard" "application" {
+        dashboard_name = "application-dashboard"
+
+        dashboard_body = jsonencode({
+          widgets = [
+            {
+              type = "metric"
+              properties = {
+                metrics = [
+                  ["Application/MyApp", "ApplicationErrors", { stat = "Sum" }],
+                  [".", "ResponseTime", { stat = "Average" }]
+                ]
+                period = 300
+                stat   = "Average"
+                region = "us-east-1"
+                title  = "Application Metrics"
+              }
+            }
+          ]
+        })
+      }
+    cli_example: |
+      # Create metric filter
+      aws logs put-metric-filter \
+        --log-group-name /aws/application/myapp \
+        --filter-name application-errors \
+        --filter-pattern '[time, request_id, level = ERROR*, ...]' \
+        --metric-transformations \
+          metricName=ApplicationErrors,metricNamespace=Application/MyApp,metricValue=1,unit=Count
+
+      # Test filter pattern
+      aws logs test-metric-filter \
+        --filter-pattern '[time, request_id, level = ERROR*, ...]' \
+        --log-event-messages \
+          '2024-01-01T10:00:00 req-123 ERROR Failed to connect to database' \
+          '2024-01-01T10:00:01 req-124 INFO Request successful'
+    console_steps:
+      - Navigate to CloudWatch console
+      - Go to "Logs" > "Log groups"
+      - Select application log group
+      - Click "Create metric filter"
+      - Enter filter pattern to match log format
+      - Test with sample log data
+      - Click "Assign metric"
+      - Enter metric name, namespace, and value
+      - Create alarm based on metric
+      - Add to CloudWatch dashboard
+
+  - category: logging
+    title: Encrypt CloudWatch Logs with KMS
+    description: |
+      Enable KMS encryption for CloudWatch Log groups containing sensitive data. Use
+      customer-managed KMS keys for additional control over who can access log data.
+      This is essential for compliance with data protection regulations.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create a KMS key with appropriate policy for CloudWatch Logs service. Associate
+      the key with log groups containing sensitive information. Ensure proper IAM
+      permissions for both encryption and decryption.
+    terraform_example: |
+      # KMS key for CloudWatch Logs
+      resource "aws_kms_key" "cloudwatch" {
+        description             = "KMS key for CloudWatch Logs encryption"
+        deletion_window_in_days = 30
+        enable_key_rotation     = true
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Sid    = "Enable IAM User Permissions"
+              Effect = "Allow"
+              Principal = {
+                AWS = "arn:aws:iam::123456789012:root"
+              }
+              Action   = "kms:*"
+              Resource = "*"
+            },
+            {
+              Sid    = "Allow CloudWatch Logs"
+              Effect = "Allow"
+              Principal = {
+                Service = "logs.us-east-1.amazonaws.com"
+              }
+              Action = [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+                "kms:CreateGrant",
+                "kms:DescribeKey"
+              ]
+              Resource = "*"
+              Condition = {
+                ArnLike = {
+                  "kms:EncryptionContext:aws:logs:arn" = "arn:aws:logs:us-east-1:123456789012:log-group:*"
+                }
+              }
+            }
+          ]
+        })
+      }
+
+      resource "aws_kms_alias" "cloudwatch" {
+        name          = "alias/cloudwatch-logs"
+        target_key_id = aws_kms_key.cloudwatch.key_id
+      }
+
+      # Log group with KMS encryption
+      resource "aws_cloudwatch_log_group" "encrypted" {
+        name              = "/aws/application/sensitive-app"
+        retention_in_days = 90
+        kms_key_id        = aws_kms_key.cloudwatch.arn
+      }
+    cli_example: |
+      # Associate KMS key with existing log group
+      aws logs associate-kms-key \
+        --log-group-name /aws/application/sensitive-app \
+        --kms-key-id arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+
+      # Disassociate KMS key
+      aws logs disassociate-kms-key \
+        --log-group-name /aws/application/sensitive-app
+
+      # Verify encryption
+      aws logs describe-log-groups \
+        --log-group-name-prefix /aws/application/ \
+        --query 'logGroups[*].[logGroupName,kmsKeyId]' \
+        --output table
+    console_steps:
+      - First, create KMS key in KMS console with CloudWatch Logs policy
+      - Navigate to CloudWatch console
+      - Go to "Logs" > "Log groups"
+      - For new log group - select KMS key during creation
+      - For existing log group:
+        - Select log group
+        - Click "Actions" > "Associate KMS key"
+        - Select KMS key
+        - Click "Associate"
+      - Verify users have kms:Decrypt permission to read logs

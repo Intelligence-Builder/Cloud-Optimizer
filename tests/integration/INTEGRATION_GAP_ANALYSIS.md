@@ -20,35 +20,35 @@ These suites rely exclusively on the dockerised infrastructure defined in
 
 ## Identified Gaps
 
-1. **Smart-Scaffold CLI/Runtime Workflow**  
+1. **Smart-Scaffold CLI/Runtime Workflow**
    - *Issue*: Tests cover individual migrator classes but never execute the
      shipping CLI entrypoints (`scripts/migrate_ss_entities.py`,
-     `scripts/migrate_ss_to_ib.py`, `scripts/run_parallel_validator.py`).  
+     `scripts/migrate_ss_to_ib.py`, `scripts/run_parallel_validator.py`).
    - *Impact*: We risk regressions in argument parsing, validation printing, and
      runtime fallback logic (memory/sd/http) because only unit tests touched the
-     helpers.  
+     helpers.
    - *Action*: Added `tests/integration/test_ss_cli_workflow.py` which
      synthesises sample Smart-Scaffold exports, invokes `run_full_migration_cli`
      via its public wrapper, captures the JSON validation summary, and asserts
      that the generated mapping contains every exported entity. This ensures the
      CLI path (async runners, mapping persistence, validator invocation) works on
-     real data without mocks.  
+     real data without mocks.
 
-2. **CLI Cleanup Workflow**  
+2. **CLI Cleanup Workflow**
    - *Issue*: The new cleanup command was only unit-tested. Integration coverage
      was missing to confirm the command-line entrypoint deletes evidence files
-     when pointed at an actual temp directory.  
+     when pointed at an actual temp directory.
    - *Action*: The integration CLI test uses temporary directories and invokes
      `run_full_migration_cli` followed by `run_cleanup_cli` to ensure evidence
      cleanup works in practice (no mocking of filesystem calls).
 
-3. **IB HTTP fallback coverage**  
+3. **IB HTTP fallback coverage**
    - *Observation*: Runtime falls back to an httpx client when the IB SDK cannot
      authenticate. The integration CLI test intentionally hits this path (no SDK
      server) so every run asserts the HTTP fallback can migrate and validate
      sample entities.
 
-4. **Parallel Validator evidence** *(Pending)*  
+4. **Parallel Validator evidence** *(Pending)*
    - *Gap*: We still need a deterministic integration test that demonstrates
      discrepancy logging when Smart-Scaffold and IB datasets diverge. This will
      require wiring the CLI to prime IB while loading a different dataset into

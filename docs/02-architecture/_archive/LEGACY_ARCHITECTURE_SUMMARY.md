@@ -279,7 +279,7 @@ Grant/Deny Access
 ```python
 class BaseDatabaseContract:
     """Base class for all database contracts"""
-    
+
     async def create_record(self, conn, **kwargs) -> Dict
     async def get_record_by_id(self, conn, record_id) -> Optional[Dict]
     async def update_record(self, conn, record_id, **kwargs) -> Optional[Dict]
@@ -471,7 +471,7 @@ Health & Monitoring:
 - **Rate Limiting**: 234 endpoints with configured rate limits
 - **Input Validation**: Pydantic models for all request validation
 - **CORS**: Properly configured for allowed origins
-- **Security Headers**: 
+- **Security Headers**:
   - `X-Content-Type-Options: nosniff`
   - `X-Frame-Options: DENY`
   - `X-XSS-Protection: 1; mode=block`
@@ -481,7 +481,7 @@ Health & Monitoring:
 
 **OpenAPI Spec**: Full Swagger/OpenAPI 3.0 specification
 **Available at**: `/docs` (Swagger UI), `/redoc` (ReDoc)
-**Includes**: 
+**Includes**:
 - All endpoints with parameters
 - Request/response schemas
 - Authentication requirements
@@ -525,14 +525,14 @@ Database Tables Needed:
     - trial_start_date
     - trial_expiration_date
     - status (trial, active, expired, converted)
-  
+
   aws_usage_metrics:
     - aws_customer_id
     - metric_type (api_calls, documents, assessments)
     - quantity
     - timestamp
     - billing_dimension
-  
+
   aws_subscriptions:
     - aws_customer_id
     - subscription_id
@@ -703,14 +703,14 @@ async def create_collaboration_session(issue_data):
 ```sql
 -- Tenant identification
 -- Option 1: Row-level security policies
-ALTER TABLE ag_catalog.organizations 
+ALTER TABLE ag_catalog.organizations
 ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY organization_isolation ON ag_catalog.organizations
 USING (id = current_setting('app.current_tenant_id')::uuid);
 
 -- Option 2: Tenant ID in where clause
-SELECT * FROM ag_catalog.assessments 
+SELECT * FROM ag_catalog.assessments
 WHERE tenant_id = current_tenant_id;
 ```
 
@@ -1259,4 +1259,3 @@ For new system build:
 **Document Compiled**: 2025-11-30
 **For**: Cloud Optimizer v2 Clean-Slate Rebuild
 **Status**: Comprehensive architectural and design summary
-

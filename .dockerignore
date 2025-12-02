@@ -1,0 +1,86 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.benchmarks/
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Smart Scaffold
+.smart-scaffold/
+.smart-scaffold.yml
+smart_scaffold_config.json
+smart_scaffold_data/
+
+# Claude
+.claude/
+
+# Evidence and examples
+evidence/
+examples/
+
+# Test files
+tests/
+
+# Scripts (not needed in container)
+scripts/
+
+# CI/CD
+.pre-commit-config.yaml

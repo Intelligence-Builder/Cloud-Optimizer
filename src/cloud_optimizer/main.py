@@ -104,34 +104,36 @@ def create_app() -> FastAPI:
     )
 
     # Register routers
+    from cloud_optimizer.api.routers import auth, health, kb, security, trial
 
-    @app.get("/health")
-    async def health_check() -> dict[str, str]:
-        """Basic health check endpoint."""
-        return {"status": "healthy", "version": settings.app_version}
+    # Health endpoints (no prefix for Kubernetes compatibility)
+    app.include_router(
+        health.router,
+        tags=["Health"],
+    )
 
-    @app.get("/ready")
-    async def readiness_check() -> dict[str, str]:
-        """Readiness check - verifies dependencies are available."""
-        ib_status = "not_configured"
-        if hasattr(app.state, "ib_service") and app.state.ib_service:
-            if app.state.ib_service.is_connected:
-                ib_status = "connected"
-            else:
-                ib_status = "disconnected"
-
-        return {
-            "status": "ready",
-            "intelligence_builder": ib_status,
-        }
-
-    # Register security analysis router
-    from cloud_optimizer.api.routers import security
+    app.include_router(
+        auth.router,
+        prefix="/api/v1/auth",
+        tags=["Authentication"],
+    )
 
     app.include_router(
         security.router,
         prefix="/api/v1/security",
         tags=["Security Analysis"],
+    )
+
+    app.include_router(
+        trial.router,
+        prefix="/api/v1/trial",
+        tags=["Trial Management"],
+    )
+
+    app.include_router(
+        kb.router,
+        prefix="/api/v1/kb",
+        tags=["Knowledge Base"],
     )
 
     return app

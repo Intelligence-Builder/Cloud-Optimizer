@@ -102,8 +102,12 @@ class SSKnowledgeGraph:
                 {
                     "id": str(row.get("rel_id")),
                     "type": row.get("rel_type", "").lower(),
-                    "source_id": self._resolve_entity_id(source_props, row.get("source_mem_id")),
-                    "target_id": self._resolve_entity_id(target_props, row.get("target_mem_id")),
+                    "source_id": self._resolve_entity_id(
+                        source_props, row.get("source_mem_id")
+                    ),
+                    "target_id": self._resolve_entity_id(
+                        target_props, row.get("target_mem_id")
+                    ),
                     "properties": row.get("rel_props") or {},
                 }
             )
@@ -152,7 +156,9 @@ class SSKnowledgeGraph:
         if not rows:
             return None
         row = rows[0]
-        return self._format_entity(row.get("props") or {}, row.get("labels") or [], row.get("mem_id"))
+        return self._format_entity(
+            row.get("props") or {}, row.get("labels") or [], row.get("mem_id")
+        )
 
     async def query(self, query_text: str, limit: int = 25) -> List[Dict[str, Any]]:
         """Approximate search by matching name/title/description fields."""
@@ -169,7 +175,9 @@ class SSKnowledgeGraph:
             {"query": query_text, "limit": limit},
         )
         return [
-            self._format_entity(row.get("props") or {}, row.get("labels") or [], row.get("mem_id"))
+            self._format_entity(
+                row.get("props") or {}, row.get("labels") or [], row.get("mem_id")
+            )
             for row in rows
         ]
 
@@ -184,7 +192,12 @@ class SSKnowledgeGraph:
         mem_id: Optional[int],
     ) -> Dict[str, Any]:
         entity_id = self._resolve_entity_id(props, mem_id)
-        name = props.get("name") or props.get("title") or props.get("issue_id") or entity_id
+        name = (
+            props.get("name")
+            or props.get("title")
+            or props.get("issue_id")
+            or entity_id
+        )
         primary_label = labels[0] if labels else "Entity"
 
         return {

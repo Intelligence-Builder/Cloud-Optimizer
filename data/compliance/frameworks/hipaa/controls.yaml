@@ -1,0 +1,232 @@
+framework: HIPAA
+version: "2013"
+description: Health Insurance Portability and Accountability Act - Security Rule
+controls:
+  - control_id: "164.312(a)(1)"
+    name: Access Control
+    description: |
+      Implement technical policies and procedures for electronic information systems
+      that maintain electronic protected health information (ePHI) to allow access
+      only to those persons or software programs that have been granted access rights.
+    requirements:
+      - Implement unique user identification
+      - Implement emergency access procedures
+      - Implement automatic logoff from sessions
+      - Implement encryption and decryption of ePHI
+    aws_services:
+      - IAM
+      - AWS SSO
+      - AWS Organizations
+      - Cognito
+      - KMS
+      - CloudTrail
+    implementation_guidance: |
+      1. Use AWS IAM to create unique user identities for each individual
+      2. Implement MFA for all users accessing ePHI
+      3. Configure IAM policies using least privilege principle
+      4. Enable AWS SSO for centralized access management
+      5. Use IAM session policies to enforce maximum session duration
+      6. Enable AWS CloudTrail to log all access to ePHI
+      7. Use AWS KMS for encryption of ePHI at rest
+      8. Implement automatic session termination using IAM session duration limits
+
+  - control_id: "164.312(b)"
+    name: Audit Controls
+    description: |
+      Implement hardware, software, and/or procedural mechanisms that record and
+      examine activity in information systems that contain or use ePHI.
+    requirements:
+      - Record and examine activity in information systems containing ePHI
+      - Maintain audit logs with sufficient detail for security analysis
+      - Protect audit trail information from unauthorized access
+      - Review audit logs regularly for security incidents
+    aws_services:
+      - CloudTrail
+      - CloudWatch Logs
+      - S3
+      - Athena
+      - GuardDuty
+      - Security Hub
+    implementation_guidance: |
+      1. Enable AWS CloudTrail in all regions for comprehensive API logging
+      2. Configure CloudTrail to log management and data events
+      3. Store CloudTrail logs in S3 with versioning and MFA delete enabled
+      4. Enable CloudTrail log file validation for integrity checking
+      5. Use CloudWatch Logs Insights for log analysis and querying
+      6. Implement CloudWatch alarms for suspicious activities
+      7. Use Amazon Athena to query CloudTrail logs for audit purposes
+      8. Enable AWS GuardDuty for threat detection and monitoring
+      9. Centralize findings in AWS Security Hub for unified view
+      10. Retain audit logs for minimum 6 years per HIPAA requirements
+
+  - control_id: "164.312(c)(1)"
+    name: Integrity Controls
+    description: |
+      Implement policies and procedures to protect ePHI from improper alteration
+      or destruction. Ensure that ePHI is not improperly modified or deleted.
+    requirements:
+      - Implement mechanisms to authenticate ePHI
+      - Protect ePHI from improper alteration or destruction
+      - Maintain data integrity during transmission
+      - Implement version control for ePHI
+    aws_services:
+      - S3
+      - S3 Object Lock
+      - KMS
+      - CloudTrail
+      - Config
+      - Macie
+    implementation_guidance: |
+      1. Enable S3 versioning for all buckets storing ePHI
+      2. Use S3 Object Lock for WORM (Write Once Read Many) protection
+      3. Implement S3 bucket policies to prevent unauthorized deletion
+      4. Enable MFA Delete on S3 buckets containing ePHI
+      5. Use AWS KMS for cryptographic signing of ePHI
+      6. Enable CloudTrail logging for all S3 data events
+      7. Use AWS Config to monitor configuration changes
+      8. Implement S3 replication for disaster recovery
+      9. Use Amazon Macie to discover and protect sensitive ePHI
+      10. Configure S3 lifecycle policies with appropriate retention
+
+  - control_id: "164.312(d)"
+    name: Person or Entity Authentication
+    description: |
+      Implement procedures to verify that a person or entity seeking access to
+      ePHI is the one claimed. Strong authentication mechanisms required.
+    requirements:
+      - Verify identity of persons accessing ePHI
+      - Implement multi-factor authentication
+      - Use strong password policies
+      - Implement biometric authentication where appropriate
+    aws_services:
+      - IAM
+      - AWS SSO
+      - Cognito
+      - Directory Service
+      - Secrets Manager
+    implementation_guidance: |
+      1. Enforce MFA for all IAM users and root account
+      2. Implement password policies requiring complexity and rotation
+      3. Use AWS SSO with corporate identity provider integration
+      4. Configure Cognito user pools with MFA enabled
+      5. Integrate with existing Active Directory using AWS Directory Service
+      6. Implement passwordless authentication using FIDO2/WebAuthn
+      7. Use AWS Secrets Manager for credential rotation
+      8. Enable CloudTrail logging for all authentication events
+      9. Implement account lockout policies after failed attempts
+      10. Use temporary security credentials instead of long-term access keys
+
+  - control_id: "164.312(e)(1)"
+    name: Transmission Security
+    description: |
+      Implement technical security measures to guard against unauthorized access
+      to ePHI that is being transmitted over an electronic communications network.
+    requirements:
+      - Implement integrity controls for transmitted ePHI
+      - Implement encryption for ePHI in transit
+      - Protect against unauthorized interception
+      - Ensure end-to-end encryption for ePHI transmission
+    aws_services:
+      - VPC
+      - Certificate Manager
+      - CloudFront
+      - API Gateway
+      - Direct Connect
+      - VPN
+    implementation_guidance: |
+      1. Use TLS 1.2 or higher for all data in transit
+      2. Implement ACM certificates for SSL/TLS encryption
+      3. Configure CloudFront with HTTPS-only distribution
+      4. Use API Gateway with TLS encryption enabled
+      5. Implement VPN or AWS Direct Connect for private connectivity
+      6. Enable VPC Flow Logs to monitor network traffic
+      7. Use PrivateLink for private connectivity to AWS services
+      8. Implement Network ACLs and Security Groups for traffic filtering
+      9. Use AWS Transit Gateway for encrypted inter-VPC communication
+      10. Enable encryption for ELB listeners and target groups
+
+  - control_id: "164.308(a)(1)(ii)(D)"
+    name: Information System Activity Review
+    description: |
+      Implement procedures to regularly review records of information system
+      activity, such as audit logs, access reports, and security incident tracking.
+    requirements:
+      - Regularly review information system activity records
+      - Analyze security-related events and incidents
+      - Monitor for unauthorized access attempts
+      - Document review procedures and findings
+    aws_services:
+      - CloudWatch
+      - CloudTrail
+      - Security Hub
+      - GuardDuty
+      - Detective
+      - EventBridge
+    implementation_guidance: |
+      1. Configure CloudWatch dashboards for security monitoring
+      2. Create CloudWatch alarms for critical security events
+      3. Use Security Hub for centralized security findings
+      4. Enable GuardDuty for intelligent threat detection
+      5. Implement Amazon Detective for security investigation
+      6. Use EventBridge to automate security incident response
+      7. Create regular reports using Athena queries on CloudTrail logs
+      8. Implement automated notifications for security events
+      9. Conduct weekly reviews of access logs and audit trails
+      10. Document all review activities and remediation actions
+
+  - control_id: "164.308(a)(3)(i)"
+    name: Workforce Security - Authorization/Supervision
+    description: |
+      Implement procedures for the authorization and/or supervision of workforce
+      members who work with ePHI or in locations where it might be accessed.
+    requirements:
+      - Implement workforce authorization procedures
+      - Establish role-based access controls
+      - Supervise workforce members accessing ePHI
+      - Implement workforce clearance procedures
+    aws_services:
+      - IAM
+      - Organizations
+      - SSO
+      - Resource Access Manager
+      - Control Tower
+    implementation_guidance: |
+      1. Use AWS Organizations for centralized account management
+      2. Implement IAM roles based on job functions
+      3. Use AWS SSO for workforce identity management
+      4. Create service control policies (SCPs) for guardrails
+      5. Implement IAM permission boundaries for delegation
+      6. Use AWS Control Tower for governance at scale
+      7. Enable AWS Resource Access Manager for controlled sharing
+      8. Conduct quarterly access reviews using IAM Access Analyzer
+      9. Implement automated provisioning and deprovisioning workflows
+      10. Use tags for resource-based access control
+
+  - control_id: "164.308(a)(5)(ii)(C)"
+    name: Log-in Monitoring
+    description: |
+      Implement procedures for monitoring log-in attempts and reporting
+      discrepancies. Track both successful and failed authentication attempts.
+    requirements:
+      - Monitor and log all authentication attempts
+      - Report discrepancies in login patterns
+      - Alert on suspicious login activities
+      - Maintain login records for audit purposes
+    aws_services:
+      - CloudTrail
+      - CloudWatch
+      - GuardDuty
+      - IAM Access Analyzer
+      - EventBridge
+      - SNS
+    implementation_guidance: |
+      1. Enable CloudTrail logging for all authentication events
+      2. Create CloudWatch metric filters for failed login attempts
+      3. Configure alarms for multiple failed authentication attempts
+      4. Use GuardDuty to detect compromised credentials
+      5. Implement EventBridge rules for real-time login monitoring
+      6. Send notifications via SNS for suspicious activities
+      7. Use IAM Access Analyzer for unused credentials detection
+      8. Create dashboards showing login patterns and anomalies
+      9. Implement automated response for account lockouts
+      10. Generate weekly reports on authentication activities

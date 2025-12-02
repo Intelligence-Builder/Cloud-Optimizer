@@ -27,6 +27,38 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
 
+    # Database
+    database_host: str = "localhost"
+    database_port: int = 5432
+    database_name: str = "cloud_optimizer"
+    database_user: str = "cloud_optimizer"
+    database_password: str = "securepass123"
+
+    # JWT Settings
+    jwt_secret_key: str = Field(
+        default="change-me-in-production-use-openssl-rand-hex-32",
+        description="Secret key for JWT signing",
+    )
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 15
+    jwt_refresh_token_expire_days: int = 7
+
+    @property
+    def database_url(self) -> str:
+        """Get async database URL for SQLAlchemy."""
+        return (
+            f"postgresql+asyncpg://{self.database_user}:{self.database_password}"
+            f"@{self.database_host}:{self.database_port}/{self.database_name}"
+        )
+
+    @property
+    def database_url_sync(self) -> str:
+        """Get sync database URL for Alembic migrations."""
+        return (
+            f"postgresql://{self.database_user}:{self.database_password}"
+            f"@{self.database_host}:{self.database_port}/{self.database_name}"
+        )
+
     # Intelligence-Builder Platform
     ib_platform_url: str = Field(
         default="http://localhost:8000",

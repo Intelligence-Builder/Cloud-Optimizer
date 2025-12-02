@@ -1,0 +1,535 @@
+service: CloudTrail
+description: AWS CloudTrail - API activity logging and monitoring
+best_practices:
+  - category: logging
+    title: Enable Multi-Region Trail
+    description: |
+      Create a multi-region trail to log API activity across all AWS regions from a single
+      trail configuration. This ensures comprehensive audit coverage even when new regions
+      are added or resources are created in unexpected regions.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable multi-region trail with global service events included. This captures IAM,
+      STS, and CloudFront events in addition to regional service events. Apply to all
+      accounts in AWS Organizations for centralized logging.
+    terraform_example: |
+      # S3 bucket for CloudTrail logs
+      resource "aws_s3_bucket" "cloudtrail" {
+        bucket = "my-org-cloudtrail-logs"
+      }
+
+      resource "aws_s3_bucket_versioning" "cloudtrail" {
+        bucket = aws_s3_bucket.cloudtrail.id
+
+        versioning_configuration {
+          status = "Enabled"
+        }
+      }
+
+      # S3 bucket policy for CloudTrail
+      resource "aws_s3_bucket_policy" "cloudtrail" {
+        bucket = aws_s3_bucket.cloudtrail.id
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Sid    = "AWSCloudTrailAclCheck"
+              Effect = "Allow"
+              Principal = {
+                Service = "cloudtrail.amazonaws.com"
+              }
+              Action   = "s3:GetBucketAcl"
+              Resource = aws_s3_bucket.cloudtrail.arn
+            },
+            {
+              Sid    = "AWSCloudTrailWrite"
+              Effect = "Allow"
+              Principal = {
+                Service = "cloudtrail.amazonaws.com"
+              }
+              Action   = "s3:PutObject"
+              Resource = "${aws_s3_bucket.cloudtrail.arn}/*"
+              Condition = {
+                StringEquals = {
+                  "s3:x-amz-acl" = "bucket-owner-full-control"
+                }
+              }
+            }
+          ]
+        })
+      }
+
+      # Multi-region CloudTrail
+      resource "aws_cloudtrail" "main" {
+        name                          = "organization-trail"
+        s3_bucket_name                = aws_s3_bucket.cloudtrail.id
+        include_global_service_events = true
+        is_multi_region_trail         = true
+        enable_log_file_validation    = true
+
+        event_selector {
+          read_write_type           = "All"
+          include_management_events = true
+        }
+
+        tags = {
+          Name = "organization-trail"
+        }
+      }
+    cli_example: |
+      # Create multi-region trail
+      aws cloudtrail create-trail \
+        --name organization-trail \
+        --s3-bucket-name my-org-cloudtrail-logs \
+        --is-multi-region-trail \
+        --include-global-service-events \
+        --enable-log-file-validation
+
+      # Start logging
+      aws cloudtrail start-logging --name organization-trail
+
+      # Verify trail status
+      aws cloudtrail get-trail-status --name organization-trail
+
+      # List all trails
+      aws cloudtrail describe-trails
+    console_steps:
+      - Navigate to CloudTrail console at https://console.aws.amazon.com/cloudtrail/
+      - Click "Create trail"
+      - Enter trail name
+      - Check "Enable for all regions in this account"
+      - Choose or create S3 bucket
+      - Enable log file validation
+      - Optionally enable SNS notifications
+      - Optionally enable CloudWatch Logs
+      - Configure event selectors (include management events)
+      - Review and create trail
+
+  - category: logging
+    title: Enable Log File Validation
+    description: |
+      Enable log file validation to verify the integrity of CloudTrail log files. This
+      feature uses digital signatures to detect whether logs have been modified, deleted,
+      or remained unchanged after CloudTrail delivered them.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable log file validation when creating the trail. CloudTrail creates hash values
+      for each log file delivered. Use these digest files to validate log integrity during
+      security investigations or compliance audits.
+    terraform_example: |
+      resource "aws_cloudtrail" "validated" {
+        name                       = "validated-trail"
+        s3_bucket_name             = aws_s3_bucket.cloudtrail.id
+        enable_log_file_validation = true
+        is_multi_region_trail      = true
+
+        tags = {
+          Name = "validated-trail"
+        }
+      }
+
+      # Lambda function to validate logs periodically
+      resource "aws_lambda_function" "log_validator" {
+        filename      = "log_validator.zip"
+        function_name = "cloudtrail-log-validator"
+        role          = aws_iam_role.lambda_role.arn
+        handler       = "index.handler"
+        runtime       = "python3.11"
+
+        environment {
+          variables = {
+            TRAIL_ARN    = aws_cloudtrail.validated.arn
+            BUCKET_NAME  = aws_s3_bucket.cloudtrail.id
+          }
+        }
+      }
+
+      # EventBridge rule to trigger validation daily
+      resource "aws_cloudwatch_event_rule" "daily_validation" {
+        name                = "daily-cloudtrail-validation"
+        description         = "Trigger log validation daily"
+        schedule_expression = "cron(0 2 * * ? *)"
+      }
+
+      resource "aws_cloudwatch_event_target" "lambda" {
+        rule      = aws_cloudwatch_event_rule.daily_validation.name
+        target_id = "LogValidation"
+        arn       = aws_lambda_function.log_validator.arn
+      }
+    cli_example: |
+      # Enable log file validation on existing trail
+      aws cloudtrail update-trail \
+        --name organization-trail \
+        --enable-log-file-validation
+
+      # Validate log files manually
+      aws cloudtrail validate-logs \
+        --trail-arn arn:aws:cloudtrail:us-east-1:123456789012:trail/organization-trail \
+        --start-time 2024-01-01T00:00:00Z \
+        --end-time 2024-01-02T00:00:00Z
+
+      # Get digest file
+      aws s3 cp s3://my-org-cloudtrail-logs/AWSLogs/123456789012/CloudTrail-Digest/us-east-1/2024/01/01/ . --recursive
+    console_steps:
+      - Navigate to CloudTrail console
+      - Select trail
+      - Click "Edit"
+      - Under "Additional settings"
+      - Check "Enable log file validation"
+      - Click "Save changes"
+      - To validate - use AWS CLI or custom validation script
+      - Download digest files from S3 for manual verification
+
+  - category: logging
+    title: Integrate with CloudWatch Logs
+    description: |
+      Send CloudTrail logs to CloudWatch Logs for real-time monitoring, alerting, and
+      analysis. This enables you to create metric filters and alarms for security events,
+      compliance violations, and operational issues.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Configure CloudTrail to send logs to CloudWatch Logs. Create an IAM role with
+      permissions to write to CloudWatch Logs. Set up metric filters for critical events
+      like root account usage, IAM policy changes, and security group modifications.
+    terraform_example: |
+      # CloudWatch Log Group
+      resource "aws_cloudwatch_log_group" "cloudtrail" {
+        name              = "/aws/cloudtrail/organization"
+        retention_in_days = 90
+      }
+
+      # IAM role for CloudTrail to CloudWatch Logs
+      resource "aws_iam_role" "cloudtrail_cloudwatch" {
+        name = "cloudtrail-cloudwatch-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              Service = "cloudtrail.amazonaws.com"
+            }
+          }]
+        })
+      }
+
+      resource "aws_iam_role_policy" "cloudtrail_cloudwatch" {
+        name = "cloudtrail-cloudwatch-policy"
+        role = aws_iam_role.cloudtrail_cloudwatch.id
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Effect = "Allow"
+            Action = [
+              "logs:CreateLogStream",
+              "logs:PutLogEvents"
+            ]
+            Resource = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+          }]
+        })
+      }
+
+      # CloudTrail with CloudWatch Logs
+      resource "aws_cloudtrail" "main" {
+        name                          = "organization-trail"
+        s3_bucket_name                = aws_s3_bucket.cloudtrail.id
+        cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+        cloud_watch_logs_role_arn     = aws_iam_role.cloudtrail_cloudwatch.arn
+        include_global_service_events = true
+        is_multi_region_trail         = true
+        enable_log_file_validation    = true
+      }
+
+      # Metric filter for root account usage
+      resource "aws_cloudwatch_log_metric_filter" "root_usage" {
+        name           = "root-account-usage"
+        log_group_name = aws_cloudwatch_log_group.cloudtrail.name
+        pattern        = '{ $.userIdentity.type = "Root" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != "AwsServiceEvent" }'
+
+        metric_transformation {
+          name      = "RootAccountUsage"
+          namespace = "Security/IAM"
+          value     = "1"
+        }
+      }
+
+      resource "aws_cloudwatch_metric_alarm" "root_usage" {
+        alarm_name          = "root-account-usage-alert"
+        comparison_operator = "GreaterThanThreshold"
+        evaluation_periods  = "1"
+        metric_name         = "RootAccountUsage"
+        namespace           = "Security/IAM"
+        period              = "60"
+        statistic           = "Sum"
+        threshold           = "0"
+        alarm_description   = "Alert on root account usage"
+        alarm_actions       = [aws_sns_topic.security_alerts.arn]
+      }
+    cli_example: |
+      # Update trail with CloudWatch Logs
+      aws cloudtrail update-trail \
+        --name organization-trail \
+        --cloud-watch-logs-log-group-arn arn:aws:logs:us-east-1:123456789012:log-group:/aws/cloudtrail/organization:* \
+        --cloud-watch-logs-role-arn arn:aws:iam::123456789012:role/cloudtrail-cloudwatch-role
+
+      # Query logs with Insights
+      aws logs start-query \
+        --log-group-name /aws/cloudtrail/organization \
+        --start-time $(date -u -d '1 hour ago' +%s) \
+        --end-time $(date -u +%s) \
+        --query-string 'fields @timestamp, userIdentity.arn, eventName, errorCode
+          | filter userIdentity.type = "Root"
+          | sort @timestamp desc'
+    console_steps:
+      - Navigate to CloudTrail console
+      - Select trail
+      - Click "Edit"
+      - Under "CloudWatch Logs"
+      - Check "Enabled"
+      - Select or create log group
+      - Select or create IAM role
+      - Click "Save changes"
+      - Go to CloudWatch console to create metric filters and alarms
+
+  - category: logging
+    title: Enable Data Event Logging
+    description: |
+      Enable data event logging for S3 buckets and Lambda functions to track object-level
+      API activity. This provides detailed audit trails for data access and modifications,
+      essential for security investigations and compliance.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Configure data event selectors for sensitive S3 buckets and critical Lambda functions.
+      Be mindful of costs as data events generate high volume of logs. Use advanced event
+      selectors to filter specific prefixes or event types.
+    terraform_example: |
+      resource "aws_cloudtrail" "with_data_events" {
+        name                          = "data-events-trail"
+        s3_bucket_name                = aws_s3_bucket.cloudtrail.id
+        include_global_service_events = true
+        is_multi_region_trail         = true
+
+        # Management events
+        event_selector {
+          read_write_type           = "All"
+          include_management_events = true
+        }
+
+        # S3 data events for specific bucket
+        event_selector {
+          read_write_type           = "All"
+          include_management_events = false
+
+          data_resource {
+            type = "AWS::S3::Object"
+            values = [
+              "arn:aws:s3:::sensitive-bucket/*"
+            ]
+          }
+        }
+
+        # Lambda data events
+        event_selector {
+          read_write_type           = "All"
+          include_management_events = false
+
+          data_resource {
+            type = "AWS::Lambda::Function"
+            values = [
+              "arn:aws:lambda:*:123456789012:function/*"
+            ]
+          }
+        }
+
+        # Advanced event selectors (alternative approach)
+        advanced_event_selector {
+          name = "S3 write events on sensitive buckets"
+
+          field_selector {
+            field  = "eventCategory"
+            equals = ["Data"]
+          }
+
+          field_selector {
+            field  = "resources.type"
+            equals = ["AWS::S3::Object"]
+          }
+
+          field_selector {
+            field       = "resources.ARN"
+            starts_with = ["arn:aws:s3:::sensitive-bucket/"]
+          }
+
+          field_selector {
+            field  = "readOnly"
+            equals = ["false"]
+          }
+        }
+      }
+    cli_example: |
+      # Update trail with S3 data events
+      aws cloudtrail put-event-selectors \
+        --trail-name data-events-trail \
+        --event-selectors '[
+          {
+            "ReadWriteType": "All",
+            "IncludeManagementEvents": true
+          },
+          {
+            "ReadWriteType": "All",
+            "IncludeManagementEvents": false,
+            "DataResources": [{
+              "Type": "AWS::S3::Object",
+              "Values": ["arn:aws:s3:::sensitive-bucket/*"]
+            }]
+          }
+        ]'
+
+      # View current event selectors
+      aws cloudtrail get-event-selectors --trail-name data-events-trail
+    console_steps:
+      - Navigate to CloudTrail console
+      - Select trail
+      - Go to "Event selectors" tab
+      - Click "Edit"
+      - For data events, click "Add data event type"
+      - Select "S3" or "Lambda"
+      - Choose "All current and future buckets/functions" or "Individual bucket/function"
+      - For individual resources, specify ARNs
+      - Select read/write type
+      - Click "Save changes"
+      - Monitor CloudTrail costs as data events increase volume
+
+  - category: encryption
+    title: Encrypt CloudTrail Logs with KMS
+    description: |
+      Enable SSE-KMS encryption for CloudTrail log files stored in S3. Use customer-managed
+      KMS keys for additional control over log encryption and access. This adds an extra
+      layer of protection for sensitive audit logs.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create a KMS key with appropriate key policy for CloudTrail. Enable KMS encryption
+      on the trail. Ensure that anyone who needs to read CloudTrail logs has decrypt
+      permissions on the KMS key.
+    terraform_example: |
+      # KMS key for CloudTrail
+      resource "aws_kms_key" "cloudtrail" {
+        description             = "KMS key for CloudTrail log encryption"
+        deletion_window_in_days = 30
+        enable_key_rotation     = true
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Sid    = "Enable IAM User Permissions"
+              Effect = "Allow"
+              Principal = {
+                AWS = "arn:aws:iam::123456789012:root"
+              }
+              Action   = "kms:*"
+              Resource = "*"
+            },
+            {
+              Sid    = "Allow CloudTrail to encrypt logs"
+              Effect = "Allow"
+              Principal = {
+                Service = "cloudtrail.amazonaws.com"
+              }
+              Action = "kms:GenerateDataKey*"
+              Resource = "*"
+              Condition = {
+                StringLike = {
+                  "kms:EncryptionContext:aws:cloudtrail:arn" = "arn:aws:cloudtrail:*:123456789012:trail/*"
+                }
+              }
+            },
+            {
+              Sid    = "Allow CloudTrail to describe key"
+              Effect = "Allow"
+              Principal = {
+                Service = "cloudtrail.amazonaws.com"
+              }
+              Action = "kms:DescribeKey"
+              Resource = "*"
+            },
+            {
+              Sid    = "Allow principals to decrypt logs"
+              Effect = "Allow"
+              Principal = {
+                AWS = "arn:aws:iam::123456789012:role/SecurityAuditor"
+              }
+              Action = "kms:Decrypt"
+              Resource = "*"
+              Condition = {
+                StringEquals = {
+                  "kms:EncryptionContext:aws:cloudtrail:arn" = "arn:aws:cloudtrail:us-east-1:123456789012:trail/organization-trail"
+                }
+              }
+            }
+          ]
+        })
+      }
+
+      resource "aws_kms_alias" "cloudtrail" {
+        name          = "alias/cloudtrail-encryption"
+        target_key_id = aws_kms_key.cloudtrail.key_id
+      }
+
+      # CloudTrail with KMS encryption
+      resource "aws_cloudtrail" "encrypted" {
+        name                  = "encrypted-trail"
+        s3_bucket_name        = aws_s3_bucket.cloudtrail.id
+        kms_key_id            = aws_kms_key.cloudtrail.arn
+        is_multi_region_trail = true
+
+        tags = {
+          Name = "encrypted-trail"
+        }
+      }
+    cli_example: |
+      # Create KMS key for CloudTrail
+      aws kms create-key \
+        --description "CloudTrail log encryption"
+
+      # Update trail with KMS encryption
+      aws cloudtrail update-trail \
+        --name organization-trail \
+        --kms-key-id arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+
+      # Verify encryption
+      aws cloudtrail describe-trails --trail-name-list organization-trail
+    console_steps:
+      - First, create KMS key in KMS console
+      - Configure key policy to allow CloudTrail access
+      - Navigate to CloudTrail console
+      - Select trail
+      - Click "Edit"
+      - Under "Log file SSE-KMS encryption"
+      - Check "Enabled"
+      - Select KMS key
+      - Click "Save changes"
+      - Ensure users who need log access have KMS decrypt permissions

@@ -1,0 +1,273 @@
+service: S3
+description: Amazon Simple Storage Service - Object storage service
+best_practices:
+  - category: encryption
+    title: Enable Default Encryption
+    description: |
+      All S3 buckets should have default encryption enabled using either SSE-S3 or SSE-KMS.
+      This ensures that all objects are automatically encrypted at rest, protecting sensitive data
+      from unauthorized access.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable server-side encryption with either AWS-managed keys (SSE-S3) or customer-managed
+      keys (SSE-KMS). SSE-KMS provides additional control and audit capabilities.
+    terraform_example: |
+      resource "aws_s3_bucket_server_side_encryption_configuration" "example" {
+        bucket = aws_s3_bucket.example.id
+
+        rule {
+          apply_server_side_encryption_by_default {
+            sse_algorithm     = "aws:kms"
+            kms_master_key_id = aws_kms_key.s3_key.arn
+          }
+          bucket_key_enabled = true
+        }
+      }
+    cli_example: |
+      aws s3api put-bucket-encryption \
+        --bucket my-bucket \
+        --server-side-encryption-configuration '{
+          "Rules": [{
+            "ApplyServerSideEncryptionByDefault": {
+              "SSEAlgorithm": "aws:kms",
+              "KMSMasterKeyID": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+            },
+            "BucketKeyEnabled": true
+          }]
+        }'
+    console_steps:
+      - Navigate to S3 console at https://console.aws.amazon.com/s3/
+      - Select the target bucket from the list
+      - Click on the "Properties" tab
+      - Scroll to "Default encryption" section
+      - Click "Edit" button
+      - Select "Server-side encryption with AWS Key Management Service keys (SSE-KMS)"
+      - Choose your KMS key or use AWS managed key
+      - Enable "Bucket Key" for cost optimization
+      - Click "Save changes"
+
+  - category: access_control
+    title: Block All Public Access
+    description: |
+      Enable S3 Block Public Access settings at both bucket and account level to prevent
+      accidental public exposure of data. This is one of the most critical S3 security controls.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable all four Block Public Access settings: BlockPublicAcls, IgnorePublicAcls,
+      BlockPublicPolicy, and RestrictPublicBuckets. Apply at account level for maximum protection.
+    terraform_example: |
+      resource "aws_s3_bucket_public_access_block" "example" {
+        bucket = aws_s3_bucket.example.id
+
+        block_public_acls       = true
+        block_public_policy     = true
+        ignore_public_acls      = true
+        restrict_public_buckets = true
+      }
+
+      # Account-level blocking
+      resource "aws_s3_account_public_access_block" "example" {
+        block_public_acls       = true
+        block_public_policy     = true
+        ignore_public_acls      = true
+        restrict_public_buckets = true
+      }
+    cli_example: |
+      # Bucket-level
+      aws s3api put-public-access-block \
+        --bucket my-bucket \
+        --public-access-block-configuration \
+          "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+      # Account-level
+      aws s3control put-public-access-block \
+        --account-id 123456789012 \
+        --public-access-block-configuration \
+          "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+    console_steps:
+      - Navigate to S3 console
+      - Select the bucket
+      - Click "Permissions" tab
+      - Under "Block public access (bucket settings)", click "Edit"
+      - Check all four options (Block all public access)
+      - Click "Save changes"
+      - Confirm by typing "confirm"
+
+  - category: logging
+    title: Enable S3 Server Access Logging
+    description: |
+      Enable server access logging to track all requests made to your S3 bucket. This provides
+      detailed records for security analysis, audit compliance, and understanding access patterns.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Configure S3 server access logging to write logs to a separate, secure logging bucket.
+      Ensure the logging bucket has appropriate lifecycle policies to manage log retention.
+    terraform_example: |
+      resource "aws_s3_bucket" "logs" {
+        bucket = "my-bucket-logs"
+      }
+
+      resource "aws_s3_bucket_logging" "example" {
+        bucket = aws_s3_bucket.example.id
+
+        target_bucket = aws_s3_bucket.logs.id
+        target_prefix = "s3-access-logs/"
+      }
+    cli_example: |
+      aws s3api put-bucket-logging \
+        --bucket my-bucket \
+        --bucket-logging-status '{
+          "LoggingEnabled": {
+            "TargetBucket": "my-bucket-logs",
+            "TargetPrefix": "s3-access-logs/"
+          }
+        }'
+    console_steps:
+      - Navigate to S3 console
+      - Select the source bucket
+      - Click "Properties" tab
+      - Scroll to "Server access logging"
+      - Click "Edit"
+      - Select "Enable"
+      - Choose target bucket for logs
+      - Specify target prefix (e.g., "s3-access-logs/")
+      - Click "Save changes"
+
+  - category: backup
+    title: Enable Versioning
+    description: |
+      Enable S3 versioning to maintain multiple variants of objects in the same bucket.
+      This protects against accidental deletions and provides rollback capabilities.
+    compliance_frameworks:
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Enable versioning on all buckets containing critical data. Combine with lifecycle policies
+      to manage storage costs by transitioning or expiring old versions.
+    terraform_example: |
+      resource "aws_s3_bucket_versioning" "example" {
+        bucket = aws_s3_bucket.example.id
+
+        versioning_configuration {
+          status = "Enabled"
+        }
+      }
+
+      # Optional: Lifecycle policy for old versions
+      resource "aws_s3_bucket_lifecycle_configuration" "example" {
+        bucket = aws_s3_bucket.example.id
+
+        rule {
+          id     = "expire-old-versions"
+          status = "Enabled"
+
+          noncurrent_version_expiration {
+            noncurrent_days = 90
+          }
+        }
+      }
+    cli_example: |
+      aws s3api put-bucket-versioning \
+        --bucket my-bucket \
+        --versioning-configuration Status=Enabled
+    console_steps:
+      - Navigate to S3 console
+      - Select the bucket
+      - Click "Properties" tab
+      - Scroll to "Bucket Versioning"
+      - Click "Edit"
+      - Select "Enable"
+      - Click "Save changes"
+
+  - category: access_control
+    title: Implement Least Privilege Bucket Policies
+    description: |
+      Use bucket policies to enforce least privilege access control. Restrict access based on
+      IAM principals, IP addresses, VPC endpoints, and require secure transport (HTTPS).
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create bucket policies that deny insecure transport, restrict access to specific principals,
+      and enforce MFA for delete operations. Use condition keys for granular control.
+    terraform_example: |
+      resource "aws_s3_bucket_policy" "example" {
+        bucket = aws_s3_bucket.example.id
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Sid    = "DenyInsecureTransport"
+              Effect = "Deny"
+              Principal = "*"
+              Action = "s3:*"
+              Resource = [
+                aws_s3_bucket.example.arn,
+                "${aws_s3_bucket.example.arn}/*"
+              ]
+              Condition = {
+                Bool = {
+                  "aws:SecureTransport" = "false"
+                }
+              }
+            },
+            {
+              Sid    = "RequireMFAForDelete"
+              Effect = "Deny"
+              Principal = "*"
+              Action = [
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
+              ]
+              Resource = "${aws_s3_bucket.example.arn}/*"
+              Condition = {
+                BoolIfExists = {
+                  "aws:MultiFactorAuthPresent" = "false"
+                }
+              }
+            }
+          ]
+        })
+      }
+    cli_example: |
+      aws s3api put-bucket-policy \
+        --bucket my-bucket \
+        --policy '{
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Sid": "DenyInsecureTransport",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:*",
+            "Resource": [
+              "arn:aws:s3:::my-bucket",
+              "arn:aws:s3:::my-bucket/*"
+            ],
+            "Condition": {
+              "Bool": {"aws:SecureTransport": "false"}
+            }
+          }]
+        }'
+    console_steps:
+      - Navigate to S3 console
+      - Select the bucket
+      - Click "Permissions" tab
+      - Scroll to "Bucket policy"
+      - Click "Edit"
+      - Enter your JSON policy document
+      - Click "Save changes"

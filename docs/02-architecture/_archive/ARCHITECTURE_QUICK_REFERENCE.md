@@ -10,7 +10,7 @@
 
 ### Layers (Top to Bottom)
 1. **User/API Layer** - FastAPI REST API (234 endpoints)
-2. **Auth Layer** - JWT + RBAC middleware  
+2. **Auth Layer** - JWT + RBAC middleware
 3. **Contract Layer** - Database contracts (100% type-safe)
 4. **Data Layer** - PostgreSQL ag_catalog schema + Redis cache
 
@@ -370,8 +370,8 @@ async def list_assessments(
 ) -> Dict:
     org_id = current_user["organization_id"]
     items = await assessments_contract.list_records(
-        conn, 
-        limit=limit, 
+        conn,
+        limit=limit,
         offset=offset,
         organization_id=org_id  # Automatic tenant filtering
     )
@@ -438,4 +438,3 @@ except Exception as e:
 - Contract system: `src/contracts/`
 - API routers: `src/api/routers/`
 - Models/schemas: `src/models/`
-

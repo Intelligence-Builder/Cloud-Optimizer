@@ -1,0 +1,404 @@
+service: Lambda
+description: AWS Lambda - Serverless compute service
+best_practices:
+  - category: network_security
+    title: Deploy Lambda in VPC When Accessing Private Resources
+    description: |
+      Deploy Lambda functions in a VPC when they need to access resources in private subnets
+      such as RDS databases, ElastiCache clusters, or internal APIs. Use VPC endpoints to
+      access AWS services without going through the internet.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Configure Lambda functions with VPC configuration including subnet IDs and security
+      groups. Use private subnets and NAT Gateway for internet access. Implement VPC endpoints
+      for AWS services to reduce costs and improve security.
+    terraform_example: |
+      resource "aws_lambda_function" "example" {
+        filename      = "lambda_function.zip"
+        function_name = "vpc-lambda"
+        role          = aws_iam_role.lambda_role.arn
+        handler       = "index.handler"
+        runtime       = "python3.11"
+
+        vpc_config {
+          subnet_ids         = [
+            aws_subnet.private_a.id,
+            aws_subnet.private_b.id
+          ]
+          security_group_ids = [aws_security_group.lambda.id]
+        }
+
+        environment {
+          variables = {
+            DB_HOST = aws_db_instance.example.endpoint
+          }
+        }
+      }
+
+      # Security group for Lambda
+      resource "aws_security_group" "lambda" {
+        name        = "lambda-sg"
+        description = "Security group for Lambda functions"
+        vpc_id      = aws_vpc.main.id
+
+        egress {
+          from_port   = 0
+          to_port     = 0
+          protocol    = "-1"
+          cidr_blocks = ["0.0.0.0/0"]
+        }
+
+        tags = {
+          Name = "lambda-sg"
+        }
+      }
+    cli_example: |
+      aws lambda create-function \
+        --function-name vpc-lambda \
+        --runtime python3.11 \
+        --role arn:aws:iam::123456789012:role/lambda-role \
+        --handler index.handler \
+        --zip-file fileb://function.zip \
+        --vpc-config SubnetIds=subnet-12345,subnet-67890,SecurityGroupIds=sg-12345
+
+      # Update VPC configuration
+      aws lambda update-function-configuration \
+        --function-name vpc-lambda \
+        --vpc-config SubnetIds=subnet-12345,subnet-67890,SecurityGroupIds=sg-12345
+    console_steps:
+      - Navigate to Lambda console at https://console.aws.amazon.com/lambda/
+      - Select function or create new function
+      - Scroll to "VPC" section in Configuration
+      - Click "Edit"
+      - Select VPC
+      - Select private subnets in multiple AZs
+      - Select security group(s)
+      - Click "Save"
+      - Ensure Lambda execution role has ec2 network interface permissions
+
+  - category: encryption
+    title: Encrypt Environment Variables
+    description: |
+      Encrypt sensitive environment variables using AWS KMS. Lambda encrypts environment
+      variables at rest by default using AWS managed keys, but you should use customer-managed
+      KMS keys for sensitive data and additional control.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Use KMS customer-managed keys to encrypt environment variables. Store sensitive
+      configuration in AWS Secrets Manager or Parameter Store and retrieve at runtime.
+      Never hardcode secrets in Lambda code or environment variables in plain text.
+    terraform_example: |
+      # KMS key for Lambda
+      resource "aws_kms_key" "lambda" {
+        description             = "KMS key for Lambda environment variables"
+        deletion_window_in_days = 10
+        enable_key_rotation     = true
+      }
+
+      resource "aws_kms_alias" "lambda" {
+        name          = "alias/lambda-env-vars"
+        target_key_id = aws_kms_key.lambda.key_id
+      }
+
+      resource "aws_lambda_function" "example" {
+        filename      = "lambda_function.zip"
+        function_name = "secure-lambda"
+        role          = aws_iam_role.lambda_role.arn
+        handler       = "index.handler"
+        runtime       = "python3.11"
+
+        kms_key_arn = aws_kms_key.lambda.arn
+
+        environment {
+          variables = {
+            DB_NAME = "mydb"
+            # Store actual password in Secrets Manager, retrieve at runtime
+            SECRET_ARN = aws_secretsmanager_secret.db_password.arn
+          }
+        }
+      }
+
+      # IAM policy for Lambda to decrypt
+      resource "aws_iam_role_policy" "lambda_kms" {
+        role = aws_iam_role.lambda_role.id
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Effect = "Allow"
+            Action = [
+              "kms:Decrypt"
+            ]
+            Resource = aws_kms_key.lambda.arn
+          }]
+        })
+      }
+    cli_example: |
+      # Create function with encrypted environment variables
+      aws lambda create-function \
+        --function-name secure-lambda \
+        --runtime python3.11 \
+        --role arn:aws:iam::123456789012:role/lambda-role \
+        --handler index.handler \
+        --zip-file fileb://function.zip \
+        --kms-key-arn arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012 \
+        --environment "Variables={DB_NAME=mydb,SECRET_ARN=arn:aws:secretsmanager:us-east-1:123456789012:secret:db-password}"
+    console_steps:
+      - Navigate to Lambda console
+      - Select function
+      - Go to "Configuration" tab
+      - Click "Environment variables"
+      - Click "Edit"
+      - Expand "Encryption configuration"
+      - Select "Enable helpers for encryption in transit"
+      - Choose KMS key (customer-managed recommended)
+      - Add environment variables
+      - Click "Encrypt" for sensitive values
+      - Click "Save"
+
+  - category: access_control
+    title: Apply Least Privilege IAM Permissions
+    description: |
+      Grant Lambda functions only the minimum IAM permissions needed to perform their tasks.
+      Use resource-specific permissions instead of wildcards. Regularly review and audit
+      Lambda execution role permissions.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create specific IAM roles for each Lambda function or group of related functions.
+      Use IAM Access Analyzer to identify unused permissions. Implement resource-level
+      permissions and condition keys for fine-grained control.
+    terraform_example: |
+      # Lambda execution role
+      resource "aws_iam_role" "lambda_role" {
+        name = "lambda-specific-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              Service = "lambda.amazonaws.com"
+            }
+          }]
+        })
+      }
+
+      # Specific S3 access policy
+      resource "aws_iam_role_policy" "lambda_s3" {
+        name = "lambda-s3-access"
+        role = aws_iam_role.lambda_role.id
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Effect = "Allow"
+              Action = [
+                "s3:GetObject",
+                "s3:PutObject"
+              ]
+              Resource = [
+                "arn:aws:s3:::my-bucket/prefix/*"
+              ]
+            },
+            {
+              Effect = "Allow"
+              Action = [
+                "s3:ListBucket"
+              ]
+              Resource = [
+                "arn:aws:s3:::my-bucket"
+              ]
+              Condition = {
+                StringLike = {
+                  "s3:prefix" = ["prefix/*"]
+                }
+              }
+            }
+          ]
+        })
+      }
+
+      # CloudWatch Logs permissions (minimal)
+      resource "aws_iam_role_policy_attachment" "lambda_logs" {
+        role       = aws_iam_role.lambda_role.name
+        policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      }
+    cli_example: |
+      # Create IAM role
+      aws iam create-role \
+        --role-name lambda-specific-role \
+        --assume-role-policy-document file://trust-policy.json
+
+      # Attach minimal policy
+      aws iam put-role-policy \
+        --role-name lambda-specific-role \
+        --policy-name lambda-s3-access \
+        --policy-document file://s3-policy.json
+
+      # List attached policies
+      aws iam list-attached-role-policies --role-name lambda-specific-role
+    console_steps:
+      - Navigate to IAM console
+      - Create new role for Lambda
+      - Select "Lambda" as trusted entity
+      - Do NOT attach broad policies like AdministratorAccess
+      - Create custom inline policy with specific permissions
+      - Use resource ARNs instead of "*"
+      - Add condition keys where applicable
+      - Attach to Lambda function
+      - Use IAM Access Analyzer to review permissions
+
+  - category: logging
+    title: Enable X-Ray Tracing
+    description: |
+      Enable AWS X-Ray tracing for Lambda functions to analyze and debug distributed
+      applications. X-Ray provides insights into function performance, service dependencies,
+      and helps identify bottlenecks.
+    compliance_frameworks:
+      - SOC2
+    implementation: |
+      Enable active tracing on Lambda functions and use X-Ray SDK in function code to
+      create custom subsegments. Configure sampling rules to control tracing costs while
+      maintaining visibility into errors and slow requests.
+    terraform_example: |
+      resource "aws_lambda_function" "example" {
+        filename      = "lambda_function.zip"
+        function_name = "traced-lambda"
+        role          = aws_iam_role.lambda_role.arn
+        handler       = "index.handler"
+        runtime       = "python3.11"
+
+        tracing_config {
+          mode = "Active"
+        }
+
+        environment {
+          variables = {
+            AWS_XRAY_TRACING_NAME = "my-app"
+          }
+        }
+      }
+
+      # IAM permissions for X-Ray
+      resource "aws_iam_role_policy_attachment" "lambda_xray" {
+        role       = aws_iam_role.lambda_role.name
+        policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+      }
+
+      # X-Ray sampling rule
+      resource "aws_xray_sampling_rule" "example" {
+        rule_name      = "lambda-sampling"
+        priority       = 1000
+        version        = 1
+        reservoir_size = 1
+        fixed_rate     = 0.05
+        url_path       = "*"
+        host           = "*"
+        http_method    = "*"
+        service_type   = "AWS::Lambda::Function"
+        service_name   = "*"
+        resource_arn   = "*"
+      }
+    cli_example: |
+      # Enable tracing on function
+      aws lambda update-function-configuration \
+        --function-name traced-lambda \
+        --tracing-config Mode=Active
+
+      # Get X-Ray traces
+      aws xray get-trace-summaries \
+        --start-time 2024-01-01T00:00:00 \
+        --end-time 2024-01-02T00:00:00
+
+      # Create sampling rule
+      aws xray create-sampling-rule --cli-input-json file://sampling-rule.json
+    console_steps:
+      - Navigate to Lambda console
+      - Select function
+      - Go to "Configuration" tab
+      - Click "Monitoring and operations tools"
+      - Under "AWS X-Ray", click "Edit"
+      - Select "Active tracing"
+      - Click "Save"
+      - Ensure execution role has AWSXRayDaemonWriteAccess
+      - View traces in X-Ray console
+
+  - category: access_control
+    title: Implement Function-Level Concurrency Controls
+    description: |
+      Set reserved concurrency limits on Lambda functions to prevent runaway executions
+      and protect downstream resources. Use provisioned concurrency for consistent
+      performance on critical functions.
+    compliance_frameworks:
+      - SOC2
+    implementation: |
+      Configure reserved concurrency to limit maximum concurrent executions and prevent
+      one function from consuming all account-level concurrency. Use provisioned concurrency
+      for latency-sensitive workloads to eliminate cold starts.
+    terraform_example: |
+      resource "aws_lambda_function" "example" {
+        filename      = "lambda_function.zip"
+        function_name = "rate-limited-lambda"
+        role          = aws_iam_role.lambda_role.arn
+        handler       = "index.handler"
+        runtime       = "python3.11"
+
+        # Reserve specific concurrency
+        reserved_concurrent_executions = 10
+      }
+
+      # Provisioned concurrency for predictable performance
+      resource "aws_lambda_provisioned_concurrency_config" "example" {
+        function_name                     = aws_lambda_function.example.function_name
+        provisioned_concurrent_executions = 5
+        qualifier                         = aws_lambda_alias.live.name
+      }
+
+      resource "aws_lambda_alias" "live" {
+        name             = "live"
+        function_name    = aws_lambda_function.example.function_name
+        function_version = aws_lambda_function.example.version
+      }
+    cli_example: |
+      # Set reserved concurrency
+      aws lambda put-function-concurrency \
+        --function-name rate-limited-lambda \
+        --reserved-concurrent-executions 10
+
+      # Get concurrency configuration
+      aws lambda get-function-concurrency \
+        --function-name rate-limited-lambda
+
+      # Remove concurrency limit
+      aws lambda delete-function-concurrency \
+        --function-name rate-limited-lambda
+
+      # Set provisioned concurrency
+      aws lambda put-provisioned-concurrency-config \
+        --function-name rate-limited-lambda \
+        --qualifier live \
+        --provisioned-concurrent-executions 5
+    console_steps:
+      - Navigate to Lambda console
+      - Select function
+      - Go to "Configuration" tab
+      - Click "Concurrency"
+      - Click "Edit"
+      - Select "Reserve concurrency"
+      - Enter maximum concurrent executions
+      - Click "Save"
+      - For provisioned concurrency, go to version/alias
+      - Configure provisioned concurrency value

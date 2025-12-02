@@ -287,9 +287,7 @@ class TestParallelValidator:
         validator = ParallelValidator(mock_ss_kg, mock_ib_service)
 
         mock_ss_kg.query_results = [{"id": "issue-001"}]
-        mock_ib_service.search_entities_result = {
-            "entities": [{"entity_id": "ib-001"}]
-        }
+        mock_ib_service.search_entities_result = {"entities": [{"entity_id": "ib-001"}]}
 
         result = await validator.validate_query("issue")
 

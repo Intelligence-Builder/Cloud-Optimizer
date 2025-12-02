@@ -1,0 +1,259 @@
+framework: SOC2
+version: "2017"
+description: Service Organization Control 2 - Trust Services Criteria
+controls:
+  - control_id: CC6.1
+    name: Logical and Physical Access Controls
+    description: |
+      The entity implements logical and physical access controls to limit access
+      to systems, data, and other IT assets to authorized personnel. Access is
+      based on the principle of least privilege.
+    requirements:
+      - Implement authentication mechanisms to verify user identity
+      - Use authorization controls to restrict access based on roles
+      - Maintain segregation of duties for critical functions
+      - Protect physical access to facilities and equipment
+    aws_services:
+      - IAM
+      - AWS SSO
+      - Organizations
+      - Secrets Manager
+      - Systems Manager
+      - Control Tower
+    implementation_guidance: |
+      1. Implement IAM policies using least privilege principle
+      2. Enable MFA for all users, especially privileged accounts
+      3. Use AWS SSO for centralized access management
+      4. Create IAM roles instead of using long-term credentials
+      5. Implement service control policies (SCPs) via AWS Organizations
+      6. Use IAM permission boundaries to delegate administration
+      7. Enable AWS Secrets Manager for credential management
+      8. Implement session-based access using temporary credentials
+      9. Use AWS Systems Manager Session Manager for secure instance access
+      10. Conduct quarterly access reviews and certification
+      11. Implement AWS Control Tower for automated guardrails
+      12. Use resource-based policies for fine-grained access control
+
+  - control_id: CC6.2
+    name: System Access Provisioning and Removal
+    description: |
+      Prior to issuing system credentials and granting system access, the entity
+      registers and authorizes new internal and external users. Deprovisioning
+      occurs promptly upon termination or role change.
+    requirements:
+      - Implement formal authorization process for access requests
+      - Provision access based on approved requests only
+      - Remove or modify access promptly when no longer needed
+      - Review access rights periodically
+    aws_services:
+      - IAM
+      - AWS SSO
+      - Organizations
+      - Lambda
+      - EventBridge
+      - Service Catalog
+    implementation_guidance: |
+      1. Create automated provisioning workflows using AWS Service Catalog
+      2. Implement approval workflows for access requests
+      3. Use Lambda functions for automated user lifecycle management
+      4. Configure EventBridge rules for termination event triggers
+      5. Implement automated deprovisioning on employee departure
+      6. Use AWS SSO SCIM for automated user synchronization
+      7. Create IAM access analyzer reports for unused credentials
+      8. Implement 90-day access key rotation policies
+      9. Use temporary credentials with session duration limits
+      10. Conduct monthly reviews of active user accounts
+      11. Disable unused IAM users and access keys automatically
+      12. Maintain audit logs of all provisioning activities
+
+  - control_id: CC6.6
+    name: Logical and Physical Access Monitoring
+    description: |
+      The entity implements monitoring controls to detect and respond to
+      unauthorized or anomalous access attempts. Logs are reviewed regularly
+      and incidents are investigated.
+    requirements:
+      - Monitor all access attempts to systems and data
+      - Log both successful and failed authentication events
+      - Review logs for anomalous activities
+      - Investigate and respond to security incidents
+    aws_services:
+      - CloudTrail
+      - CloudWatch
+      - GuardDuty
+      - Security Hub
+      - Detective
+      - EventBridge
+    implementation_guidance: |
+      1. Enable CloudTrail in all regions and accounts
+      2. Configure CloudTrail to log management and data events
+      3. Create CloudWatch metric filters for security events
+      4. Enable GuardDuty for intelligent threat detection
+      5. Use Security Hub for centralized security monitoring
+      6. Implement Amazon Detective for investigation workflows
+      7. Configure CloudWatch alarms for critical security events
+      8. Use EventBridge for automated incident response
+      9. Create dashboards for real-time security visibility
+      10. Implement automated alerting via SNS for anomalies
+      11. Conduct weekly log reviews and analysis
+      12. Maintain incident response runbooks in Systems Manager
+
+  - control_id: CC6.7
+    name: System Operations - Detection of Changes
+    description: |
+      The entity implements controls to detect changes to system configurations,
+      software, and data that could affect security or availability. Unauthorized
+      changes are identified and addressed.
+    requirements:
+      - Monitor system configurations for unauthorized changes
+      - Detect changes to critical files and databases
+      - Implement version control for infrastructure
+      - Alert on unexpected modifications
+    aws_services:
+      - Config
+      - CloudTrail
+      - Systems Manager
+      - CodeCommit
+      - EventBridge
+      - SNS
+    implementation_guidance: |
+      1. Enable AWS Config in all regions and accounts
+      2. Create Config rules to detect non-compliant configurations
+      3. Use Config aggregators for multi-account visibility
+      4. Enable automated remediation for configuration drift
+      5. Use Systems Manager State Manager for desired state
+      6. Implement CloudFormation for infrastructure as code
+      7. Store templates in CodeCommit with version control
+      8. Configure EventBridge rules for configuration change events
+      9. Send SNS notifications for critical configuration changes
+      10. Use Config snapshots for configuration backup
+      11. Implement change approval workflows for production
+      12. Conduct monthly configuration compliance reviews
+
+  - control_id: CC7.1
+    name: Detection of Security Events
+    description: |
+      The entity uses detection tools and procedures to identify anomalous
+      activities and security events. Detection includes both automated monitoring
+      and manual review processes.
+    requirements:
+      - Implement automated security monitoring tools
+      - Define security event detection criteria
+      - Analyze system logs for security incidents
+      - Maintain up-to-date threat intelligence
+    aws_services:
+      - GuardDuty
+      - Security Hub
+      - Detective
+      - Macie
+      - Inspector
+      - CloudWatch
+    implementation_guidance: |
+      1. Enable GuardDuty for threat detection across all accounts
+      2. Use Security Hub for centralized security findings
+      3. Enable Amazon Macie for sensitive data discovery
+      4. Use Amazon Inspector for vulnerability assessment
+      5. Implement Detective for security investigation
+      6. Create CloudWatch custom metrics for business logic anomalies
+      7. Configure anomaly detection in CloudWatch
+      8. Integrate third-party SIEM tools using EventBridge
+      9. Use VPC Flow Logs for network traffic analysis
+      10. Enable DNS query logging for Route 53
+      11. Implement behavioral analytics for user activities
+      12. Conduct daily review of high-severity findings
+
+  - control_id: CC7.2
+    name: Response to Security Incidents
+    description: |
+      The entity responds to identified security events by executing a defined
+      incident response program. This includes containment, eradication, recovery,
+      and post-incident analysis.
+    requirements:
+      - Maintain documented incident response procedures
+      - Assign incident response roles and responsibilities
+      - Contain and remediate security incidents promptly
+      - Conduct post-incident reviews and lessons learned
+    aws_services:
+      - Security Hub
+      - Systems Manager
+      - Lambda
+      - Step Functions
+      - EventBridge
+      - SNS
+    implementation_guidance: |
+      1. Create incident response runbooks in Systems Manager
+      2. Implement automated response using Lambda functions
+      3. Use Step Functions for orchestrated incident workflows
+      4. Configure Security Hub custom actions for remediation
+      5. Enable EventBridge for automated incident triggering
+      6. Use SNS for incident notification and escalation
+      7. Implement EC2 instance isolation procedures
+      8. Create snapshot workflows for forensic evidence
+      9. Use Systems Manager for automated patching and remediation
+      10. Maintain incident response contact list in SSM Parameter Store
+      11. Conduct quarterly incident response tabletop exercises
+      12. Document all incidents in ticketing system with root cause
+
+  - control_id: CC7.3
+    name: System Monitoring - Availability
+    description: |
+      The entity monitors system components and performance to ensure availability
+      objectives are met. Monitoring includes capacity, performance, and health
+      of critical systems.
+    requirements:
+      - Monitor system availability and performance metrics
+      - Set thresholds for availability alerts
+      - Track system capacity and utilization
+      - Implement redundancy for critical components
+    aws_services:
+      - CloudWatch
+      - X-Ray
+      - Auto Scaling
+      - ELB
+      - Route 53
+      - RDS
+    implementation_guidance: |
+      1. Create CloudWatch dashboards for system health monitoring
+      2. Configure CloudWatch alarms for availability metrics
+      3. Use X-Ray for distributed tracing and performance analysis
+      4. Implement Auto Scaling for dynamic capacity management
+      5. Use ELB health checks for application availability
+      6. Configure Route 53 health checks for DNS failover
+      7. Enable RDS enhanced monitoring for database performance
+      8. Use CloudWatch Synthetics for synthetic monitoring
+      9. Implement composite alarms for complex availability scenarios
+      10. Configure CloudWatch anomaly detection for baselines
+      11. Set up real-user monitoring (RUM) for client-side metrics
+      12. Conduct monthly availability reports and SLA reviews
+
+  - control_id: CC7.4
+    name: Processing Integrity - Data Validation
+    description: |
+      The entity validates data processing accuracy, completeness, and
+      authorization. Controls ensure data is processed as intended without
+      unauthorized alterations.
+    requirements:
+      - Validate input data for accuracy and completeness
+      - Implement data integrity checks during processing
+      - Detect and prevent data corruption or loss
+      - Authorize data processing activities
+    aws_services:
+      - Lambda
+      - Step Functions
+      - SQS
+      - EventBridge
+      - DynamoDB
+      - S3
+    implementation_guidance: |
+      1. Implement input validation in Lambda functions
+      2. Use Step Functions for workflow orchestration and validation
+      3. Enable SQS dead-letter queues for failed processing
+      4. Configure EventBridge for event-driven validation
+      5. Use DynamoDB transactions for atomic operations
+      6. Enable S3 versioning for data recovery
+      7. Implement checksums for data integrity verification
+      8. Use AWS Glue for data quality validation
+      9. Enable CloudWatch Logs for processing activity monitoring
+      10. Implement idempotency for duplicate prevention
+      11. Use DynamoDB streams for change data capture
+      12. Conduct quarterly data integrity audits

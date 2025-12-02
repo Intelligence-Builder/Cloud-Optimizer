@@ -1,0 +1,255 @@
+framework: PCI-DSS
+version: "4.0"
+description: Payment Card Industry Data Security Standard
+controls:
+  - control_id: "1.2.1"
+    name: Network Security Controls
+    description: |
+      Install and maintain network security controls to protect cardholder data.
+      This includes firewalls, network segmentation, and traffic filtering to
+      restrict access between untrusted networks and system components.
+    requirements:
+      - Implement network security controls at each internet connection
+      - Restrict inbound and outbound traffic to necessary protocols
+      - Implement network segmentation to isolate cardholder data
+      - Deny all traffic by default and allow by exception
+    aws_services:
+      - VPC
+      - Security Groups
+      - Network ACLs
+      - WAF
+      - Network Firewall
+      - Shield
+    implementation_guidance: |
+      1. Create isolated VPCs for cardholder data environment (CDE)
+      2. Implement Security Groups with least privilege access rules
+      3. Configure Network ACLs for subnet-level traffic filtering
+      4. Use AWS WAF to protect web applications from attacks
+      5. Deploy AWS Network Firewall for stateful traffic inspection
+      6. Enable AWS Shield Standard for DDoS protection
+      7. Implement VPC Flow Logs for network traffic monitoring
+      8. Use PrivateLink for private connectivity to AWS services
+      9. Configure Route 53 Resolver DNS Firewall for DNS filtering
+      10. Implement bastion hosts or Systems Manager for secure access
+      11. Use Transit Gateway for centralized routing and inspection
+      12. Conduct quarterly firewall rule reviews and optimization
+
+  - control_id: "2.2.1"
+    name: Secure Configuration Standards
+    description: |
+      Develop and implement secure configuration standards for all system
+      components. Remove unnecessary services, protocols, and accounts.
+      Configurations must be documented and aligned with industry standards.
+    requirements:
+      - Develop configuration standards for system components
+      - Remove or disable unnecessary services and functions
+      - Implement only one primary function per server
+      - Document all configuration settings and security parameters
+    aws_services:
+      - Systems Manager
+      - Config
+      - EC2 Image Builder
+      - Service Catalog
+      - CloudFormation
+    implementation_guidance: |
+      1. Create hardened AMIs using EC2 Image Builder
+      2. Use Systems Manager State Manager for configuration compliance
+      3. Implement AWS Config rules for configuration monitoring
+      4. Deploy systems using CloudFormation with approved templates
+      5. Use Service Catalog for standardized deployment portfolios
+      6. Implement CIS-hardened base images for EC2 instances
+      7. Disable unnecessary services in user data scripts
+      8. Use Systems Manager Patch Manager for OS hardening
+      9. Configure minimum required IAM permissions per service
+      10. Enable IMDSv2 for EC2 metadata security
+      11. Implement automated configuration drift detection
+      12. Conduct quarterly configuration standard reviews
+
+  - control_id: "3.3.1"
+    name: Cardholder Data Protection
+    description: |
+      Primary Account Numbers (PAN) must be masked when displayed. Full PAN
+      should only be visible to those with legitimate business need. Strong
+      cryptography must protect cardholder data at rest.
+    requirements:
+      - Mask PAN when displayed (first six and last four digits maximum)
+      - Encrypt cardholder data at rest using strong cryptography
+      - Implement key management procedures for encryption keys
+      - Render PAN unreadable wherever it is stored
+    aws_services:
+      - KMS
+      - S3
+      - RDS
+      - DynamoDB
+      - EBS
+      - CloudHSM
+    implementation_guidance: |
+      1. Use AWS KMS for encryption key management
+      2. Enable S3 server-side encryption with KMS keys
+      3. Configure RDS encryption at rest for databases
+      4. Enable DynamoDB encryption using KMS
+      5. Use EBS encryption for all volumes in CDE
+      6. Implement CloudHSM for additional key protection
+      7. Use application-level encryption for PAN masking
+      8. Implement tokenization using Lambda and KMS
+      9. Enable key rotation policies in KMS (annual minimum)
+      10. Use separate KMS keys for different environments
+      11. Implement key access logging via CloudTrail
+      12. Store encryption keys separate from encrypted data
+
+  - control_id: "4.2.1"
+    name: Transmission Security
+    description: |
+      Strong cryptography and security protocols must be used to safeguard
+      cardholder data during transmission over open, public networks. Only
+      trusted keys and certificates should be accepted.
+    requirements:
+      - Use strong cryptography for data transmission (TLS 1.2 minimum)
+      - Verify authenticity of certificates before establishing connection
+      - Encrypt all transmissions containing cardholder data
+      - Implement secure protocols for wireless networks
+    aws_services:
+      - Certificate Manager
+      - ELB
+      - CloudFront
+      - API Gateway
+      - VPN
+      - Direct Connect
+    implementation_guidance: |
+      1. Use ACM to manage SSL/TLS certificates
+      2. Configure ELB listeners with TLS 1.2 or higher only
+      3. Implement CloudFront with HTTPS-only distribution
+      4. Enable API Gateway with TLS encryption
+      5. Use VPN or Direct Connect for private connectivity
+      6. Disable weak cipher suites in security policies
+      7. Implement certificate pinning for mobile applications
+      8. Enable Perfect Forward Secrecy (PFS) on all endpoints
+      9. Use PrivateLink for service-to-service communication
+      10. Monitor certificate expiration using CloudWatch
+      11. Implement automated certificate renewal
+      12. Conduct quarterly TLS configuration reviews
+
+  - control_id: "7.2.1"
+    name: Access Control Systems
+    description: |
+      Access to system components and cardholder data must be restricted
+      based on business need-to-know. Access control systems must enforce
+      role-based access and deny by default.
+    requirements:
+      - Implement role-based access control (RBAC)
+      - Assign access based on job function and least privilege
+      - Default deny-all setting with explicit allow rules
+      - Document and approve all access privileges
+    aws_services:
+      - IAM
+      - Organizations
+      - SSO
+      - Resource Access Manager
+      - Secrets Manager
+    implementation_guidance: |
+      1. Create IAM roles aligned with job functions
+      2. Use IAM policies with least privilege principle
+      3. Implement Organizations SCPs for guardrails
+      4. Enable AWS SSO for workforce access management
+      5. Use IAM Access Analyzer to identify overly permissive access
+      6. Implement permission boundaries for delegated administration
+      7. Use resource-based policies for fine-grained control
+      8. Enable MFA for all users accessing CDE
+      9. Use temporary credentials instead of long-term keys
+      10. Implement automated access certification (quarterly)
+      11. Store application credentials in Secrets Manager
+      12. Revoke access immediately upon termination
+
+  - control_id: "8.3.1"
+    name: Multi-Factor Authentication
+    description: |
+      Multi-factor authentication (MFA) must be implemented for all access
+      to the cardholder data environment. MFA requires at least two of three
+      authentication methods: something you know, have, or are.
+    requirements:
+      - Implement MFA for all access to CDE
+      - Use at least two authentication factors
+      - MFA for remote network access from outside entity network
+      - MFA for all administrative access to system components
+    aws_services:
+      - IAM
+      - AWS SSO
+      - Cognito
+      - Directory Service
+      - MFA devices
+    implementation_guidance: |
+      1. Enable MFA for all IAM users in CDE accounts
+      2. Enforce MFA for AWS root account access
+      3. Use AWS SSO with MFA enforcement
+      4. Configure Cognito with MFA enabled for applications
+      5. Integrate with hardware MFA tokens for high-privilege users
+      6. Implement U2F/WebAuthn for phishing-resistant MFA
+      7. Use conditional access policies requiring MFA
+      8. Enable MFA for AWS Management Console access
+      9. Require MFA for API access to sensitive operations
+      10. Monitor MFA compliance using Config rules
+      11. Implement backup MFA methods for account recovery
+      12. Conduct monthly MFA compliance audits
+
+  - control_id: "10.2.1"
+    name: Audit Logging
+    description: |
+      Implement automated audit trails for all system components to reconstruct
+      security-relevant events. Logs must include user access to cardholder
+      data, administrative actions, and failed access attempts.
+    requirements:
+      - Log all individual user access to cardholder data
+      - Log all administrative actions on system components
+      - Log all access to audit trails
+      - Log all failed access attempts and invalid logical access
+    aws_services:
+      - CloudTrail
+      - CloudWatch Logs
+      - S3
+      - Athena
+      - Macie
+      - GuardDuty
+    implementation_guidance: |
+      1. Enable CloudTrail in all regions for all accounts
+      2. Configure CloudTrail to log management and data events
+      3. Enable S3 data events logging for buckets containing CHD
+      4. Use CloudWatch Logs for centralized log aggregation
+      5. Enable VPC Flow Logs for network activity logging
+      6. Store logs in S3 with versioning and MFA delete
+      7. Implement CloudTrail log file validation
+      8. Use Athena for log querying and analysis
+      9. Enable GuardDuty for security event detection
+      10. Use Macie to identify cardholder data in logs
+      11. Implement log retention for minimum one year
+      12. Conduct daily automated log reviews
+
+  - control_id: "11.3.1"
+    name: Vulnerability Management
+    description: |
+      Internal and external vulnerabilities must be identified through scanning
+      and addressed based on risk rankings. Scans must be performed quarterly
+      and after significant changes.
+    requirements:
+      - Perform quarterly internal vulnerability scans
+      - Perform quarterly external vulnerability scans by ASV
+      - Remediate vulnerabilities based on risk ranking
+      - Rescan after remediation to verify fixes
+    aws_services:
+      - Inspector
+      - Security Hub
+      - Systems Manager
+      - ECR
+      - GuardDuty
+    implementation_guidance: |
+      1. Enable Amazon Inspector for continuous vulnerability scanning
+      2. Use Inspector for EC2, ECR, and Lambda vulnerability assessment
+      3. Centralize findings in AWS Security Hub
+      4. Configure automated scanning schedules (weekly minimum)
+      5. Use Systems Manager Patch Manager for remediation
+      6. Scan container images in ECR for vulnerabilities
+      7. Implement automated patching for critical vulnerabilities
+      8. Create remediation workflows using EventBridge and Lambda
+      9. Use GuardDuty for runtime threat detection
+      10. Generate quarterly vulnerability reports
+      11. Track remediation progress in Security Hub
+      12. Engage approved scanning vendor (ASV) for external scans

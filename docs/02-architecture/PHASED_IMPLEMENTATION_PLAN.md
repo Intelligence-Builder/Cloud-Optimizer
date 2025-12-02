@@ -1,8 +1,8 @@
 # Cloud Optimizer v2 - Phased Implementation Plan
 
-**Version:** 1.2
-**Date:** 2025-11-30
-**Status:** Ready for Execution
+**Version:** 2.0
+**Date:** 2025-12-01
+**Status:** MVP Scope Finalized
 
 ---
 
@@ -142,14 +142,22 @@ CREATE TABLE ib_platform.domain_entities (...);
 | Metric | Value |
 |--------|-------|
 | **Total Requirements** | 221 |
-| **Cloud Optimizer (CO) Owned** | 172 (78%) |
-| **Intelligence-Builder (IB) Owned** | 49 (22%) |
-| **Can Migrate Directly** | 45% (99 requirements) |
-| **Needs Adaptation** | 44% (97 requirements) |
-| **Needs New Development** | 11% (25 requirements) |
-| **Original Timeline** | 52 weeks |
-| **Revised Timeline** | 30 weeks |
-| **Reduction** | 42% |
+| **MVP Requirements** | 99 (45%) |
+| **MVP - Cloud Optimizer (CO)** | 65 |
+| **MVP - Intelligence-Builder (IB)** | 34 |
+| **Post-MVP Requirements** | 122 (55%) |
+| **Timeline** | 30 weeks |
+| **MVP Delivery** | Week 12 |
+
+### MVP Core Capabilities
+
+| Capability | Requirements | Priority |
+|------------|--------------|----------|
+| **Security Chat Q&A** | NLU-*, ANS-*, UI-002 | P0 - Differentiator |
+| **Document Analysis** | DOC-*, UI-003 | P0 - Differentiator |
+| **AWS Scanning** | SEC-* | P0 - Core Value |
+| **Compliance KB** | KNG-*, SRH-* | P0 - Foundation |
+| **Container Deployment** | CNT-*, MKT-*, TRL-* | P0 - Delivery |
 
 > See [REQUIREMENTS_OWNERSHIP.md](./REQUIREMENTS_OWNERSHIP.md) for detailed CO vs IB split.
 
@@ -157,22 +165,92 @@ CREATE TABLE ib_platform.domain_entities (...);
 
 ## MVP Definition
 
+### MVP Value Proposition
+
+**"AI-powered security advisor that understands your AWS architecture"**
+
+Cloud Optimizer MVP delivers an intelligent security assistant that:
+1. Answers natural language questions about AWS security
+2. Analyzes uploaded architecture documents
+3. Scans AWS accounts for real vulnerabilities
+4. Provides compliance-aware recommendations (HIPAA, SOC2, PCI-DSS, GDPR, CIS)
+
+### MVP Use Cases
+
+#### Use Case 1: Security Q&A Chat
+
+```
+User: "I have patient data loaded to S3 then ingested via Glue into
+       Redshift and use Power BI for reporting, what should I be
+       concerned about security-wise?"
+
+System: Based on your architecture involving PHI data, here are the
+        key security concerns:
+
+        🔴 HIGH PRIORITY - HIPAA Compliance:
+        1. S3 Bucket Encryption - Ensure SSE-KMS for PHI at rest
+        2. Glue Job IAM Roles - Principle of least privilege
+        3. Redshift encryption - Enable cluster encryption
+        4. Data in transit - Verify TLS everywhere
+
+        🟡 MEDIUM PRIORITY:
+        5. Power BI connection - Use private endpoints
+        6. VPC configuration - Isolate data pipeline
+        7. CloudTrail logging - Audit all PHI access
+
+        📋 Compliance Mapping:
+        - HIPAA §164.312(a)(1): Access controls
+        - HIPAA §164.312(e)(1): Transmission security
+
+        Would you like me to scan your AWS account to verify these?
+```
+
+#### Use Case 2: Architecture Document Analysis
+
+```
+User: [Uploads architecture-diagram.pdf]
+      "What security improvements do you recommend?"
+
+System: I've analyzed your architecture document. Found:
+        - 3 S3 buckets (2 public-facing)
+        - 1 RDS instance (MySQL)
+        - 2 Lambda functions
+        - 1 API Gateway
+
+        🔴 Critical Findings:
+        1. Public S3 bucket "data-exports" - should be private
+        2. RDS not in private subnet
+        3. API Gateway missing WAF
+
+        📄 Full report: [Download PDF]
+```
+
 ### MVP Scope (Weeks 1-12)
 
-The Minimum Viable Product focuses on **AWS Marketplace Container Product** with trial capability to gather real-world feedback:
+The Minimum Viable Product focuses on **AWS Marketplace Container Product** with AI-powered security Q&A:
 
-#### MVP Must-Have Requirements (55 requirements)
+#### MVP Requirements Summary (99 requirements)
 
-| Category | Count | Priority | Migration Effort | Notes |
-|----------|-------|----------|------------------|-------|
-| Container Packaging (CNT-*) | 6 | P0 | NEW | Docker, Helm, CloudFormation |
-| AWS Marketplace Container (MKT-*) | 5 | P0 | ADAPT | Container-specific metering |
-| Trial Management (TRL-*) | 6 | P0 | ADAPT | Container license enforcement |
-| User Management (USR-*) | 5 | P1 | LOW - Migrate | Single-tenant simplified |
-| Security Scanning (SEC-*) | 12 | P0 | LOW - Migrate | Core value proposition |
-| Cost Optimization (CST-*) | 9 | P0 | LOW - Migrate | Core value proposition |
-| Monitoring (MON-*) | 7 | P1 | LOW - Migrate | Container health checks |
-| Feature Flags (FLG-*) | 5 | P1 | LOW - Migrate | Tier-based features |
+| Owner | Category | Count | Priority | Notes |
+|-------|----------|-------|----------|-------|
+| **CO** | Container Packaging (CNT-*) | 6 | P0 | Docker, Helm, CloudFormation |
+| **CO** | AWS Marketplace (MKT-*) | 5 | P0 | License, metering |
+| **CO** | Trial Management (TRL-*) | 6 | P0 | 14-day trial |
+| **CO** | Basic Auth (USR-*) | 3 | P0 | Single admin, email/password |
+| **CO** | Chat + Dashboard UI (UI-*) | 10 | P0 | **Chat interface + dashboard** |
+| **CO** | Security Scanning (SEC-*) | 12 | P0 | AWS account scanning |
+| **CO** | Cost Optimization (CST-*) | 5 | P1 | Basic cost analysis |
+| **CO** | Document Processing (DOC-*) | 5 | P0 | **PDF upload + parsing** |
+| **CO** | Job Management (JOB-*) | 5 | P1 | Background processing |
+| **CO** | Minimal Monitoring (MON-*) | 2 | P1 | Health endpoints only |
+| **CO** | Feature Flags (FLG-*) | 6 | P1 | Tier-based features |
+| **IB** | Knowledge Ingestion (KNG-*) | 14 | P0 | **Compliance frameworks** |
+| **IB** | Hybrid Search (SRH-*) | 6 | P0 | Vector + graph search |
+| **IB** | NLU Pipeline (NLU-*) | 6 | P0 | **Question understanding** |
+| **IB** | Answer Generation (ANS-*) | 8 | P0 | **Recommendations** |
+| | **CO Total** | **65** | | |
+| | **IB Total** | **34** | | |
+| | **MVP Total** | **99** | | |
 
 #### New Container-Specific Requirements
 
@@ -195,6 +273,21 @@ The Minimum Viable Product focuses on **AWS Marketplace Container Product** with
 | MKT-004 | Entitlement check | Periodic entitlement validation (hourly) |
 | MKT-005 | Subscription handling | Graceful degradation on subscription issues |
 
+#### Compliance Knowledge Base (MVP)
+
+The Expert System requires comprehensive compliance knowledge:
+
+| Framework | Content | Ingestion Source | Priority |
+|-----------|---------|------------------|----------|
+| **HIPAA** | PHI handling, encryption, access controls, audit | HHS Guidelines | P0 |
+| **SOC 2** | Trust service criteria (security, availability) | AICPA | P0 |
+| **PCI-DSS** | Cardholder data, network security, monitoring | PCI Council | P0 |
+| **GDPR** | Data privacy, consent, retention, DPO | EU Regulations | P0 |
+| **CIS Benchmarks** | AWS hardening (200+ controls) | CIS Downloads | P0 |
+| **NIST 800-53** | Security controls catalog | NIST CSF | P1 |
+| **AWS Well-Architected** | Security pillar best practices | AWS Docs | P0 |
+| **AWS Security Best Practices** | Service-specific guidance | AWS Docs | P0 |
+
 #### Trial-First Strategy
 
 ```yaml
@@ -202,25 +295,31 @@ Trial Configuration:
   duration: 14 days
   limits:
     aws_accounts: 1
-    scans_per_day: 10
+    chat_questions_per_day: 50
+    document_uploads: 10
+    scans_per_day: 5
     findings_stored: 500
-    users: 3
+    users: 1  # Single admin for trial
   features_enabled:
+    - security_chat_qa           # Core differentiator
+    - document_analysis          # Core differentiator
     - security_scanning
-    - cost_analysis
-    - basic_dashboard
+    - cost_analysis_basic
+    - compliance_recommendations
   features_disabled:
     - advanced_analytics
     - custom_reports
     - api_access
     - multi-account
+    - scheduled_scans
 
 Conversion Path:
-  1. Trial user discovers value
-  2. AWS Marketplace subscription
-  3. License key applied to container
-  4. Full features unlocked
-  5. Usage metering begins
+  1. Trial user asks security questions (immediate value)
+  2. Uploads architecture doc for analysis
+  3. Connects AWS account for real findings
+  4. Sees value in recommendations
+  5. AWS Marketplace subscription
+  6. Full features unlocked
 ```
 
 #### MVP Success Criteria
@@ -230,24 +329,34 @@ Conversion Path:
    - <10 minute setup time
    - Automated database initialization
 
-2. **Trial Experience**
-   - Immediate value demonstration
-   - Clear trial limits and messaging
+2. **Security Q&A Experience** (Primary Differentiator)
+   - User asks security question, gets expert-level answer in <3 seconds
+   - Answers include compliance mapping (HIPAA, SOC2, etc.)
+   - Recommendations are actionable with specific AWS guidance
+
+3. **Document Analysis**
+   - Upload PDF architecture document
+   - Extract entities (S3, RDS, Lambda, etc.)
+   - Generate security recommendations within 30 seconds
+
+4. **AWS Scanning Integration**
+   - Connect AWS account via IAM role
+   - Scan completes in <60 seconds for typical account
+   - Findings linked to knowledge base recommendations
+
+5. **Trial Experience**
+   - Immediate value in first 5 minutes (ask a question, get an answer)
+   - Clear trial limits and upgrade path
    - Smooth conversion to paid
 
-3. **Core Value Delivery**
-   - Security scanning with actionable findings
-   - Cost optimization recommendations
-   - Real-world customer feedback collection
-
-4. **AWS Marketplace Compliance**
+6. **AWS Marketplace Compliance**
    - Container FTR (Fulfillment Technical Review) passed
    - Proper license validation
    - Accurate usage metering
 
-5. **Quality Gates**
+7. **Quality Gates**
    - 80%+ test coverage
-   - <500ms p95 API latency
+   - <500ms p95 API latency (chat responses <3s)
    - Zero critical security vulnerabilities
 
 ### MVP Simplifications (Container Model)
@@ -500,24 +609,58 @@ tests/test_auth*.py (subset)
 
 **Effort:** 0.5 weeks (existing: 95% complete, simplified)
 
-#### 1.5 Basic UI Dashboard (Week 4-5)
+#### 1.5 Chat Interface + Dashboard UI (Week 4-5)
 
-**MVP requires a basic UI for trial users to see value immediately.**
+**MVP requires a chat-first UI that delivers immediate value to trial users.**
 
 | Requirement | Action | Deliverable |
 |-------------|--------|-------------|
 | UI-001 | NEW | Login/registration page |
-| UI-002 | NEW | Dashboard overview (findings count, cost savings) |
-| UI-003 | NEW | Security findings list with severity |
-| UI-004 | NEW | Cost recommendations list |
-| UI-005 | NEW | Trial status and upgrade prompt |
-| UI-006 | NEW | Basic settings page |
+| UI-002 | NEW | **Security Chat Interface** (primary experience) |
+| UI-003 | NEW | Document upload with analysis results |
+| UI-004 | NEW | AWS account connection wizard |
+| UI-005 | NEW | Dashboard overview (findings, compliance status) |
+| UI-006 | NEW | Security findings list with severity |
+| UI-007 | NEW | Cost recommendations list |
+| UI-008 | NEW | Compliance status by framework (HIPAA, SOC2, etc.) |
+| UI-009 | NEW | Trial status and upgrade prompt |
+| UI-010 | NEW | Basic settings page |
 
 **Technology Stack:**
 - React 18 with TypeScript
 - Tailwind CSS for styling
 - React Query for API integration
-- Minimal dependencies for fast load
+- Streaming responses for chat (SSE or WebSocket)
+- PDF.js for document preview
+
+**Chat Interface Design:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Cloud Optimizer                    [Trial: 12 days left] [⚙️]  │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Ask me about AWS security...                            │    │
+│  │                                                          │    │
+│  │  💬 "I have patient data in S3, what should I check?"   │    │
+│  │                                                          │    │
+│  │  🤖 Based on your description involving PHI data:       │    │
+│  │                                                          │    │
+│  │     🔴 HIGH PRIORITY - HIPAA Compliance:                │    │
+│  │     1. S3 Bucket Encryption - Ensure SSE-KMS            │    │
+│  │     2. Access Logging - Enable CloudTrail               │    │
+│  │                                                          │    │
+│  │     📋 Compliance: HIPAA §164.312(a)(1)                 │    │
+│  │                                                          │    │
+│  │     [Connect AWS Account to Verify]                      │    │
+│  │                                                          │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Type your question...                    [📎] [Send]   │    │
+│  └─────────────────────────────────────────────────────────┘    │
+├─────────────────────────────────────────────────────────────────┤
+│  [💬 Chat] [📄 Documents] [🔍 Scan Results] [💰 Cost] [⚡ Quick]│
+└─────────────────────────────────────────────────────────────────┘
+```
 
 **Files to Create:**
 ```
@@ -525,21 +668,30 @@ frontend/
 ├── src/
 │   ├── pages/
 │   │   ├── Login.tsx
-│   │   ├── Dashboard.tsx
+│   │   ├── Chat.tsx              # Primary experience
+│   │   ├── Documents.tsx         # Upload + analysis
+│   │   ├── AWSConnect.tsx        # Account connection
+│   │   ├── Dashboard.tsx         # Overview
 │   │   ├── Findings.tsx
-│   │   ├── CostRecommendations.tsx
+│   │   ├── Compliance.tsx        # Framework status
+│   │   ├── CostAnalysis.tsx
 │   │   └── Settings.tsx
 │   ├── components/
+│   │   ├── ChatMessage.tsx
+│   │   ├── ChatInput.tsx
+│   │   ├── DocumentUpload.tsx
+│   │   ├── ComplianceBadge.tsx
 │   │   ├── TrialBanner.tsx
 │   │   ├── FindingsTable.tsx
 │   │   └── CostSavingsCard.tsx
 │   └── api/
-│       └── client.ts
+│       ├── client.ts
+│       └── streaming.ts          # SSE for chat
 ├── Dockerfile
 └── nginx.conf
 ```
 
-**Effort:** 1 week (new development, minimal viable UI)
+**Effort:** 1.5 weeks (chat interface adds complexity)
 
 #### Phase 1 Summary
 
@@ -666,25 +818,61 @@ tests/test_job*.py (12 files)
 
 **Effort:** 1 week (existing: 85% complete)
 
-#### 2.5 Knowledge Graph (Week 9-10)
+#### 2.5 Knowledge Graph + Compliance KB (Week 9-10)
 
 | Requirement | Source | Migration Action |
 |-------------|--------|------------------|
-| KNG-001 to KNG-014 | `graphrag/` directory | Direct migrate |
+| KNG-001 to KNG-014 | `graphrag/` directory | Direct migrate + extend |
 
-**Files to Migrate:**
+**Compliance Knowledge Ingestion (NEW):**
+```python
+# Compliance frameworks to ingest for MVP
+COMPLIANCE_SOURCES = {
+    "hipaa": {
+        "source": "HHS Guidelines",
+        "entities": ["PHI", "BAA", "encryption", "access_control"],
+        "controls": 45,
+    },
+    "soc2": {
+        "source": "AICPA Trust Services",
+        "entities": ["security", "availability", "confidentiality"],
+        "controls": 64,
+    },
+    "pci_dss": {
+        "source": "PCI Security Council",
+        "entities": ["cardholder_data", "network_security"],
+        "controls": 250,
+    },
+    "gdpr": {
+        "source": "EU Regulations",
+        "entities": ["personal_data", "consent", "dpo"],
+        "controls": 99,
+    },
+    "cis_aws": {
+        "source": "CIS Benchmark v2.0",
+        "entities": ["iam", "logging", "monitoring", "networking"],
+        "controls": 200,
+    },
+}
+```
+
+**Files to Migrate + Create:**
 ```
 src/services/graphrag/ (35+ files)
 src/api/routers/knowledge_graph.py
-src/api/routers/knowledge_sharing.py
 src/models/knowledge_base.py
 src/services/semantic/ (entire directory)
+NEW: src/ib_platform/ingestion/sources/hipaa.py
+NEW: src/ib_platform/ingestion/sources/soc2.py
+NEW: src/ib_platform/ingestion/sources/pci_dss.py
+NEW: src/ib_platform/ingestion/sources/gdpr.py
+NEW: src/ib_platform/ingestion/sources/cis_aws.py
 tests/test_graphrag*.py (25 files)
 ```
 
-**Effort:** 1 week (existing: 95% complete, 97.4% quality score)
+**Effort:** 1.5 weeks (existing: 95% + compliance ingestion)
 
-#### 2.6 Hybrid Search (Week 10-11)
+#### 2.6 Hybrid Search (Week 10)
 
 | Requirement | Source | Migration Action |
 |-------------|--------|------------------|
@@ -701,27 +889,149 @@ tests/test_hybrid_search*.py (8 files)
 
 **Effort:** 0.5 weeks (existing: 100% complete, 850ms response time)
 
-#### 2.7 Document Management (Week 11)
+#### 2.7 NLU Pipeline (Week 10-11) - **NEW IN MVP**
 
 | Requirement | Source | Migration Action |
 |-------------|--------|------------------|
-| DOC-001 to DOC-008 | `documents_v2.py`, bulk upload | Direct migrate |
+| NLU-001 | Intent classification | Direct migrate from `intent_analyzer.py` |
+| NLU-002 | Domain classification | Direct migrate |
+| NLU-003 | Entity extraction | Direct migrate |
+| NLU-004 | Query reformulation | Adapt |
+| NLU-005 | Temporal understanding | Adapt |
+| NLU-006 | Query decomposition | Adapt |
+
+**NLU for Security Q&A:**
+```python
+# Example query parsing
+query = "I have patient data in S3, what should I check for HIPAA?"
+
+parsed = {
+    "intent": "security_assessment",
+    "domain": "compliance",
+    "entities": [
+        {"type": "data_type", "value": "patient_data", "compliance": "hipaa"},
+        {"type": "aws_service", "value": "S3"},
+        {"type": "framework", "value": "HIPAA"},
+    ],
+    "focus": "data_protection",
+}
+```
 
 **Files to Migrate:**
 ```
+src/services/graphrag/intent_analyzer.py
+src/services/graphrag/domain/classifier.py
+NEW: src/ib_platform/nlu/security_intent.py
+NEW: src/ib_platform/nlu/compliance_extractor.py
+tests/test_nlu*.py
+```
+
+**Effort:** 1 week (existing: 70% + security-specific)
+
+#### 2.8 Answer Generation (Week 11) - **NEW IN MVP**
+
+| Requirement | Source | Migration Action |
+|-------------|--------|------------------|
+| ANS-001 | Multi-source synthesis | Direct migrate |
+| ANS-002 | Confidence scoring | Direct migrate |
+| ANS-003 | Alternative interpretations | Adapt |
+| ANS-004 | Ranked recommendations | Direct migrate |
+| ANS-005 | Remediation steps | Direct migrate |
+| ANS-006 | Evidence chains | Adapt |
+| ANS-007 | Answer formatting | Direct migrate |
+| ANS-008 | Cross-domain insights | Adapt |
+
+**Answer Format for Security Q&A:**
+```python
+# Example generated answer
+answer = {
+    "summary": "Based on your architecture with PHI in S3...",
+    "findings": [
+        {
+            "severity": "high",
+            "category": "encryption",
+            "title": "S3 Bucket Encryption",
+            "description": "Ensure SSE-KMS for PHI at rest",
+            "compliance": ["HIPAA §164.312(a)(2)(iv)"],
+            "remediation": "aws s3api put-bucket-encryption...",
+        },
+    ],
+    "compliance_mapping": {
+        "HIPAA": {"covered": 3, "gaps": 2},
+        "SOC2": {"covered": 5, "gaps": 1},
+    },
+    "confidence": 0.92,
+    "sources": ["CIS AWS Benchmark", "AWS Security Best Practices"],
+}
+```
+
+**Files to Migrate:**
+```
+src/services/graphrag/answer_generator.py
+src/services/recommendation_service.py
+NEW: src/ib_platform/generation/compliance_formatter.py
+NEW: src/ib_platform/generation/remediation_generator.py
+tests/test_answer*.py
+```
+
+**Effort:** 1 week (existing: 75% + compliance formatting)
+
+#### 2.9 Document Processing (Week 11-12) - **ADDED BACK**
+
+| Requirement | Source | Migration Action |
+|-------------|--------|------------------|
+| DOC-001 | Document upload | Direct migrate |
+| DOC-002 | PDF extraction | Adapt - add PDF parsing |
+| DOC-003 | Entity extraction from docs | NEW |
+| DOC-004 | Architecture analysis | NEW |
+| DOC-005 | Document storage | Direct migrate |
+
+**PDF Architecture Analysis:**
+```python
+# Example document processing
+async def analyze_architecture_document(pdf_file: UploadFile) -> AnalysisResult:
+    # 1. Extract text from PDF
+    text = await extract_pdf_text(pdf_file)
+
+    # 2. Extract AWS entities
+    entities = await nlu.extract_entities(text)
+    # Found: ["S3:data-bucket", "RDS:mysql", "Lambda:processor"]
+
+    # 3. Infer relationships
+    relationships = await infer_architecture(entities)
+    # Found: S3 -> Lambda -> RDS data flow
+
+    # 4. Generate security recommendations
+    recommendations = await answer_gen.analyze_architecture(
+        entities=entities,
+        relationships=relationships,
+        compliance_frameworks=["HIPAA", "SOC2"],
+    )
+
+    return AnalysisResult(
+        entities=entities,
+        recommendations=recommendations,
+        compliance_gaps=recommendations.gaps,
+    )
+```
+
+**Files to Migrate + Create:**
+```
 src/api/routers/documents_v2.py
 src/services/document_service.py
-src/services/bulk_upload/ (entire directory)
-src/contracts/document_contracts.py
+NEW: src/services/pdf_extractor.py (PyMuPDF or pdfplumber)
+NEW: src/services/architecture_analyzer.py
 tests/test_document*.py (15 files)
 ```
 
-**Effort:** 0.5 weeks (existing: 95% complete)
+**Effort:** 1 week (existing: 60% + PDF + architecture analysis)
 
-#### 2.8 MVP Integration Testing (Week 12)
+#### 2.10 MVP Integration Testing (Week 12)
 
-- End-to-end testing of all MVP features
-- Performance testing and optimization
+- End-to-end testing of Security Q&A flow
+- Document upload → analysis → recommendations flow
+- AWS scan → findings → compliance mapping flow
+- Performance testing (chat <3s response)
 - Security audit
 - Documentation finalization
 
@@ -729,19 +1039,22 @@ tests/test_document*.py (15 files)
 
 #### Phase 2 Summary
 
-| Week | Deliverables | Effort |
-|------|--------------|--------|
-| 6-7 | Security Scanning | 1.5 weeks |
-| 7-8 | Cost Optimization | 1.5 weeks |
-| 8 | Monitoring & Health | 0.5 weeks |
-| 9 | Job Management | 1 week |
-| 9-10 | Knowledge Graph | 1 week |
-| 10-11 | Hybrid Search | 0.5 weeks |
-| 11 | Document Management | 0.5 weeks |
-| 12 | MVP Integration Testing | 1 week |
+| Week | Deliverables | Owner | Effort |
+|------|--------------|-------|--------|
+| 6-7 | Security Scanning | CO | 1.5 weeks |
+| 7-8 | Cost Optimization | CO | 1 week |
+| 8 | Monitoring & Health | CO | 0.5 weeks |
+| 9 | Job Management | CO | 1 week |
+| 9-10 | Knowledge Graph + Compliance KB | IB | 1.5 weeks |
+| 10 | Hybrid Search | IB | 0.5 weeks |
+| 10-11 | **NLU Pipeline** | IB | 1 week |
+| 11 | **Answer Generation** | IB | 1 week |
+| 11-12 | **Document Processing** | CO | 1 week |
+| 12 | MVP Integration Testing | Both | 1 week |
 
-**Phase 2 Total: 7 weeks** (vs 16 weeks original)
-**Reduction: 56%**
+**Phase 2 Total: 7 weeks**
+**CO Work: 5 weeks**
+**IB Work: 4 weeks** (parallelized with CO)
 
 ---
 
@@ -832,40 +1145,22 @@ tests/test_document*.py (15 files)
 
 ### Phase 4: Advanced Features (Weeks 21-26)
 
-**Goal:** Differentiation and enterprise features
+**Goal:** Enterprise features and enhanced user management
 
-#### 4.1 NLU Enhancement (Week 21)
+> **Note:** NLU-* and ANS-* moved to MVP Phase 2 to support Security Q&A use case.
 
-| Requirement | Source | Migration Action |
-|-------------|--------|------------------|
-| NLU-001 to NLU-003 | `intent_analyzer.py` | Direct migrate |
-| NLU-004 to NLU-006 | Query enhancement | Adapt |
-
-**Files to Migrate:**
-```
-src/services/graphrag/intent_analyzer.py
-src/services/graphrag/domain/classifier.py
-src/services/graphrag/llm_service.py
-```
-
-**Effort:** 1.5 weeks (existing: 70%)
-
-#### 4.2 Answer Generation Enhancement (Week 22)
+#### 4.1 Multi-User Support (Week 21)
 
 | Requirement | Source | Migration Action |
 |-------------|--------|------------------|
-| ANS-001 to ANS-008 | `answer_generator.py` | Adapt |
+| USR-002 | User invitation | Migrate from auth_abstraction |
+| USR-003 | User roles (Owner/Admin/Viewer) | Migrate |
+| USR-005 | MFA support | Adapt |
+| USR-006 | Session management | Migrate |
 
-**Files to Migrate:**
-```
-src/services/graphrag/answer_generator.py
-src/services/recommendation_service.py
-src/services/graphrag/llm_router.py
-```
+**Effort:** 1 week (deferred from MVP for simplicity)
 
-**Effort:** 1 week (existing: 75%)
-
-#### 4.3 SSO/SAML Integration (Week 22-23)
+#### 4.2 SSO/SAML Integration (Week 21-22)
 
 | Requirement | Source | Migration Action |
 |-------------|--------|------------------|
@@ -991,23 +1286,38 @@ CloudGuardian/src/intelligence/
 | Phase | Scope | Weeks | Cumulative | Milestone |
 |-------|-------|-------|------------|-----------|
 | Phase 0 | Foundation Setup | 1 | Week 1 | CI/CD Ready |
-| Phase 1 | Container Product (MVP Foundation) | 4 | Weeks 2-5 | Container Deployable |
-| Phase 2 | Core Features (MVP Completion) | 7 | Weeks 6-12 | **MVP + Trial Launch** |
-| Phase 3 | Enhanced Frontend | 8 | Weeks 13-20 | Full UI |
-| Phase 4 | Advanced Features | 6 | Weeks 21-26 | Enterprise Features |
-| Phase 5 | Post-MVP Features | 4 | Weeks 27-30 | Multi-Cloud |
+| Phase 1 | Container + Chat UI (MVP Foundation) | 5 | Weeks 2-6 | Container + Chat Deployable |
+| Phase 2 | Expert System (MVP Completion) | 6 | Weeks 7-12 | **MVP: Security Q&A Launch** |
+| Phase 3 | Enhanced Frontend | 8 | Weeks 13-20 | Full UI Polish |
+| Phase 4 | Enterprise Features | 6 | Weeks 21-26 | Multi-User, SSO, Analytics |
+| Phase 5 | Post-MVP Features | 4 | Weeks 27-30 | Multi-Cloud, Feedback |
 | **Total** | | **30 weeks** | | |
+
+### MVP Milestone (Week 12)
+
+**Delivered Capabilities:**
+- Security Chat Q&A with compliance mapping
+- Architecture document analysis (PDF)
+- AWS account scanning with recommendations
+- Knowledge base: HIPAA, SOC2, PCI-DSS, GDPR, CIS
+- Trial-first container deployment
+
+**Key Metrics:**
+- 99 requirements (65 CO + 34 IB)
+- Chat response time: <3 seconds
+- Document analysis: <30 seconds
+- AWS scan: <60 seconds
 
 ### Timeline Comparison
 
-| Phase | Original | Revised | Savings |
-|-------|----------|---------|---------|
-| Phase 1 | 10 weeks | 4 weeks | 6 weeks (60%) |
-| Phase 2 | 16 weeks | 7 weeks | 9 weeks (56%) |
-| Phase 3 | 10 weeks | 8 weeks | 2 weeks (20%) |
-| Phase 4 | 12 weeks | 6 weeks | 6 weeks (50%) |
-| Phase 5/Buffer | 4 weeks | 5 weeks | -1 week |
-| **Total** | **52 weeks** | **30 weeks** | **22 weeks (42%)** |
+| Phase | Original | Revised | Notes |
+|-------|----------|---------|-------|
+| Phase 1 | 4 weeks | 5 weeks | +1 week for Chat UI |
+| Phase 2 | 7 weeks | 6 weeks | Optimized with NLU/ANS parallel work |
+| Phase 3 | 8 weeks | 8 weeks | Same - UI polish |
+| Phase 4 | 6 weeks | 6 weeks | Reduced scope (NLU/ANS moved to MVP) |
+| Phase 5 | 4 weeks | 4 weeks | Same |
+| **Total** | **30 weeks** | **30 weeks** | Timeline maintained |
 
 ---
 
@@ -1158,4 +1468,6 @@ Jobs:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0 | 2025-12-01 | **MVP scope finalized** based on use cases: Security Chat Q&A, Document Analysis. Added NLU-*, ANS-* to MVP. Expanded UI for chat interface. Added compliance KB (HIPAA, SOC2, PCI-DSS, GDPR, CIS). |
+| 1.2 | 2025-11-30 | Added CO+IB bundle architecture, container deployment model |
 | 1.0 | 2025-11-30 | Initial phased implementation plan with MVP definition |

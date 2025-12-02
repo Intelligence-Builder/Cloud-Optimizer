@@ -1,0 +1,554 @@
+service: VPC
+description: Amazon Virtual Private Cloud - Isolated cloud network
+best_practices:
+  - category: network_security
+    title: Use Private Subnets for Internal Resources
+    description: |
+      Deploy application and database tiers in private subnets that don't have direct internet
+      access. Use NAT Gateways in public subnets for outbound internet connectivity from
+      private resources. This reduces attack surface and protects internal resources.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create separate public and private subnets across multiple availability zones. Place
+      load balancers and NAT Gateways in public subnets. Deploy application servers, databases,
+      and internal services in private subnets. Use route tables to control traffic flow.
+    terraform_example: |
+      # VPC
+      resource "aws_vpc" "main" {
+        cidr_block           = "10.0.0.0/16"
+        enable_dns_hostnames = true
+        enable_dns_support   = true
+
+        tags = {
+          Name = "main-vpc"
+        }
+      }
+
+      # Public subnet
+      resource "aws_subnet" "public_a" {
+        vpc_id                  = aws_vpc.main.id
+        cidr_block              = "10.0.1.0/24"
+        availability_zone       = "us-east-1a"
+        map_public_ip_on_launch = true
+
+        tags = {
+          Name = "public-subnet-a"
+          Type = "public"
+        }
+      }
+
+      # Private subnet
+      resource "aws_subnet" "private_a" {
+        vpc_id            = aws_vpc.main.id
+        cidr_block        = "10.0.10.0/24"
+        availability_zone = "us-east-1a"
+
+        tags = {
+          Name = "private-subnet-a"
+          Type = "private"
+        }
+      }
+
+      # Internet Gateway
+      resource "aws_internet_gateway" "main" {
+        vpc_id = aws_vpc.main.id
+
+        tags = {
+          Name = "main-igw"
+        }
+      }
+
+      # NAT Gateway
+      resource "aws_eip" "nat" {
+        domain = "vpc"
+      }
+
+      resource "aws_nat_gateway" "main" {
+        allocation_id = aws_eip.nat.id
+        subnet_id     = aws_subnet.public_a.id
+
+        tags = {
+          Name = "main-nat"
+        }
+      }
+
+      # Route table for public subnet
+      resource "aws_route_table" "public" {
+        vpc_id = aws_vpc.main.id
+
+        route {
+          cidr_block = "0.0.0.0/0"
+          gateway_id = aws_internet_gateway.main.id
+        }
+
+        tags = {
+          Name = "public-rt"
+        }
+      }
+
+      # Route table for private subnet
+      resource "aws_route_table" "private" {
+        vpc_id = aws_vpc.main.id
+
+        route {
+          cidr_block     = "0.0.0.0/0"
+          nat_gateway_id = aws_nat_gateway.main.id
+        }
+
+        tags = {
+          Name = "private-rt"
+        }
+      }
+
+      resource "aws_route_table_association" "public_a" {
+        subnet_id      = aws_subnet.public_a.id
+        route_table_id = aws_route_table.public.id
+      }
+
+      resource "aws_route_table_association" "private_a" {
+        subnet_id      = aws_subnet.private_a.id
+        route_table_id = aws_route_table.private.id
+      }
+    cli_example: |
+      # Create VPC
+      aws ec2 create-vpc --cidr-block 10.0.0.0/16
+
+      # Create public subnet
+      aws ec2 create-subnet \
+        --vpc-id vpc-12345678 \
+        --cidr-block 10.0.1.0/24 \
+        --availability-zone us-east-1a
+
+      # Create private subnet
+      aws ec2 create-subnet \
+        --vpc-id vpc-12345678 \
+        --cidr-block 10.0.10.0/24 \
+        --availability-zone us-east-1a
+
+      # Create and attach Internet Gateway
+      aws ec2 create-internet-gateway
+      aws ec2 attach-internet-gateway \
+        --vpc-id vpc-12345678 \
+        --internet-gateway-id igw-12345678
+
+      # Create NAT Gateway
+      aws ec2 allocate-address --domain vpc
+      aws ec2 create-nat-gateway \
+        --subnet-id subnet-public \
+        --allocation-id eipalloc-12345678
+    console_steps:
+      - Navigate to VPC console at https://console.aws.amazon.com/vpc/
+      - Click "Create VPC"
+      - Choose "VPC and more" for wizard
+      - Configure CIDR block (e.g., 10.0.0.0/16)
+      - Select number of AZs (minimum 2 for HA)
+      - Select number of public subnets
+      - Select number of private subnets
+      - Choose NAT Gateway option (one per AZ for HA)
+      - Enable DNS hostnames
+      - Click "Create VPC"
+
+  - category: logging
+    title: Enable VPC Flow Logs
+    description: |
+      Enable VPC Flow Logs to capture information about IP traffic going to and from network
+      interfaces in your VPC. Flow logs help with security analysis, network troubleshooting,
+      and compliance monitoring.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create flow logs for VPC, subnet, or network interface level. Send logs to CloudWatch
+      Logs or S3 for analysis. Use flow log insights or third-party tools to detect anomalies,
+      unauthorized access attempts, and unusual traffic patterns.
+    terraform_example: |
+      # CloudWatch Log Group for Flow Logs
+      resource "aws_cloudwatch_log_group" "flow_logs" {
+        name              = "/aws/vpc/flow-logs"
+        retention_in_days = 30
+      }
+
+      # IAM role for Flow Logs
+      resource "aws_iam_role" "flow_logs" {
+        name = "vpc-flow-logs-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+              Service = "vpc-flow-logs.amazonaws.com"
+            }
+          }]
+        })
+      }
+
+      resource "aws_iam_role_policy" "flow_logs" {
+        name = "vpc-flow-logs-policy"
+        role = aws_iam_role.flow_logs.id
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Effect = "Allow"
+            Action = [
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents",
+              "logs:DescribeLogGroups",
+              "logs:DescribeLogStreams"
+            ]
+            Resource = "*"
+          }]
+        })
+      }
+
+      # VPC Flow Logs
+      resource "aws_flow_log" "main" {
+        iam_role_arn    = aws_iam_role.flow_logs.arn
+        log_destination = aws_cloudwatch_log_group.flow_logs.arn
+        traffic_type    = "ALL"
+        vpc_id          = aws_vpc.main.id
+
+        tags = {
+          Name = "main-vpc-flow-logs"
+        }
+      }
+
+      # Alternative: Flow Logs to S3
+      resource "aws_flow_log" "s3" {
+        log_destination      = aws_s3_bucket.flow_logs.arn
+        log_destination_type = "s3"
+        traffic_type         = "ALL"
+        vpc_id               = aws_vpc.main.id
+
+        log_format = "$${srcaddr} $${dstaddr} $${srcport} $${dstport} $${protocol} $${packets} $${bytes} $${start} $${end} $${action} $${log-status}"
+      }
+    cli_example: |
+      # Create flow log to CloudWatch
+      aws ec2 create-flow-logs \
+        --resource-type VPC \
+        --resource-ids vpc-12345678 \
+        --traffic-type ALL \
+        --log-destination-type cloud-watch-logs \
+        --log-group-name /aws/vpc/flow-logs \
+        --deliver-logs-permission-arn arn:aws:iam::123456789012:role/vpc-flow-logs-role
+
+      # Create flow log to S3
+      aws ec2 create-flow-logs \
+        --resource-type VPC \
+        --resource-ids vpc-12345678 \
+        --traffic-type ALL \
+        --log-destination-type s3 \
+        --log-destination arn:aws:s3:::my-flow-logs-bucket
+
+      # Describe flow logs
+      aws ec2 describe-flow-logs --filter "Name=resource-id,Values=vpc-12345678"
+    console_steps:
+      - Navigate to VPC console
+      - Select your VPC
+      - Go to "Flow logs" tab
+      - Click "Create flow log"
+      - Enter name
+      - Choose filter (All, Accept, Reject)
+      - Select destination (CloudWatch Logs or S3)
+      - If CloudWatch - select or create log group and IAM role
+      - If S3 - select bucket
+      - Optionally customize log format
+      - Click "Create flow log"
+
+  - category: network_security
+    title: Implement Network ACLs and Security Groups
+    description: |
+      Use both Network ACLs (NACLs) and Security Groups for defense in depth. NACLs provide
+      stateless subnet-level filtering, while Security Groups provide stateful instance-level
+      filtering. Implement least privilege rules for both.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+      - GDPR
+    implementation: |
+      Create custom NACLs for each subnet with explicit allow and deny rules. Use Security
+      Groups to control traffic at the instance level. Follow the principle of least privilege
+      and regularly audit rules. Document the purpose of each rule.
+    terraform_example: |
+      # Network ACL for private subnet
+      resource "aws_network_acl" "private" {
+        vpc_id = aws_vpc.main.id
+
+        # Allow inbound from VPC
+        ingress {
+          protocol   = -1
+          rule_no    = 100
+          action     = "allow"
+          cidr_block = "10.0.0.0/16"
+          from_port  = 0
+          to_port    = 0
+        }
+
+        # Allow return traffic
+        ingress {
+          protocol   = "tcp"
+          rule_no    = 110
+          action     = "allow"
+          cidr_block = "0.0.0.0/0"
+          from_port  = 1024
+          to_port    = 65535
+        }
+
+        # Deny all other inbound
+        ingress {
+          protocol   = -1
+          rule_no    = 200
+          action     = "deny"
+          cidr_block = "0.0.0.0/0"
+          from_port  = 0
+          to_port    = 0
+        }
+
+        # Allow all outbound
+        egress {
+          protocol   = -1
+          rule_no    = 100
+          action     = "allow"
+          cidr_block = "0.0.0.0/0"
+          from_port  = 0
+          to_port    = 0
+        }
+
+        tags = {
+          Name = "private-subnet-nacl"
+        }
+      }
+
+      resource "aws_network_acl_association" "private_a" {
+        network_acl_id = aws_network_acl.private.id
+        subnet_id      = aws_subnet.private_a.id
+      }
+
+      # Security group for web tier
+      resource "aws_security_group" "web" {
+        name        = "web-tier-sg"
+        description = "Security group for web servers"
+        vpc_id      = aws_vpc.main.id
+
+        ingress {
+          from_port   = 443
+          to_port     = 443
+          protocol    = "tcp"
+          cidr_blocks = ["0.0.0.0/0"]
+          description = "HTTPS from internet"
+        }
+
+        egress {
+          from_port   = 0
+          to_port     = 0
+          protocol    = "-1"
+          cidr_blocks = ["0.0.0.0/0"]
+        }
+
+        tags = {
+          Name = "web-tier-sg"
+        }
+      }
+    cli_example: |
+      # Create Network ACL
+      aws ec2 create-network-acl --vpc-id vpc-12345678
+
+      # Add inbound rule
+      aws ec2 create-network-acl-entry \
+        --network-acl-id acl-12345678 \
+        --ingress \
+        --rule-number 100 \
+        --protocol tcp \
+        --port-range From=443,To=443 \
+        --cidr-block 0.0.0.0/0 \
+        --rule-action allow
+
+      # Associate with subnet
+      aws ec2 replace-network-acl-association \
+        --association-id aclassoc-12345678 \
+        --network-acl-id acl-12345678
+    console_steps:
+      - Navigate to VPC console
+      - For NACLs - Select "Network ACLs"
+      - Click "Create network ACL"
+      - Add inbound and outbound rules
+      - Associate with subnets
+      - For Security Groups - Select "Security Groups"
+      - Click "Create security group"
+      - Add inbound and outbound rules
+      - Attach to instances
+
+  - category: network_security
+    title: Enable DNS Resolution and Hostnames
+    description: |
+      Enable DNS resolution and DNS hostnames in your VPC to allow instances to resolve
+      public DNS hostnames to IP addresses and to assign public DNS hostnames to instances
+      with public IP addresses.
+    compliance_frameworks:
+      - SOC2
+    implementation: |
+      Enable both enableDnsSupport and enableDnsHostnames on your VPC. This is required
+      for proper functioning of many AWS services and for instances to communicate using
+      DNS names instead of IP addresses.
+    terraform_example: |
+      resource "aws_vpc" "main" {
+        cidr_block = "10.0.0.0/16"
+
+        # Enable DNS support
+        enable_dns_support   = true
+        enable_dns_hostnames = true
+
+        tags = {
+          Name = "main-vpc"
+        }
+      }
+
+      # VPC endpoint for S3 (uses DNS)
+      resource "aws_vpc_endpoint" "s3" {
+        vpc_id       = aws_vpc.main.id
+        service_name = "com.amazonaws.us-east-1.s3"
+
+        route_table_ids = [
+          aws_route_table.private.id
+        ]
+
+        tags = {
+          Name = "s3-endpoint"
+        }
+      }
+    cli_example: |
+      # Enable DNS support
+      aws ec2 modify-vpc-attribute \
+        --vpc-id vpc-12345678 \
+        --enable-dns-support
+
+      # Enable DNS hostnames
+      aws ec2 modify-vpc-attribute \
+        --vpc-id vpc-12345678 \
+        --enable-dns-hostnames
+
+      # Verify settings
+      aws ec2 describe-vpc-attribute \
+        --vpc-id vpc-12345678 \
+        --attribute enableDnsSupport
+
+      aws ec2 describe-vpc-attribute \
+        --vpc-id vpc-12345678 \
+        --attribute enableDnsHostnames
+    console_steps:
+      - Navigate to VPC console
+      - Select your VPC
+      - Click "Actions" > "Edit VPC settings"
+      - Check "Enable DNS resolution"
+      - Check "Enable DNS hostnames"
+      - Click "Save"
+
+  - category: network_security
+    title: Use VPC Endpoints for AWS Services
+    description: |
+      Use VPC endpoints to access AWS services privately without traversing the internet.
+      This improves security, reduces data transfer costs, and provides better performance
+      for services like S3, DynamoDB, and others.
+    compliance_frameworks:
+      - HIPAA
+      - SOC2
+      - PCI-DSS
+    implementation: |
+      Create Gateway endpoints for S3 and DynamoDB. Create Interface endpoints for other
+      AWS services. Update route tables and security groups to allow endpoint traffic.
+      Use endpoint policies to control access.
+    terraform_example: |
+      # Gateway endpoint for S3
+      resource "aws_vpc_endpoint" "s3" {
+        vpc_id       = aws_vpc.main.id
+        service_name = "com.amazonaws.us-east-1.s3"
+
+        route_table_ids = [
+          aws_route_table.private.id
+        ]
+
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [{
+            Effect    = "Allow"
+            Principal = "*"
+            Action    = "s3:*"
+            Resource  = "*"
+          }]
+        })
+
+        tags = {
+          Name = "s3-gateway-endpoint"
+        }
+      }
+
+      # Interface endpoint for Secrets Manager
+      resource "aws_vpc_endpoint" "secretsmanager" {
+        vpc_id              = aws_vpc.main.id
+        service_name        = "com.amazonaws.us-east-1.secretsmanager"
+        vpc_endpoint_type   = "Interface"
+        subnet_ids          = [aws_subnet.private_a.id]
+        security_group_ids  = [aws_security_group.endpoints.id]
+        private_dns_enabled = true
+
+        tags = {
+          Name = "secretsmanager-endpoint"
+        }
+      }
+
+      # Security group for interface endpoints
+      resource "aws_security_group" "endpoints" {
+        name        = "vpc-endpoints-sg"
+        description = "Security group for VPC endpoints"
+        vpc_id      = aws_vpc.main.id
+
+        ingress {
+          from_port   = 443
+          to_port     = 443
+          protocol    = "tcp"
+          cidr_blocks = [aws_vpc.main.cidr_block]
+          description = "HTTPS from VPC"
+        }
+
+        tags = {
+          Name = "endpoints-sg"
+        }
+      }
+    cli_example: |
+      # Create S3 gateway endpoint
+      aws ec2 create-vpc-endpoint \
+        --vpc-id vpc-12345678 \
+        --service-name com.amazonaws.us-east-1.s3 \
+        --route-table-ids rtb-12345678
+
+      # Create interface endpoint
+      aws ec2 create-vpc-endpoint \
+        --vpc-id vpc-12345678 \
+        --vpc-endpoint-type Interface \
+        --service-name com.amazonaws.us-east-1.secretsmanager \
+        --subnet-ids subnet-12345678 \
+        --security-group-ids sg-12345678
+
+      # List endpoints
+      aws ec2 describe-vpc-endpoints
+    console_steps:
+      - Navigate to VPC console
+      - Click "Endpoints"
+      - Click "Create endpoint"
+      - Enter name
+      - Select service category and service
+      - Select VPC
+      - For Gateway endpoints - select route tables
+      - For Interface endpoints - select subnets and security groups
+      - Optionally add endpoint policy
+      - Click "Create endpoint"

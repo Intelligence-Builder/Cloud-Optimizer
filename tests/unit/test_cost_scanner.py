@@ -273,4 +273,7 @@ class TestIdleEIPFinding:
             account_id="123456789012",
         )
 
-        assert "attach" in finding["remediation"].lower() or "release" in finding["remediation"].lower()
+        assert (
+            "attach" in finding["remediation"].lower()
+            or "release" in finding["remediation"].lower()
+        )
