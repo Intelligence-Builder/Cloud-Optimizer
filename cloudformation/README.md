@@ -6,6 +6,7 @@ One-click AWS deployment for Cloud Optimizer using CloudFormation.
 
 This CloudFormation template deploys a complete, production-ready Cloud Optimizer infrastructure in your AWS account:
 
+- **ECR**: Elastic Container Registry for Docker images (optional)
 - **VPC**: Custom VPC with public and private subnets across 2 Availability Zones
 - **RDS**: PostgreSQL database (encrypted, automated backups)
 - **ECS Fargate**: Serverless container orchestration
@@ -13,6 +14,8 @@ This CloudFormation template deploys a complete, production-ready Cloud Optimize
 - **Security Groups**: Properly configured network security
 
 **Deployment Time**: 8-10 minutes
+
+> **Note**: For detailed ECR setup and configuration, see [ECR_SETUP_GUIDE.md](ECR_SETUP_GUIDE.md)
 
 ## Deployment Options
 
