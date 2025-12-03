@@ -81,6 +81,10 @@ COPY --chown=appuser:appuser alembic.ini .
 # Create data directory for compliance files
 RUN mkdir -p data/compliance && chown -R appuser:appuser data/
 
+# Copy container entrypoint wrapper
+COPY --chown=appuser:appuser docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Switch to non-root user
 USER appuser
 
@@ -92,4 +96,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -fsS http://localhost:8000/health || exit 1
 
 # Use entrypoint script for startup
-ENTRYPOINT ["python", "-m", "cloud_optimizer.entrypoint"]
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,41 +1,22 @@
-"""Pytest fixtures for marketplace tests."""
+"""
+Pytest fixtures for marketplace tests.
+
+IMPORTANT NOTES:
+- AWS Marketplace Metering API is NOT supported by LocalStack
+- These fixtures provide minimal setup for testing marketplace code
+- Most tests use direct unit/integration testing without AWS dependencies
+- For real marketplace testing, use AWS test accounts with proper IAM policies
+
+See localstack_conftest.py for LocalStack-specific fixtures (S3, IAM, etc.)
+"""
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
-@pytest.fixture
-def mock_boto3_client():
-    """Mock boto3 client for marketplace API."""
-    with patch('boto3.client') as mock:
-        client = MagicMock()
-        mock.return_value = client
-        yield client
-
-
-@pytest.fixture
-def valid_subscription_client(mock_boto3_client):
-    """Mock client with valid subscription."""
-    mock_boto3_client.register_usage.return_value = {
-        "CustomerIdentifier": "customer-123",
-        "Signature": "signature",
-    }
-    return mock_boto3_client
-
-
-@pytest.fixture
-def expired_subscription_client(mock_boto3_client):
-    """Mock client with expired subscription."""
-    from botocore.exceptions import ClientError
-    error_response = {'Error': {'Code': 'CustomerNotSubscribedException', 'Message': 'test'}}
-    mock_boto3_client.register_usage.side_effect = ClientError(error_response, 'RegisterUsage')
-    return mock_boto3_client
-
-
-@pytest.fixture
-def trial_client(mock_boto3_client):
-    """Mock client with trial status."""
-    from botocore.exceptions import ClientError
-    error_response = {'Error': {'Code': 'CustomerNotEntitledException', 'Message': 'test'}}
-    mock_boto3_client.register_usage.side_effect = ClientError(error_response, 'RegisterUsage')
-    return mock_boto3_client
+# This file intentionally minimal - fixtures moved to test files
+# to keep test dependencies clear and avoid mock complexity.
+#
+# Previous mock fixtures removed in favor of:
+# 1. Direct unit tests (test internal logic)
+# 2. Integration tests with TestClient (test middleware behavior)
+# 3. Real AWS tests (marked with @pytest.mark.real_aws)

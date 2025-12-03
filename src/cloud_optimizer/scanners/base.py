@@ -102,3 +102,32 @@ class BaseScanner(ABC):
     def get_rules(self) -> Dict[str, ScannerRule]:
         """Get all registered rules."""
         return self.rules
+
+    def create_result(
+        self,
+        rule_id: str,
+        resource_id: str,
+        resource_name: str,
+        region: str = "us-east-1",
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> ScanResult:
+        """Create a scan result for a rule violation.
+
+        Args:
+            rule_id: ID of the violated rule
+            resource_id: ARN or ID of the resource
+            resource_name: Human-readable resource name
+            region: AWS region
+            metadata: Additional metadata about the finding
+
+        Returns:
+            ScanResult for the finding
+        """
+        return ScanResult(
+            rule_id=rule_id,
+            passed=False,
+            resource_id=resource_id,
+            resource_arn=resource_id if resource_id.startswith("arn:") else None,
+            region=region,
+            evidence=metadata or {},
+        )
