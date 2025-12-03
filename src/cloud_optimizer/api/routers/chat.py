@@ -17,6 +17,11 @@ from cloud_optimizer.api.schemas.chat import (
     HealthCheckResponse,
 )
 from cloud_optimizer.database import AsyncSessionDep
+from cloud_optimizer.middleware.auth import CurrentUser
+from cloud_optimizer.middleware.trial import (
+    RequireQuestionLimit,
+    record_trial_usage,
+)
 from cloud_optimizer.services.findings import FindingsService
 from ib_platform.answer.service import AnswerService
 from ib_platform.answer.streaming import StreamingHandler
@@ -157,6 +162,9 @@ async def health_check(
 async def send_message(
     request: ChatRequest,
     answer_service: Annotated[AnswerService, Depends(get_answer_service)],
+    user_id: CurrentUser = None,
+    db: AsyncSessionDep = None,
+    _question_limit: RequireQuestionLimit = None,
 ) -> ChatResponse:
     """Send a chat message and get complete response.
 
@@ -194,6 +202,10 @@ async def send_message(
             nlu_result=nlu_result,
             aws_account_id=request.aws_account_id,
         )
+
+        # Record trial usage after successful question
+        if user_id and db:
+            await record_trial_usage("questions", user_id, db)
 
         return ChatResponse(
             answer=answer,
@@ -233,6 +245,9 @@ async def send_message(
 async def stream_message(
     request: ChatRequest,
     streaming_handler: Annotated[StreamingHandler, Depends(get_streaming_handler)],
+    user_id: CurrentUser = None,
+    db: AsyncSessionDep = None,
+    _question_limit: RequireQuestionLimit = None,
 ) -> StreamingResponse:
     """Stream chat response using Server-Sent Events.
 
@@ -266,6 +281,10 @@ async def stream_message(
                 conversation_history=conversation_history,
             ):
                 yield event
+
+            # Record trial usage after successful streaming question
+            if user_id and db:
+                await record_trial_usage("questions", user_id, db)
 
         # Return streaming response
         return StreamingResponse(
