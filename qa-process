@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+    echo "Usage: $0 [--force-tests] [--refresh-context] [--test-path <path>] issue <issue-number> [pytest-args...]" >&2
+}
+
+is_truthy() {
+    local value="${1:-}"
+    local lower
+    lower="$(printf '%s' "${value}" | tr '[:upper:]' '[:lower:]')"
+    case "${lower}" in
+        1|true|yes|y|on) return 0 ;;
+    esac
+    return 1
+}
+
+FORCE_TESTS=0
+REFRESH_CONTEXT=0
+TEST_PATH="${QA_TEST_PATH:-}"
+
+if is_truthy "${QA_FORCE_TESTS:-}"; then
+    FORCE_TESTS=1
+fi
+if is_truthy "${QA_REFRESH_CONTEXT:-}"; then
+    REFRESH_CONTEXT=1
+fi
+if is_truthy "${QA_FORCE_CONTEXT:-}"; then
+    REFRESH_CONTEXT=1
+fi
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force-tests)
+            FORCE_TESTS=1
+            shift
+            ;;
+        --refresh-context|--force-context)
+            REFRESH_CONTEXT=1
+            shift
+            ;;
+        --test-path)
+            if [[ $# -lt 2 ]]; then
+                echo "Missing value for --test-path" >&2
+                exit 1
+            fi
+            TEST_PATH="$2"
+            shift 2
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        issue)
+            break
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [[ $# -lt 2 || "$1" != "issue" ]]; then
+    usage
+    exit 1
+fi
+
+ISSUE_NUMBER="$2"
+shift 2
+PYTEST_ARGS=("$@")
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CTX_FILE="${REPO_ROOT}/.smart-scaffold/contexts/issue-${ISSUE_NUMBER}.json"
+QA_SCRIPT="${REPO_ROOT}/scripts/qa_process_v2.py"
+
+heading() {
+    echo
+    echo "=================================================="
+    echo "$1"
+    echo "=================================================="
+}
+
+run_step() {
+    local label="$1"
+    shift
+
+    echo "→ ${label}"
+    if "$@"; then
+        echo "✓ ${label}"
+    else
+        local status=$?
+        echo "✗ ${label} failed with exit code ${status}"
+        exit "${status}"
+    fi
+    echo
+}
+
+heading "QA Process for Issue #${ISSUE_NUMBER}"
+
+if command -v smart-scaffold >/dev/null 2>&1; then
+    if [[ -f "${CTX_FILE}" && (( REFRESH_CONTEXT == 0 )) ]]; then
+        echo "→ smart-scaffold github start --issue ${ISSUE_NUMBER}"
+        echo "✓ Context already exists at ${CTX_FILE}; skipping github start"
+        echo "  (Use --refresh-context to rebuild the Smart-Scaffold cache)"
+        echo
+    else
+        run_step "smart-scaffold github start --issue ${ISSUE_NUMBER}" \
+            smart-scaffold github start --issue "${ISSUE_NUMBER}"
+    fi
+
+    if smart-scaffold --help 2>&1 | grep -q "backlog process"; then
+        run_step "smart-scaffold backlog process ${ISSUE_NUMBER}" \
+            smart-scaffold backlog process "${ISSUE_NUMBER}"
+    else
+        echo "⚠️  smart-scaffold backlog process not available; skipping"
+        echo
+    fi
+
+    run_step "smart-scaffold check" smart-scaffold check
+
+    if [[ -f "${CTX_FILE}" ]]; then
+        run_step "smart-scaffold github qa --context ${CTX_FILE}" \
+            smart-scaffold github qa --context "${CTX_FILE}"
+    else
+        echo "⚠️  Smart-Scaffold context ${CTX_FILE} not found; running issue-only QA"
+        echo
+        run_step "smart-scaffold github qa --issue ${ISSUE_NUMBER}" \
+            smart-scaffold github qa --issue "${ISSUE_NUMBER}"
+    fi
+else
+    echo "⚠️  smart-scaffold CLI not installed; skipping Smart-Scaffold automation"
+    echo
+fi
+
+if [[ -f "${QA_SCRIPT}" ]]; then
+    qa_cmd=(python "${QA_SCRIPT}" run --issue "${ISSUE_NUMBER}")
+    qa_label="python ${QA_SCRIPT} run --issue ${ISSUE_NUMBER}"
+    run_step "${qa_label}" "${qa_cmd[@]}"
+else
+    echo "⚠️  ${QA_SCRIPT} not found; skipping supplemental QA script"
+    echo
+fi
+
+if command -v pytest >/dev/null 2>&1; then
+    if [[ -n "${TEST_PATH}" && (( FORCE_TESTS == 0 )) ]]; then
+        echo "Skipping full 'pytest tests' run because --test-path was provided (scoped QA already ran)."
+        echo "Use --refresh-context/--force-tests if you need to rebuild caches, or rerun without --test-path to execute the full suite."
+        echo
+    else
+        heading "Pytest (Issue ${ISSUE_NUMBER})"
+        pytest_cmd=(pytest)
+        if [[ -n "${TEST_PATH}" ]]; then
+            pytest_cmd+=("${TEST_PATH}")
+        else
+            pytest_cmd+=("tests")
+        fi
+        if ((${#PYTEST_ARGS[@]})); then
+            pytest_cmd+=("${PYTEST_ARGS[@]}")
+        fi
+        run_step "${pytest_cmd[*]}" "${pytest_cmd[@]}"
+    fi
+else
+    echo "⚠️  pytest not installed; skipping direct test execution"
+    echo
+fi
+
+heading "QA process completed for Issue #${ISSUE_NUMBER}"
+exit 0

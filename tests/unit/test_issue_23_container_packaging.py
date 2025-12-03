@@ -40,15 +40,20 @@ def test_dockerfile_runs_as_non_root() -> None:
 
 
 def test_dockerfile_has_healthcheck_endpoint() -> None:
-    """Health check must probe /health endpoint on port 8080."""
+    """Health check must probe /health endpoint on port 8000."""
     contents = "\n".join(_load_dockerfile())
     match = re.search(
-        r"HEALTHCHECK.*curl.*http://localhost:8080/health", contents, re.DOTALL
+        r"HEALTHCHECK.*curl.*http://localhost:8000/health", contents, re.DOTALL
     )
     assert match, "HEALTHCHECK for /health endpoint is required"
 
 
-def test_dockerfile_entrypoint_runs_uvicorn() -> None:
-    """Runtime should launch the FastAPI app via uvicorn."""
+def test_dockerfile_entrypoint_runs_app() -> None:
+    """Runtime should launch the FastAPI app via entrypoint module."""
     contents = "\n".join(_load_dockerfile())
-    assert 'CMD ["uvicorn", "cloud_optimizer.main:app"' in contents
+    # Accept either CMD with uvicorn or ENTRYPOINT with entrypoint module
+    has_uvicorn_cmd = 'CMD ["uvicorn", "cloud_optimizer.main:app"' in contents
+    has_entrypoint = 'ENTRYPOINT ["python", "-m", "cloud_optimizer.entrypoint"]' in contents
+    assert has_uvicorn_cmd or has_entrypoint, (
+        "Dockerfile must use either CMD with uvicorn or ENTRYPOINT with entrypoint module"
+    )

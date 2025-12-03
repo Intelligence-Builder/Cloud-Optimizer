@@ -189,23 +189,31 @@ Be concise but thorough - aim for 2-3 sentences per section."""
 
         for line in lines:
             line_lower = line.lower().strip()
+            content_after_header = ""
 
             if "what it means" in line_lower:
                 current_section = "what_it_means"
-                continue
+                # Extract content after the header if on same line
+                if ":" in line:
+                    content_after_header = line.split(":", 1)[1].strip()
             elif "why it matters" in line_lower:
                 current_section = "why_it_matters"
-                continue
+                if ":" in line:
+                    content_after_header = line.split(":", 1)[1].strip()
             elif "technical details" in line_lower:
                 current_section = "technical_details"
-                continue
+                if ":" in line:
+                    content_after_header = line.split(":", 1)[1].strip()
+            else:
+                # Regular content line
+                content_after_header = line.strip()
 
-            # Add non-empty lines to current section
-            if line.strip():
+            # Add content to current section
+            if content_after_header:
                 if sections[current_section]:
-                    sections[current_section] += " " + line.strip()
+                    sections[current_section] += " " + content_after_header
                 else:
-                    sections[current_section] = line.strip()
+                    sections[current_section] = content_after_header
 
         # If no sections were found, put everything in explanation
         if not sections["what_it_means"] and not sections["why_it_matters"]:
