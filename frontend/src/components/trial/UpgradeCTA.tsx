@@ -73,3 +73,5 @@ export const UpgradeCTA: React.FC<UpgradeCTAProps> = ({
     </button>
   );
 };
+
+export default UpgradeCTA;

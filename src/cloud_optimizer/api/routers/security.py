@@ -29,6 +29,12 @@ from cloud_optimizer.api.schemas.security import (
     Vulnerability,
     VulnerabilityCreate,
 )
+from cloud_optimizer.database import AsyncSessionDep
+from cloud_optimizer.middleware.auth import CurrentUser
+from cloud_optimizer.middleware.trial import (
+    RequireScanLimit,
+    record_trial_usage,
+)
 
 router = APIRouter()
 
@@ -307,6 +313,9 @@ async def security_health(request: Request) -> Dict[str, Any]:
 async def scan_text(
     request: SecurityScanRequest,
     ib_service=Depends(get_ib_service),
+    user_id: CurrentUser = None,
+    db: AsyncSessionDep = None,
+    _scan_limit: RequireScanLimit = None,
 ) -> SecurityScanResult:
     """
     Scan text for security entities and relationships.
@@ -353,6 +362,10 @@ async def scan_text(
         ]
 
     processing_time = (time.time() - start_time) * 1000
+
+    # Record trial usage after successful scan
+    if user_id and db:
+        await record_trial_usage("scans", user_id, db)
 
     return SecurityScanResult(
         scan_id=scan_id,

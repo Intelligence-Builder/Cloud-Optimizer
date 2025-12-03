@@ -25,7 +25,11 @@ from cloud_optimizer.api.schemas.documents import (
     ErrorResponse,
 )
 from cloud_optimizer.database import AsyncSessionDep
-from cloud_optimizer.middleware.auth import get_current_user
+from cloud_optimizer.middleware.auth import CurrentUser, get_current_user
+from cloud_optimizer.middleware.trial import (
+    RequireDocumentLimit,
+    record_trial_usage,
+)
 from ib_platform.document import (
     DocumentAnalyzer,
     DocumentContext,
@@ -38,8 +42,6 @@ from ib_platform.document.models import DocumentStatus
 from ib_platform.document.service import DocumentValidationError
 
 router = APIRouter()
-
-CurrentUser = Annotated[UUID, Depends(get_current_user)]
 
 
 def get_document_service(db: AsyncSessionDep) -> DocumentService:
@@ -102,8 +104,10 @@ async def process_document_background(
 async def upload_document(
     background_tasks: BackgroundTasks,
     service: DocumentServiceDep,
-    user_id: UUID = Depends(get_current_user),
+    user_id: CurrentUser,
+    db: AsyncSessionDep,
     file: UploadFile = File(...),
+    _document_limit: RequireDocumentLimit = None,
 ) -> DocumentUploadResponse:
     """Upload a document for analysis."""
     if not file.filename:
@@ -132,6 +136,9 @@ async def upload_document(
             document.storage_path,
             document.content_type,
         )
+
+        # Record trial usage after successful document upload
+        await record_trial_usage("documents", user_id, db)
 
         return DocumentUploadResponse(
             document_id=document.document_id,

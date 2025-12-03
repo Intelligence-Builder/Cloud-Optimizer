@@ -40,9 +40,9 @@ class TrialExtensionError(TrialError):
 
 # Trial limits configuration
 TRIAL_LIMITS = {
-    "scans": 10,  # per month
-    "questions": 50,  # per month
-    "documents": 5,  # total
+    "scans": 50,  # per month
+    "questions": 500,  # per month
+    "documents": 20,  # total
 }
 
 TRIAL_DURATION_DAYS = 14

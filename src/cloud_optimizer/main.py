@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from cloud_optimizer.config import get_settings
+from cloud_optimizer.middleware.license import LicenseMiddleware
 
 # Configure structured logging
 structlog.configure(
@@ -38,6 +39,7 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan handler for startup/shutdown."""
+    from cloud_optimizer.marketplace import get_metering_service
     from cloud_optimizer.services.intelligence_builder import get_ib_service
 
     settings = get_settings()
@@ -68,10 +70,33 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.error("ib_service_connection_failed", error=str(e))
         app.state.ib_service = None
 
+    # Initialize Usage Metering service
+    metering_service = get_metering_service()
+    try:
+        await metering_service.start()
+        app.state.metering_service = metering_service
+        logger.info(
+            "metering_service_started",
+            enabled=metering_service.enabled,
+            product_code=metering_service.product_code,
+        )
+    except Exception as e:
+        logger.error("metering_service_start_failed", error=str(e))
+        app.state.metering_service = None
+
     yield
 
     # Shutdown
     logger.info("shutting_down_cloud_optimizer")
+
+    # Stop metering service and flush remaining records
+    if hasattr(app.state, "metering_service") and app.state.metering_service:
+        try:
+            await app.state.metering_service.stop()
+            logger.info("metering_service_stopped")
+        except Exception as e:
+            logger.error("metering_service_stop_failed", error=str(e))
+
     if hasattr(app.state, "ib_service") and app.state.ib_service:
         await app.state.ib_service.disconnect()
         logger.info("ib_service_disconnected")
@@ -102,6 +127,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # License enforcement middleware
+    app.add_middleware(LicenseMiddleware)
 
     # Register routers
     from cloud_optimizer.api.routers import (
