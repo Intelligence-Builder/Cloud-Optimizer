@@ -156,8 +156,14 @@ class TestRemediationGenerator:
         plan = generator.generate_plan(sample_finding)
 
         assert len(plan.references) > 0
-        references_text = " ".join(plan.references)
-        assert "docs.aws.amazon.com" in references_text or "aws.amazon.com" in references_text
+        # Parse each reference to check for required AWS documentation domains
+        from urllib.parse import urlparse
+        allowed_domains = {"docs.aws.amazon.com", "aws.amazon.com"}
+        found = any(
+            urlparse(ref).netloc in allowed_domains
+            for ref in plan.references
+        )
+        assert found
 
     def test_s3_specific_remediation(self, sample_finding: Finding) -> None:
         """Test S3-specific remediation steps."""
