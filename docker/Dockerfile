@@ -1,18 +1,22 @@
 # ============================================================================
 # Multi-stage Dockerfile for Cloud Optimizer
-# Optimized for production deployment with security and size in mind
+# Uses Poetry for deterministic, reproducible builds
 # ============================================================================
 
 # ============================================================================
-# Stage 1 - Builder: Build dependencies in an isolated image
+# Stage 1 - Builder: Install Poetry and build dependencies
 # ============================================================================
 FROM python:3.11-slim AS builder
 
 # Prevent Python from writing .pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    # Poetry configuration - use 2.x to match local development
+    POETRY_VERSION=2.1.3 \
+    POETRY_HOME=/opt/poetry \
+    POETRY_VENV=/opt/poetry-venv \
+    POETRY_CACHE_DIR=/opt/.cache \
+    POETRY_NO_INTERACTION=1
 
 WORKDIR /app
 
@@ -20,17 +24,27 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
-COPY pyproject.toml README.md ./
+# Install Poetry in isolated environment
+RUN python -m venv $POETRY_VENV \
+    && $POETRY_VENV/bin/pip install -U pip setuptools \
+    && $POETRY_VENV/bin/pip install poetry==$POETRY_VERSION
 
-# Copy source code
+ENV PATH="$POETRY_VENV/bin:$PATH"
+
+# Copy dependency files first (for better layer caching)
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies only (no dev dependencies, no root package)
+RUN poetry config virtualenvs.create false \
+    && poetry install --only main --no-root --no-interaction
+
+# Copy source code and install the package
 COPY src/ src/
-
-# Install application and dependencies to /install prefix
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --prefix=/install .
+COPY README.md ./
+RUN poetry install --only main --no-interaction
 
 # ============================================================================
 # Stage 2 - Runtime: Minimal runtime image
@@ -56,14 +70,15 @@ RUN useradd --create-home --shell /bin/bash --uid 1000 appuser && \
     chown -R appuser:appuser /app
 
 # Copy installed packages from builder
-COPY --from=builder /install /usr/local
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application files
 COPY --chown=appuser:appuser src/ src/
 COPY --chown=appuser:appuser alembic/ alembic/
 COPY --chown=appuser:appuser alembic.ini .
 
-# Create data directory for compliance files (if needed in future)
+# Create data directory for compliance files
 RUN mkdir -p data/compliance && chown -R appuser:appuser data/
 
 # Switch to non-root user

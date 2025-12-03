@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "cloud-optimizer"
 version = "2.0.0"
@@ -10,8 +6,9 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
 authors = [
-    {name = "Intelligence-Builder Team"}
+    {name = "Intelligence-Builder Team", email = "team@intelligence-builder.com"}
 ]
+keywords = ["cloud", "optimization", "aws", "graphrag", "knowledge-graph"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,45 +19,35 @@ classifiers = [
     "Framework :: FastAPI",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords = ["cloud", "optimization", "aws", "graphrag", "knowledge-graph"]
-
 dependencies = [
     # Web Framework
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
-
-    # Intelligence-Builder SDK (placeholder - will be published)
-    # "intelligence-builder-sdk>=1.0.0",
-
     # HTTP Client
     "httpx>=0.25.0",
-
     # Database
     "sqlalchemy[asyncio]>=2.0.0",
     "asyncpg>=0.29.0",
     "psycopg2-binary>=2.9.9",
     "alembic>=1.13.0",
-
     # Authentication
     "bcrypt>=4.1.0",
     "python-jose[cryptography]>=3.3.0",
-
     # AWS Integration
     "boto3>=1.33.0",
     "botocore>=1.33.0",
-
     # Utilities
     "python-dotenv>=1.0.0",
     "structlog>=23.2.0",
     "tenacity>=8.2.0",
-
     # AI/ML
     "anthropic>=0.40.0",
-
     # Document Processing
     "pypdf>=4.0.0",
+    # Encryption
+    "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]
@@ -70,16 +57,14 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.12.0",
-    "httpx>=0.25.0",  # for TestClient
-    "docker>=7.0.0",  # for container integration tests
-
+    "docker>=7.0.0",
+    "click>=8.1.7",
     # Code Quality
     "black>=23.11.0",
     "isort>=5.12.0",
     "flake8>=6.1.0",
     "mypy>=1.7.0",
     "pre-commit>=3.6.0",
-
     # Type Stubs
     "boto3-stubs[essential]>=1.33.0",
     "types-requests>=2.31.0",
@@ -94,11 +79,12 @@ Issues = "https://github.com/Intelligence-Builder/Cloud-Optimizer/issues"
 [project.scripts]
 cloud-optimizer = "cloud_optimizer.main:cli"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.poetry]
+packages = [{include = "cloud_optimizer", from = "src"}, {include = "ib_platform", from = "src"}]
 
-[tool.setuptools.package-dir]
-"" = "src"
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 # Black configuration
 [tool.black]
