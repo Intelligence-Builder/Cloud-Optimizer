@@ -11,7 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from cloud_optimizer.api.schemas.trial import (
     ExtendTrialRequest,
     ExtendTrialResponse,
+    TrialAnalyticsResponse,
     TrialStatusResponse,
+    TrialUsageBreakdownResponse,
+    UsageAnalyticsResponse,
     UsageDimensionResponse,
 )
 from cloud_optimizer.database import AsyncSessionDep
@@ -115,3 +118,69 @@ async def extend_trial(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         ) from e
+
+
+# TRL-006: Analytics endpoints (admin only)
+
+
+@router.get(
+    "/analytics",
+    response_model=TrialAnalyticsResponse,
+    summary="Get trial analytics (admin)",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (admin only)"},
+    },
+)
+async def get_trial_analytics(
+    user_id: CurrentUser,
+    trial_service: TrialServiceDep,
+) -> TrialAnalyticsResponse:
+    """
+    Get aggregate trial analytics for admin dashboard.
+
+    Returns:
+    - Total trials count
+    - Active/expired/converted breakdown
+    - Conversion rate percentage
+    - Average days to conversion
+    - Extension rate
+
+    Note: This endpoint should be restricted to admin users in production.
+    """
+    # TODO: Add admin role check when role system is implemented
+    analytics = await trial_service.get_trial_analytics()
+    return TrialAnalyticsResponse(**analytics)
+
+
+@router.get(
+    "/analytics/usage",
+    response_model=TrialUsageBreakdownResponse,
+    summary="Get usage analytics (admin)",
+    responses={
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (admin only)"},
+    },
+)
+async def get_usage_analytics(
+    user_id: CurrentUser,
+    trial_service: TrialServiceDep,
+) -> TrialUsageBreakdownResponse:
+    """
+    Get usage analytics breakdown by dimension.
+
+    Returns:
+    - Per-dimension usage statistics
+    - Average usage per trial
+    - Number of trials reaching limits
+    - Most/least used dimensions
+
+    Note: This endpoint should be restricted to admin users in production.
+    """
+    # TODO: Add admin role check when role system is implemented
+    analytics = await trial_service.get_usage_analytics()
+    return TrialUsageBreakdownResponse(
+        dimensions=[UsageAnalyticsResponse(**d) for d in analytics["dimensions"]],
+        most_used_dimension=analytics["most_used_dimension"],
+        least_used_dimension=analytics["least_used_dimension"],
+    )

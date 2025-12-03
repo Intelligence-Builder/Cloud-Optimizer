@@ -23,7 +23,7 @@ dependencies = [
     # Web Framework
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
-    "pydantic>=2.5.0",
+    "pydantic[email]>=2.5.0",
     "pydantic-settings>=2.1.0",
     # HTTP Client
     "httpx>=0.25.0",

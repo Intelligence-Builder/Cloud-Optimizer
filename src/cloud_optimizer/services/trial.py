@@ -124,14 +124,15 @@ class TrialService:
         """
         trial = await self.get_or_create_trial(user_id)
 
-        # Check if trial is expired
+        # Check if trial is converted FIRST - converted users have no limits
+        # regardless of trial status or expiration
+        if trial.converted_at:
+            return True  # No limits for converted (paid) users
+
+        # Check if trial is expired (only for non-converted users)
         now = datetime.now(timezone.utc)
         if trial.status != "active" or now > trial.expires_at:
             raise TrialExpiredError("Trial period has expired")
-
-        # Check if trial is converted
-        if trial.converted_at:
-            return True  # No limits for converted users
 
         # Get current usage
         result = await self.db.execute(
@@ -299,3 +300,134 @@ class TrialService:
             await self.db.flush()
 
         return trial
+
+    # TRL-006: Analytics methods
+
+    async def get_trial_analytics(self) -> dict[str, Any]:
+        """
+        Get aggregate trial analytics for admin dashboard.
+
+        Returns:
+            Dictionary containing trial metrics.
+        """
+        from sqlalchemy import case, func
+
+        # Get trial counts by status
+        result = await self.db.execute(
+            select(
+                func.count(Trial.trial_id).label("total"),
+                func.count(case((Trial.status == "active", 1))).label("active"),
+                func.count(case((Trial.status == "converted", 1))).label("converted"),
+                func.count(case((Trial.extended_at.isnot(None), 1))).label("extended"),
+            )
+        )
+        counts = result.one()
+        total = counts.total or 0
+        active = counts.active or 0
+        converted = counts.converted or 0
+        extended = counts.extended or 0
+
+        # Calculate expired (not active and not converted)
+        now = datetime.now(timezone.utc)
+        expired_result = await self.db.execute(
+            select(func.count(Trial.trial_id)).where(
+                Trial.status == "active",
+                Trial.expires_at < now,
+            )
+        )
+        expired = expired_result.scalar() or 0
+
+        # Calculate conversion rate
+        conversion_rate = (converted / total * 100) if total > 0 else 0.0
+        extension_rate = (extended / total * 100) if total > 0 else 0.0
+
+        # Calculate average days to conversion
+        avg_days_result = await self.db.execute(
+            select(
+                func.avg(
+                    func.extract(
+                        "epoch", Trial.converted_at - Trial.started_at
+                    ) / 86400  # seconds to days
+                )
+            ).where(Trial.converted_at.isnot(None))
+        )
+        avg_days = avg_days_result.scalar()
+
+        return {
+            "total_trials": total,
+            "active_trials": active - expired,  # Active minus expired
+            "expired_trials": expired,
+            "converted_trials": converted,
+            "conversion_rate": round(conversion_rate, 2),
+            "average_days_to_conversion": round(avg_days, 1) if avg_days else None,
+            "extension_rate": round(extension_rate, 2),
+        }
+
+    async def get_usage_analytics(self) -> dict[str, Any]:
+        """
+        Get usage analytics by dimension.
+
+        Returns:
+            Dictionary containing usage breakdown.
+        """
+        from sqlalchemy import func
+
+        # Get usage stats per dimension
+        result = await self.db.execute(
+            select(
+                TrialUsage.dimension,
+                func.sum(TrialUsage.count).label("total_usage"),
+                func.avg(TrialUsage.count).label("avg_usage"),
+                func.count(TrialUsage.usage_id).label("trial_count"),
+            ).group_by(TrialUsage.dimension)
+        )
+        usage_rows = result.all()
+
+        dimensions = []
+        max_usage = 0
+        max_dimension = None
+        min_usage = float("inf")
+        min_dimension = None
+
+        for row in usage_rows:
+            dimension = row.dimension
+            total = int(row.total_usage or 0)
+            avg = float(row.avg_usage or 0)
+            trial_count = int(row.trial_count or 0)
+
+            # Get limit for this dimension
+            limit = TRIAL_LIMITS.get(dimension, 0)
+
+            # Count how many reached the limit
+            limit_result = await self.db.execute(
+                select(func.count(TrialUsage.usage_id)).where(
+                    TrialUsage.dimension == dimension,
+                    TrialUsage.count >= limit,
+                )
+            )
+            limit_reached = limit_result.scalar() or 0
+
+            # Calculate utilization rate
+            utilization = (avg / limit * 100) if limit > 0 else 0.0
+
+            dimensions.append({
+                "dimension": dimension,
+                "total_usage": total,
+                "average_usage": round(avg, 1),
+                "limit_reached_count": limit_reached,
+                "utilization_rate": round(utilization, 1),
+            })
+
+            # Track most/least used
+            if total > max_usage:
+                max_usage = total
+                max_dimension = dimension
+            if total < min_usage:
+                min_usage = total
+                min_dimension = dimension
+
+        return {
+            "dimensions": dimensions,
+            "most_used_dimension": max_dimension,
+            "least_used_dimension": min_dimension,
+        }

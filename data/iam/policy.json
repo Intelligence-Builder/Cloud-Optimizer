@@ -1,0 +1,39 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudOptimizerReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketPolicy",
+        "s3:GetBucketEncryption",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketLogging",
+        "s3:ListAllMyBuckets",
+        "ec2:Describe*",
+        "rds:Describe*",
+        "iam:GetAccountPasswordPolicy",
+        "iam:ListUsers",
+        "iam:ListRoles",
+        "iam:ListPolicies",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListAccessKeys",
+        "iam:GetAccessKeyLastUsed",
+        "cloudtrail:DescribeTrails",
+        "cloudtrail:GetTrailStatus",
+        "config:DescribeConfigurationRecorders",
+        "kms:ListKeys",
+        "kms:GetKeyPolicy",
+        "kms:DescribeKey",
+        "ce:GetCostAndUsage",
+        "ce:GetReservationUtilization",
+        "ce:GetSavingsPlansPurchaseRecommendation",
+        "support:DescribeTrustedAdvisorChecks",
+        "support:DescribeTrustedAdvisorCheckResult"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -53,6 +53,19 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, description="New password")
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Forgot password request."""
+
+    email: EmailStr = Field(..., description="Email address for password reset")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password request."""
+
+    token: str = Field(..., description="Password reset token")
+    new_password: str = Field(..., min_length=8, description="New password")
+
+
 # Response schemas
 
 

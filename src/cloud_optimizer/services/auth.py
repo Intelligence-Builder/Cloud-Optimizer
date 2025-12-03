@@ -51,6 +51,16 @@ class PasswordPolicyError(AuthError):
         super().__init__("; ".join(errors))
 
 
+class PasswordResetError(AuthError):
+    """Password reset error."""
+
+    pass
+
+
+# Password reset configuration
+PASSWORD_RESET_EXPIRE_MINUTES = 60  # 1 hour
+
+
 class AuthService:
     """
     Authentication service.
@@ -386,3 +396,83 @@ class AuthService:
     def _hash_token(self, token: str) -> str:
         """Create a hash of a token for storage."""
         return hashlib.sha256(token.encode()).hexdigest()
+
+    # USR-007: Password Reset Methods
+
+    async def request_password_reset(self, email: str) -> str | None:
+        """
+        Request a password reset for a user.
+
+        Args:
+            email: User's email address.
+
+        Returns:
+            Reset token if user exists, None otherwise.
+            Note: The token should be sent via email, not returned to the API.
+        """
+        import secrets
+
+        user = await self._get_user_by_email(email)
+        if not user:
+            # Don't reveal if email exists - return None silently
+            return None
+
+        # Generate secure reset token
+        reset_token = secrets.token_urlsafe(32)
+
+        # Store token hash and expiration
+        user.password_reset_token_hash = self._hash_token(reset_token)
+        user.password_reset_expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=PASSWORD_RESET_EXPIRE_MINUTES
+        )
+        await self.db.flush()
+
+        return reset_token
+
+    async def reset_password(self, token: str, new_password: str) -> None:
+        """
+        Reset password using a valid reset token.
+
+        Args:
+            token: Password reset token.
+            new_password: New password.
+
+        Raises:
+            PasswordResetError: If token is invalid or expired.
+            PasswordPolicyError: If new password doesn't meet requirements.
+        """
+        # Validate new password first
+        validation = self.password_policy.validate(new_password)
+        if not validation.is_valid:
+            raise PasswordPolicyError(validation.errors)
+
+        # Hash the provided token
+        token_hash = self._hash_token(token)
+
+        # Find user with matching token hash
+        result = await self.db.execute(
+            select(User).where(User.password_reset_token_hash == token_hash)
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise PasswordResetError("Invalid or expired reset token")
+
+        # Check if token has expired
+        now = datetime.now(timezone.utc)
+        if not user.password_reset_expires_at or user.password_reset_expires_at < now:
+            # Clear expired token
+            user.password_reset_token_hash = None
+            user.password_reset_expires_at = None
+            await self.db.flush()
+            raise PasswordResetError("Reset token has expired")
+
+        # Update password
+        user.password_hash = self.password_policy.hash(new_password)
+        user.password_reset_token_hash = None
+        user.password_reset_expires_at = None
+        user.updated_at = now
+        await self.db.flush()
+
+        # Revoke all sessions (force re-login)
+        await self._revoke_all_sessions(user.user_id)
