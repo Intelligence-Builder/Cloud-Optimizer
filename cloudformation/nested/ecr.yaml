@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Elastic Container Registry (ECR) for Cloud Optimizer Docker images'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name to prefix resources
+    Type: String
+    Default: cloud-optimizer
+
+  ImageTagMutability:
+    Description: The tag mutability setting for the repository
+    Type: String
+    Default: IMMUTABLE
+    AllowedValues:
+      - MUTABLE
+      - IMMUTABLE
+
+  LifecyclePolicyMaxImageCount:
+    Description: Maximum number of images to retain in the repository
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 100
+
+Resources:
+  # ECR Repository
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${EnvironmentName}
+      ImageTagMutability: !Ref ImageTagMutability
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: !Sub |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep last ${LifecyclePolicyMaxImageCount} images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": ${LifecyclePolicyMaxImageCount}
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
+      RepositoryPolicyText:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowPullFromECS
+            Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+                - ec2.amazonaws.com
+            Action:
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:BatchCheckLayerAvailability
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ecr-repository
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  RepositoryUri:
+    Description: URI of the ECR repository
+    Value: !GetAtt ECRRepository.RepositoryUri
+    Export:
+      Name: !Sub ${EnvironmentName}-ecr-repository-uri
+
+  RepositoryArn:
+    Description: ARN of the ECR repository
+    Value: !GetAtt ECRRepository.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-ecr-repository-arn
+
+  RepositoryName:
+    Description: Name of the ECR repository
+    Value: !Ref ECRRepository
+    Export:
+      Name: !Sub ${EnvironmentName}-ecr-repository-name
+
+  RegistryId:
+    Description: Registry ID (AWS Account ID)
+    Value: !Select [0, !Split ['.', !GetAtt ECRRepository.RepositoryUri]]
+    Export:
+      Name: !Sub ${EnvironmentName}-ecr-registry-id

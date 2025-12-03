@@ -5,12 +5,27 @@
 replicaCount: 2
 
 image:
+  # Docker image repository
+  # For ECR: <aws_account_id>.dkr.ecr.<region>.amazonaws.com/cloud-optimizer
+  # For Docker Hub: cloudoptimizer/cloud-optimizer
+  # For public ECR: public.ecr.aws/<alias>/cloud-optimizer
   repository: cloud-optimizer
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
+  # Common tags: latest, v1.0.0, main-<sha>, develop-<sha>
   tag: ""
 
+# Image pull secrets for private registries
+# For ECR, create a secret with ECR credentials:
+#   kubectl create secret docker-registry ecr-registry-secret \
+#     --docker-server=<aws_account_id>.dkr.ecr.<region>.amazonaws.com \
+#     --docker-username=AWS \
+#     --docker-password=$(aws ecr get-login-password --region <region>)
+# Note: For EKS with IAM roles, this may not be needed if using IRSA
 imagePullSecrets: []
+# Example:
+# imagePullSecrets:
+#   - name: ecr-registry-secret
 nameOverride: ""
 fullnameOverride: ""
 
@@ -117,6 +132,23 @@ secrets:
   ibCredentials: "cloud-optimizer-ib-credentials"
   # AWS credentials secret name
   awsCredentials: "cloud-optimizer-aws-credentials"
+
+# ECR Configuration (if using Amazon ECR)
+# These values are used to configure ECR image pull secrets and registry settings
+ecr:
+  # Enable ECR-specific configurations
+  enabled: false
+  # AWS Account ID (e.g., 123456789012)
+  accountId: ""
+  # AWS Region (e.g., us-east-1)
+  region: "us-east-1"
+  # Repository name (should match the ECR repository)
+  repositoryName: "cloud-optimizer"
+  # Automatically create image pull secret using IRSA (requires EKS with IRSA configured)
+  # If true, the service account will be annotated with the IAM role
+  useIRSA: true
+  # IAM role ARN for IRSA (only needed if useIRSA is true)
+  iamRoleArn: ""
 
 # Application configuration (non-sensitive)
 config:
