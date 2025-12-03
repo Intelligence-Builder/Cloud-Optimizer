@@ -1,0 +1,155 @@
+version: '3.8'
+
+# E2E Test Environment for Cloud Optimizer
+# Complete stack with all services for end-to-end testing
+#
+# Usage:
+#   Start: docker-compose -f docker/docker-compose.e2e.yml up -d
+#   Stop:  docker-compose -f docker/docker-compose.e2e.yml down -v
+#
+# Services:
+#   - PostgreSQL (test database)
+#   - LocalStack (AWS services)
+#   - Cloud Optimizer API (application under test)
+
+services:
+  # PostgreSQL Test Database
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: co-e2e-postgres
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test_intelligence
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5434:5432"  # Use 5434 to avoid conflict with local postgres
+    volumes:
+      - postgres_e2e_data:/var/lib/postgresql/data
+      - ../docker/init-test-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test_intelligence"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - e2e-network
+
+  # LocalStack for AWS Services
+  localstack:
+    image: localstack/localstack:latest
+    container_name: co-e2e-localstack
+    ports:
+      - "4566:4566"  # LocalStack edge port
+      - "4571:4571"  # Legacy ports (if needed)
+    environment:
+      SERVICES: ec2,iam,s3,cloudwatch,rds,sts,kms,cloudtrail
+      DEBUG: 0
+      DATA_DIR: /tmp/localstack/data
+      LAMBDA_EXECUTOR: local
+      DOCKER_HOST: unix:///var/run/docker.sock
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    volumes:
+      - localstack_e2e_data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - e2e-network
+
+  # Cloud Optimizer Application
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: co-e2e-app
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      # Application
+      APP_NAME: "Cloud Optimizer E2E"
+      APP_VERSION: "2.0.0-e2e"
+      DEBUG: "true"
+      LOG_LEVEL: "INFO"
+
+      # Database (connect to postgres-test)
+      DATABASE_HOST: postgres-test
+      DATABASE_PORT: 5432
+      DATABASE_NAME: test_intelligence
+      DATABASE_USER: test
+      DATABASE_PASSWORD: test
+
+      # JWT (test keys)
+      JWT_SECRET_KEY: "test-secret-key-for-e2e-testing-only"
+      JWT_ALGORITHM: "HS256"
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      JWT_REFRESH_TOKEN_EXPIRE_DAYS: 7
+
+      # Encryption (test key)
+      ENCRYPTION_KEY: "test-encryption-key-for-e2e-only-not-production"
+
+      # Intelligence-Builder Platform (optional)
+      IB_PLATFORM_URL: "http://localhost:8000"
+      IB_API_KEY: ""
+      IB_TENANT_ID: "e2e-test"
+
+      # AWS Configuration (LocalStack)
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+
+      # Anthropic API (optional - not required for E2E)
+      ANTHROPIC_API_KEY: ""
+
+      # API Configuration
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+      API_RELOAD: "false"
+
+      # Feature Flags (enable all domains for testing)
+      ENABLE_SECURITY_DOMAIN: "true"
+      ENABLE_COST_DOMAIN: "true"
+      ENABLE_PERFORMANCE_DOMAIN: "true"
+      ENABLE_RELIABILITY_DOMAIN: "true"
+      ENABLE_OPEX_DOMAIN: "true"
+
+      # Trial/License (disable for E2E)
+      TRIAL_ENABLED: "false"
+      LICENSE_CHECK_ENABLED: "false"
+
+    ports:
+      - "18080:8080"  # Use 18080 to avoid conflict with local development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - e2e-network
+
+# Volumes for data persistence during test session
+volumes:
+  postgres_e2e_data:
+    driver: local
+    name: co-e2e-postgres-data
+  localstack_e2e_data:
+    driver: local
+    name: co-e2e-localstack-data
+
+# Network for E2E services
+networks:
+  e2e-network:
+    driver: bridge
+    name: co-e2e-network

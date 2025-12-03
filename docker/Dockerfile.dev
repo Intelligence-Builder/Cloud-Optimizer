@@ -1,0 +1,40 @@
+# ============================================================================
+# Development Dockerfile for Cloud Optimizer
+# Provides a hot-reload capable container for local development.
+# Usage:
+#   docker build -f docker/Dockerfile.dev -t cloud-optimizer-dev .
+#   docker run --rm -p 8080:8000 -v "$(pwd)":/app cloud-optimizer-dev
+# ============================================================================
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install system dependencies needed for compilation and dev tooling
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project files
+COPY . /app
+
+# Install application in editable mode with dev dependencies
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install -e ".[dev]"
+
+# Expose FastAPI port
+EXPOSE 8000
+
+# Environment defaults for dev container
+ENV API_HOST=0.0.0.0 \
+    API_PORT=8000 \
+    LOG_LEVEL=DEBUG
+
+# Run FastAPI with auto-reload for development
+CMD ["uvicorn", "cloud_optimizer.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

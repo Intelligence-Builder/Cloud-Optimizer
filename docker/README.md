@@ -25,9 +25,11 @@ docker-compose -f docker/docker-compose.prod.yml --env-file docker/.env.producti
 ## Files
 
 - **Dockerfile**: Multi-stage production build (builder + runtime)
+- **Dockerfile.dev**: Developer-focused image with hot reload + dev deps
 - **docker-compose.prod.yml**: Full production stack (postgres, redis, app)
 - **.env.production.example**: Environment variable template
 - **init-db.sql**: PostgreSQL initialization script
+- **entrypoint.sh**: Shell wrapper that bootstraps the Python entrypoint
 
 ## Container Features
 
@@ -66,7 +68,7 @@ See `.env.production.example` for complete list.
 ## Building
 
 ```bash
-# Build image
+# Build production image
 docker build -f docker/Dockerfile -t cloud-optimizer:latest .
 
 # Check image size
@@ -81,7 +83,18 @@ docker run --rm -p 8000:8000 \
   -e DATABASE_PASSWORD=securepass123 \
   -e JWT_SECRET_KEY=change-me \
   cloud-optimizer:latest
+
+# Development image with auto-reload
+docker build -f docker/Dockerfile.dev -t cloud-optimizer-dev .
+docker run --rm -p 8080:8000 \
+  -v "$(pwd)":/app \
+  --env-file .env \
+  cloud-optimizer-dev
 ```
+
+The development image installs all dev dependencies and runs FastAPI with
+`uvicorn --reload`, so changes to your mounted working directory are reloaded
+automatically.
 
 ## Production Stack
 
