@@ -7,6 +7,7 @@ from cloud_optimizer.integrations.aws.iam import IAMScanner
 from cloud_optimizer.integrations.aws.operations import SystemsManagerScanner
 from cloud_optimizer.integrations.aws.performance import CloudWatchScanner
 from cloud_optimizer.integrations.aws.reliability import ReliabilityScanner
+from cloud_optimizer.integrations.aws.s3_security import S3SecurityScanner
 from cloud_optimizer.integrations.aws.security_groups import SecurityGroupScanner
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "CloudWatchScanner",
     "ReliabilityScanner",
     "SystemsManagerScanner",
+    "S3SecurityScanner",
 ]

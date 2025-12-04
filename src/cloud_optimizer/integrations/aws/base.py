@@ -15,16 +15,21 @@ logger = logging.getLogger(__name__)
 class BaseAWSScanner(ABC):
     """Abstract base class for AWS resource scanners."""
 
-    def __init__(self, region: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        region: Optional[str] = None,
+        session: Optional[boto3.Session] = None,
+    ) -> None:
         """
         Initialize AWS scanner.
 
         Args:
             region: AWS region to scan (defaults to settings.aws_default_region)
+            session: Optional boto3 session (useful for per-account scans)
         """
         settings = get_settings()
         self.region = region or settings.aws_default_region
-        self._session: Optional[boto3.Session] = None
+        self._session: Optional[boto3.Session] = session
 
     @property
     def session(self) -> boto3.Session:
