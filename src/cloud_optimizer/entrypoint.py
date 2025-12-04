@@ -26,12 +26,12 @@ class StartupError(Exception):
     pass
 
 
-def validate_required_env_vars() -> None:
+def validate_required_env_vars() -> bool:
     """
     Validate that all required environment variables are set.
 
-    Raises:
-        StartupError: If any required environment variable is missing.
+    Returns:
+        bool: True if all database vars are set, False otherwise.
     """
     required_vars = [
         "DATABASE_HOST",
@@ -44,15 +44,15 @@ def validate_required_env_vars() -> None:
     missing_vars = [var for var in required_vars if not os.getenv(var)]
 
     if missing_vars:
-        logger.error(
-            "missing_required_environment_variables",
+        logger.warning(
+            "missing_database_environment_variables",
             missing_vars=missing_vars,
+            message="Starting in standalone mode without database",
         )
-        raise StartupError(
-            f"Missing required environment variables: {', '.join(missing_vars)}"
-        )
+        return False
 
     logger.info("environment_validation_passed", validated_vars=len(required_vars))
+    return True
 
 
 @retry(
@@ -224,13 +224,14 @@ def main() -> int:
         logger.info("cloud_optimizer_starting")
 
         # Step 1: Validate environment variables
-        validate_required_env_vars()
+        has_database = validate_required_env_vars()
 
-        # Step 2: Wait for database
-        wait_for_database()
+        if has_database:
+            # Step 2: Wait for database
+            wait_for_database()
 
-        # Step 3: Run database migrations
-        run_database_migrations()
+            # Step 3: Run database migrations
+            run_database_migrations()
 
         # Step 4: Initialize services
         asyncio.run(async_startup())
