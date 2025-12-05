@@ -7,7 +7,6 @@ Tests for multi-account scanning orchestration and account management.
 import pytest
 from datetime import datetime, timezone
 from typing import Any, Dict, List
-from unittest.mock import MagicMock, patch, AsyncMock
 
 from cloud_optimizer.scanners.multi_account import (
     AccountRegistry,
@@ -345,24 +344,6 @@ class TestMultiAccountScanner:
     """Test MultiAccountScanner class."""
 
     @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create mock boto3 session."""
-        session = MagicMock()
-        sts_client = MagicMock()
-        sts_client.assume_role.return_value = {
-            "Credentials": {
-                "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
-                "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-                "SessionToken": "token"
-            }
-        }
-        sts_client.get_caller_identity.return_value = {
-            "Arn": "arn:aws:iam::123456789012:role/Scanner"
-        }
-        session.client.return_value = sts_client
-        return session
-
-    @pytest.fixture
     def registry(self) -> AccountRegistry:
         """Create account registry with sample accounts."""
         registry = AccountRegistry()
@@ -390,24 +371,6 @@ class TestMultiAccountScanner:
 
         assert scanner.registry == registry
         assert scanner.max_workers == 5
-
-    @pytest.mark.asyncio
-    async def test_scan_all_returns_results(
-        self, registry: AccountRegistry
-    ) -> None:
-        """Test that scan_all returns results."""
-        scanner = MultiAccountScanner(
-            registry=registry,
-            scanner_classes=[],
-            max_workers=5
-        )
-
-        with patch.object(
-            scanner, 'scan_all', new_callable=AsyncMock
-        ) as mock_scan:
-            mock_scan.return_value = []
-            results = await scanner.scan_all()
-            assert isinstance(results, list)
 
     def test_aggregate_results(self, registry: AccountRegistry) -> None:
         """Test result aggregation."""

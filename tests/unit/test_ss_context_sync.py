@@ -4,6 +4,8 @@ Unit tests for Smart-Scaffold Context Sync and Workflow Coordinator.
 Tests context-to-entity synchronization and workflow operations.
 """
 
+from typing import List, Optional
+
 import pytest
 
 from cloud_optimizer.integrations.smart_scaffold.context_sync import (
@@ -11,6 +13,7 @@ from cloud_optimizer.integrations.smart_scaffold.context_sync import (
     SyncResult,
     WorkflowCoordinator,
 )
+from cloud_optimizer.integrations.smart_scaffold.runtime import LocalIBService
 
 
 class TestSyncResult:
@@ -47,8 +50,8 @@ class TestContextIBSync:
 
     @pytest.fixture
     def mock_service(self):
-        """Create mock IB service."""
-        return MockContextIBService()
+        """Create LocalIBService-based context service."""
+        return ContextIBTestService()
 
     @pytest.fixture
     def sync(self, mock_service):
@@ -158,7 +161,13 @@ class TestContextIBSync:
     @pytest.mark.asyncio
     async def test_sync_context_with_references(self, sync, mock_service):
         """Sync context creates reference relationships."""
-        mock_service.query_result = {"entities": [{"entity_id": "ib-issue-42"}]}
+        await mock_service.create_entity(
+            {
+                "entity_type": "github_issue",
+                "name": "Issue 42",
+                "metadata": {"original_id": "issue-42"},
+            }
+        )
 
         context = {
             "id": "ctx-refs",
@@ -171,8 +180,7 @@ class TestContextIBSync:
         result = await sync.sync_context(context)
 
         assert result.synced == 1
-        # Should have created relationship
-        assert len(mock_service.created_relationships) >= 0  # May or may not succeed
+        assert len(mock_service.created_relationships) == 1
 
 
 class TestWorkflowCoordinator:
@@ -180,8 +188,8 @@ class TestWorkflowCoordinator:
 
     @pytest.fixture
     def mock_service(self):
-        """Create mock IB service."""
-        return MockWorkflowIBService()
+        """Create LocalIBService-based workflow service."""
+        return WorkflowIBTestService()
 
     @pytest.fixture
     def coordinator(self, mock_service):
@@ -191,23 +199,33 @@ class TestWorkflowCoordinator:
     @pytest.mark.asyncio
     async def test_find_implementation_path(self, coordinator, mock_service):
         """Find implementation path from issue to code."""
-        mock_service.query_result = {
-            "entities": [{"entity_id": "ib-issue-001", "name": "Test Issue"}]
-        }
-        mock_service.traversal_result = {
-            "nodes": [
-                {
-                    "entity_id": "ib-pr-001",
-                    "entity_type": "pull_request",
-                    "name": "PR 1",
-                },
-                {
-                    "entity_id": "ib-file-001",
-                    "entity_type": "code_file",
-                    "name": "main.py",
-                },
-            ]
-        }
+        issue = await mock_service.create_entity(
+            {
+                "entity_type": "github_issue",
+                "name": "Test Issue",
+                "metadata": {"original_id": "issue-001"},
+            }
+        )
+        pr = await mock_service.create_entity(
+            {"entity_type": "pull_request", "name": "PR 1"}
+        )
+        code_file = await mock_service.create_entity(
+            {"entity_type": "code_file", "name": "main.py"}
+        )
+        await mock_service.create_relationship(
+            {
+                "source_id": issue["entity_id"],
+                "target_id": pr["entity_id"],
+                "relationship_type": "implements",
+            }
+        )
+        await mock_service.create_relationship(
+            {
+                "source_id": pr["entity_id"],
+                "target_id": code_file["entity_id"],
+                "relationship_type": "modifies",
+            }
+        )
 
         path = await coordinator.find_implementation_path("issue-001")
 
@@ -227,18 +245,24 @@ class TestWorkflowCoordinator:
     @pytest.mark.asyncio
     async def test_find_similar_issues(self, coordinator, mock_service):
         """Find similar issues via vector search."""
-        mock_service.search_result = {
-            "entities": [
-                {"entity_id": "ib-001", "name": "Auth bug", "score": 0.95},
-                {"entity_id": "ib-002", "name": "Login issue", "score": 0.85},
-            ]
-        }
+        await mock_service.create_entity(
+            {
+                "entity_type": "github_issue",
+                "name": "authentication problem - Auth bug",
+            }
+        )
+        await mock_service.create_entity(
+            {
+                "entity_type": "github_issue",
+                "name": "authentication problem - Login issue",
+            }
+        )
 
         similar = await coordinator.find_similar_issues("authentication problem")
 
         assert len(similar) == 2
-        assert similar[0]["score"] == 0.95
-        assert similar[1]["name"] == "Login issue"
+        assert "Auth bug" in similar[0]["name"]
+        assert "Login issue" in similar[1]["name"]
 
     @pytest.mark.asyncio
     async def test_find_similar_issues_error(self, coordinator, mock_service):
@@ -252,18 +276,25 @@ class TestWorkflowCoordinator:
     @pytest.mark.asyncio
     async def test_find_related_patterns(self, coordinator, mock_service):
         """Find patterns related to an issue."""
-        mock_service.traversal_result = {
-            "nodes": [
-                {
-                    "entity_id": "pat-001",
-                    "entity_type": "pattern",
-                    "name": "Auth Pattern",
-                    "properties": {"confidence": 0.9, "occurrences": 5},
-                },
-            ]
-        }
+        issue = await mock_service.create_entity(
+            {"entity_type": "github_issue", "name": "Issue Node"}
+        )
+        pattern = await mock_service.create_entity(
+            {
+                "entity_type": "pattern",
+                "name": "Auth Pattern",
+                "properties": {"confidence": 0.9, "occurrences": 5},
+            }
+        )
+        await mock_service.create_relationship(
+            {
+                "source_id": issue["entity_id"],
+                "target_id": pattern["entity_id"],
+                "relationship_type": "has_pattern",
+            }
+        )
 
-        patterns = await coordinator.find_related_patterns("issue-001")
+        patterns = await coordinator.find_related_patterns(issue["entity_id"])
 
         assert len(patterns) == 1
         assert patterns[0]["name"] == "Auth Pattern"
@@ -272,15 +303,13 @@ class TestWorkflowCoordinator:
     @pytest.mark.asyncio
     async def test_get_context_for_issue(self, coordinator, mock_service):
         """Get context record for an issue."""
-        mock_service.query_result = {
-            "entities": [
-                {
-                    "entity_id": "ctx-001",
-                    "name": "Issue 42 Context",
-                    "properties": {"issue_number": 42},
-                }
-            ]
-        }
+        await mock_service.create_entity(
+            {
+                "entity_type": "context_record",
+                "name": "Issue 42 Context",
+                "properties": {"issue_number": 42},
+            }
+        )
 
         context = await coordinator.get_context_for_issue(42)
 
@@ -298,69 +327,83 @@ class TestWorkflowCoordinator:
 
 
 # ============================================================================
-# Mock Services for Testing
+# LocalIBService-based helpers for testing
 # ============================================================================
 
 
-class MockContextIBService:
-    """Mock IB service for context sync testing."""
+class ContextIBTestService(LocalIBService):
+    """LocalIBService extension for context sync tests."""
 
     def __init__(self):
-        self.created_entities = []
-        self.created_relationships = []
-        self.query_result = {"entities": []}
+        super().__init__()
         self.fail_next = False
 
+    @property
+    def created_entities(self):
+        """Expose created entities for assertions."""
+        return list(self._entities.values())
+
+    @property
+    def created_relationships(self):
+        """Expose created relationships for assertions."""
+        return list(self._relationships)
+
     async def create_entity(self, entity_data: dict) -> dict:
-        """Mock entity creation."""
         if self.fail_next:
             self.fail_next = False
             raise Exception("Simulated failure")
+        return await super().create_entity(entity_data)
 
-        entity_id = f"ib-ctx-{len(self.created_entities) + 1}"
-        result = {
-            "entity_id": entity_id,
-            "name": entity_data.get("name"),
-            "properties": entity_data.get("properties", {}),
-        }
-        self.created_entities.append(entity_data)
-        return result
-
-    async def create_relationship(self, rel_data: dict) -> dict:
-        """Mock relationship creation."""
-        self.created_relationships.append(rel_data)
-        return {"relationship_id": f"rel-{len(self.created_relationships)}"}
-
-    async def query_entities(self, **kwargs) -> dict:
-        """Mock entity query."""
-        return self.query_result
+    async def query_entities(self, entity_type=None, limit: int = 100, **filters):
+        """Support both IB-style filters dict and LocalIBService kwargs."""
+        filter_kwargs = filters.pop("filters", {})
+        combined = {**filters, **filter_kwargs}
+        return await super().query_entities(
+            entity_type=entity_type,
+            limit=limit,
+            **combined,
+        )
 
 
-class MockWorkflowIBService:
-    """Mock IB service for workflow coordinator testing."""
+class WorkflowIBTestService(ContextIBTestService):
+    """Workflow-specific test service with traversal/search helpers."""
 
     def __init__(self):
-        self.query_result = {"entities": []}
-        self.traversal_result = {"nodes": []}
-        self.search_result = {"entities": []}
+        super().__init__()
         self.fail_search = False
 
-    async def query_entities(self, **kwargs) -> dict:
-        """Mock entity query."""
-        return self.query_result
+    async def traverse_graph(
+        self,
+        entity_id: str,
+        depth: int = 1,
+        relationship_types: Optional[List[str]] = None,
+    ) -> dict:
+        """Traverse stored relationships up to depth."""
+        nodes: list[dict] = []
+        visited = set()
+        frontier: list[tuple[str, int]] = [(entity_id, 0)]
 
-    async def traverse_graph(self, **kwargs) -> dict:
-        """Mock graph traversal."""
-        return self.traversal_result
+        while frontier:
+            current_id, current_depth = frontier.pop(0)
+            for rel in self._relationships:
+                if rel.get("source_id") != current_id:
+                    continue
+                rel_type = rel.get("relationship_type")
+                if relationship_types and rel_type not in relationship_types:
+                    continue
+                target_id = rel.get("target_id")
+                if not target_id or target_id in visited:
+                    continue
+                visited.add(target_id)
+                entity = await self.get_entity_by_id(target_id)
+                if entity:
+                    nodes.append(entity)
+                if current_depth + 1 < depth:
+                    frontier.append((target_id, current_depth + 1))
 
-    async def search_entities(self, **kwargs) -> dict:
-        """Mock entity search."""
+        return {"nodes": nodes}
+
+    async def search_entities(self, **kwargs):
         if self.fail_search:
             raise Exception("Search failed")
-        return self.search_result
-
-    async def get_entity_by_id(self, entity_id: str) -> dict:
-        """Mock get entity by ID."""
-        if self.query_result.get("entities"):
-            return self.query_result["entities"][0]
-        return None
+        return await super().search_entities(**kwargs)

@@ -5,26 +5,19 @@ Tests for API Gateway security scanning rules APIGW_001-009.
 """
 
 import pytest
-from typing import Any, Dict, List
-from unittest.mock import MagicMock, patch, AsyncMock
 
 from cloud_optimizer.scanners.apigateway_scanner import APIGatewayScanner
 from cloud_optimizer.scanners.base import ScannerRule
 
 
+@pytest.fixture
+def scanner(boto_session) -> APIGatewayScanner:
+    """Create API Gateway scanner using real boto3 session (LocalStack or AWS)."""
+    return APIGatewayScanner(session=boto_session, regions=["us-east-1"])
+
+
 class TestAPIGatewayScannerRules:
     """Test API Gateway scanner security rules."""
-
-    @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create mock boto3 session."""
-        session = MagicMock()
-        return session
-
-    @pytest.fixture
-    def scanner(self, mock_session: MagicMock) -> APIGatewayScanner:
-        """Create API Gateway scanner with mock session."""
-        return APIGatewayScanner(session=mock_session, regions=["us-east-1"])
 
     def test_scanner_initialization(self, scanner: APIGatewayScanner) -> None:
         """Test scanner initializes with correct rules."""
@@ -118,72 +111,15 @@ class TestAPIGatewayScannerRules:
             assert rule.recommendation, f"Rule {rule_id} missing recommendation"
 
 
-class TestAPIGatewayScannerIntegration:
-    """Integration tests for API Gateway scanner."""
+class TestAPIGatewayScannerMetadata:
+    """Metadata validation for API Gateway scanner."""
 
-    @pytest.fixture
-    def mock_apigateway_client(self) -> MagicMock:
-        """Create mock API Gateway client."""
-        client = MagicMock()
-        client.get_rest_apis.return_value = {
-            "items": [
-                {
-                    "id": "api123",
-                    "name": "test-api",
-                    "endpointConfiguration": {"types": ["REGIONAL"]}
-                }
-            ]
-        }
-        client.get_stages.return_value = {
-            "item": [{"stageName": "prod"}]
-        }
-        client.get_resources.return_value = {
-            "items": []
-        }
-        return client
-
-    @pytest.fixture
-    def mock_session_with_client(
-        self, mock_apigateway_client: MagicMock
-    ) -> MagicMock:
-        """Create mock session with API Gateway client."""
-        session = MagicMock()
-        session.client.return_value = mock_apigateway_client
-        return session
-
-    @pytest.mark.asyncio
-    async def test_scan_returns_results(
-        self, mock_session_with_client: MagicMock
-    ) -> None:
-        """Test that scan returns results."""
-        scanner = APIGatewayScanner(
-            session=mock_session_with_client,
-            regions=["us-east-1"]
-        )
-
-        with patch.object(scanner, 'scan', new_callable=AsyncMock) as mock_scan:
-            mock_scan.return_value = []
-            results = await scanner.scan()
-            assert isinstance(results, list)
-
-    def test_scanner_has_correct_service(
-        self, mock_session_with_client: MagicMock
-    ) -> None:
+    def test_scanner_has_correct_service(self, scanner: APIGatewayScanner) -> None:
         """Test scanner has correct service."""
-        scanner = APIGatewayScanner(
-            session=mock_session_with_client,
-            regions=["us-east-1"]
-        )
         assert scanner.SERVICE == "APIGateway"
 
-    def test_scanner_registers_rules_on_init(
-        self, mock_session_with_client: MagicMock
-    ) -> None:
+    def test_scanner_registers_rules_on_init(self, scanner: APIGatewayScanner) -> None:
         """Test scanner registers rules on initialization."""
-        scanner = APIGatewayScanner(
-            session=mock_session_with_client,
-            regions=["us-east-1"]
-        )
         assert len(scanner.rules) > 0
         for rule_id, rule in scanner.rules.items():
             assert isinstance(rule, ScannerRule)
