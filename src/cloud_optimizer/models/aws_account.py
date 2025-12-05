@@ -9,7 +9,17 @@ from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, LargeBinary, String, Text, func
+from sqlalchemy import (
+    DateTime,
+    Enum as SQLEnum,
+    ForeignKey,
+    Index,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,6 +50,14 @@ class AWSAccount(Base):
     """AWS Account connection model."""
 
     __tablename__ = "aws_accounts"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "aws_account_id",
+            name="uq_aws_account_user_account",
+        ),
+        Index("ix_aws_accounts_status", "status"),
+    )
 
     account_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -102,6 +120,12 @@ class AWSAccount(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # Relationships

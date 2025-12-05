@@ -163,14 +163,13 @@ async def test_check_limit_allows_converted_users(
     trial_service, test_user, test_trial, db_session
 ):
     """Test that check_limit allows unlimited access for converted users."""
-    # Mark trial as converted (but keep status as "active" to avoid expiration check)
-    # NOTE: This tests the current implementation where conversion is checked
-    # after status check. Converted users need to maintain "active" status.
+    # Mark trial as converted with "converted" status
+    # Converted users should bypass ALL limits regardless of trial status
     test_trial.converted_at = datetime.now(timezone.utc)
-    # Keep status as "active" to pass the expiration check
+    test_trial.status = "converted"
     await db_session.commit()
 
-    # Create usage at the limit
+    # Create usage WAY over the limit
     usage = TrialUsage(
         trial_id=test_trial.trial_id,
         dimension="scans",
@@ -179,7 +178,7 @@ async def test_check_limit_allows_converted_users(
     db_session.add(usage)
     await db_session.commit()
 
-    # Should still be allowed (no limits for converted users)
+    # Should still be allowed (no limits for converted/paid users)
     result = await trial_service.check_limit(test_user.user_id, "scans")
     assert result is True
 
@@ -513,6 +512,7 @@ async def test_trial_lifecycle(trial_service, test_user, db_session):
     3. Limit checking
     4. Extension
     5. Conversion
+    6. Converted users bypass all limits
     """
     # 1. Create trial
     trial = await trial_service.get_or_create_trial(test_user.user_id)
@@ -539,17 +539,13 @@ async def test_trial_lifecycle(trial_service, test_user, db_session):
     converted_trial = await trial_service.convert_trial(test_user.user_id)
     assert converted_trial.status == "converted"
 
-    # 7. Verify conversion bypasses limits (if status kept as active)
-    # NOTE: Current implementation has a design issue - converted trials with
-    # status="converted" fail the expiration check. This test documents that behavior.
-    # For converted users to bypass limits, the trial.converted_at should be set
-    # but status should remain "active", OR the check_limit logic should be reordered.
+    # 7. Verify converted (paid) users bypass ALL limits
+    # Record usage WAY over the limit
     await trial_service.record_usage(test_user.user_id, "scans", count=1000)
 
-    # After conversion with status="converted", check_limit will raise TrialExpiredError
-    # because status check happens before converted check
-    with pytest.raises(TrialExpiredError):
-        await trial_service.check_limit(test_user.user_id, "scans")
+    # Converted users should have unlimited access regardless of trial status
+    result = await trial_service.check_limit(test_user.user_id, "scans")
+    assert result is True
 
 
 @pytest.mark.asyncio
@@ -629,3 +625,118 @@ async def test_service_initialization():
     service = TrialService(mock_session)
 
     assert service.db is mock_session
+
+
+# TRL-006: Analytics Tests
+
+
+@pytest.mark.asyncio
+async def test_get_trial_analytics_empty(trial_service, db_session):
+    """Test analytics with no trials."""
+    analytics = await trial_service.get_trial_analytics()
+
+    assert analytics["total_trials"] == 0
+    assert analytics["active_trials"] == 0
+    assert analytics["expired_trials"] == 0
+    assert analytics["converted_trials"] == 0
+    assert analytics["conversion_rate"] == 0.0
+    assert analytics["average_days_to_conversion"] is None
+    assert analytics["extension_rate"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_get_trial_analytics_with_trials(
+    trial_service, test_user, test_trial, db_session
+):
+    """Test analytics with existing trials."""
+    analytics = await trial_service.get_trial_analytics()
+
+    assert analytics["total_trials"] == 1
+    assert analytics["active_trials"] == 1
+    assert analytics["expired_trials"] == 0
+    assert analytics["converted_trials"] == 0
+    assert analytics["conversion_rate"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_get_trial_analytics_with_converted_trial(
+    trial_service, test_user, test_trial, db_session
+):
+    """Test analytics correctly counts converted trials."""
+    # Convert the trial
+    test_trial.converted_at = datetime.now(timezone.utc)
+    test_trial.status = "converted"
+    await db_session.commit()
+
+    analytics = await trial_service.get_trial_analytics()
+
+    assert analytics["total_trials"] == 1
+    assert analytics["converted_trials"] == 1
+    assert analytics["conversion_rate"] == 100.0
+
+
+@pytest.mark.asyncio
+async def test_get_trial_analytics_with_extended_trial(
+    trial_service, test_user, test_trial, db_session
+):
+    """Test analytics correctly counts extended trials."""
+    # Extend the trial
+    await trial_service.extend_trial(test_user.user_id)
+
+    analytics = await trial_service.get_trial_analytics()
+
+    assert analytics["extension_rate"] == 100.0
+
+
+@pytest.mark.asyncio
+async def test_get_usage_analytics_empty(trial_service, db_session):
+    """Test usage analytics with no usage data."""
+    analytics = await trial_service.get_usage_analytics()
+
+    assert analytics["dimensions"] == []
+    assert analytics["most_used_dimension"] is None
+    assert analytics["least_used_dimension"] is None
+
+
+@pytest.mark.asyncio
+async def test_get_usage_analytics_with_usage(
+    trial_service, test_user, test_trial, db_session
+):
+    """Test usage analytics with usage data."""
+    # Record some usage
+    await trial_service.record_usage(test_user.user_id, "scans", count=10)
+    await trial_service.record_usage(test_user.user_id, "questions", count=50)
+    await trial_service.record_usage(test_user.user_id, "documents", count=5)
+
+    analytics = await trial_service.get_usage_analytics()
+
+    assert len(analytics["dimensions"]) == 3
+
+    # Questions should be most used, documents least
+    assert analytics["most_used_dimension"] == "questions"
+    assert analytics["least_used_dimension"] == "documents"
+
+    # Verify dimension data
+    scans_data = next(
+        d for d in analytics["dimensions"] if d["dimension"] == "scans"
+    )
+    assert scans_data["total_usage"] == 10
+    assert scans_data["average_usage"] == 10.0
+
+
+@pytest.mark.asyncio
+async def test_get_usage_analytics_limit_reached(
+    trial_service, test_user, test_trial, db_session
+):
+    """Test usage analytics tracks limit reached count."""
+    # Record usage at the limit
+    await trial_service.record_usage(
+        test_user.user_id, "scans", count=TRIAL_LIMITS["scans"]
+    )
+
+    analytics = await trial_service.get_usage_analytics()
+
+    scans_data = next(
+        d for d in analytics["dimensions"] if d["dimension"] == "scans"
+    )
+    assert scans_data["limit_reached_count"] == 1

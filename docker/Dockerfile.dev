@@ -24,9 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy project files
 COPY . /app
 
-# Install application in editable mode with dev dependencies
+# Install application in editable mode with dev dependencies, including optional extras
 RUN pip install --upgrade pip setuptools wheel \
-    && pip install -e ".[dev]"
+    && pip install -e ".[dev,email]"
 
 # Expose FastAPI port
 EXPOSE 8000

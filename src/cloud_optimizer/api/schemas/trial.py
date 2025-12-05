@@ -60,3 +60,44 @@ class TrialErrorResponse(BaseModel):
 
     detail: str = Field(..., description="Error detail message")
     error_type: str = Field(..., description="Type of error")
+
+
+# Analytics schemas (TRL-006)
+
+
+class TrialAnalyticsResponse(BaseModel):
+    """Analytics response for trial metrics (admin only)."""
+
+    total_trials: int = Field(..., description="Total number of trials")
+    active_trials: int = Field(..., description="Currently active trials")
+    expired_trials: int = Field(..., description="Expired trials")
+    converted_trials: int = Field(..., description="Converted to paid")
+    conversion_rate: float = Field(..., description="Conversion rate percentage")
+    average_days_to_conversion: float | None = Field(
+        None, description="Average days from trial start to conversion"
+    )
+    extension_rate: float = Field(..., description="Percentage of trials extended")
+
+
+class UsageAnalyticsResponse(BaseModel):
+    """Usage analytics by dimension."""
+
+    dimension: str = Field(..., description="Usage dimension name")
+    total_usage: int = Field(..., description="Total usage across all trials")
+    average_usage: float = Field(..., description="Average usage per trial")
+    limit_reached_count: int = Field(..., description="Number of trials reaching limit")
+    utilization_rate: float = Field(..., description="Average utilization percentage")
+
+
+class TrialUsageBreakdownResponse(BaseModel):
+    """Complete usage analytics breakdown."""
+
+    dimensions: list[UsageAnalyticsResponse] = Field(
+        ..., description="Analytics by dimension"
+    )
+    most_used_dimension: str | None = Field(
+        None, description="Most frequently used dimension"
+    )
+    least_used_dimension: str | None = Field(
+        None, description="Least frequently used dimension"
+    )

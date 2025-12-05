@@ -12,11 +12,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from cloud_optimizer.api.schemas.auth import (
     AuthResponse,
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     LogoutRequest,
     MessageResponse,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UpdateProfileRequest,
     UserResponse,
@@ -28,6 +30,7 @@ from cloud_optimizer.services.auth import (
     InvalidCredentialsError,
     InvalidTokenError,
     PasswordPolicyError,
+    PasswordResetError,
     UserExistsError,
 )
 
@@ -286,4 +289,78 @@ async def change_password(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
+        ) from e
+
+
+# USR-007: Password Reset Endpoints
+
+
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    summary="Request password reset",
+)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    auth_service: AuthServiceDep,
+) -> MessageResponse:
+    """
+    Request a password reset email.
+
+    If the email exists, a reset link will be sent.
+    Always returns success to prevent email enumeration.
+
+    Note: In production, this should send an email with a reset link.
+    """
+    # Request reset token (returns None if user doesn't exist)
+    reset_token = await auth_service.request_password_reset(request.email)
+
+    # TODO: Send email with reset link
+    # For now, we log the token in development (NEVER do this in production)
+    if reset_token:
+        # In a real app, send email here using SES or similar
+        # send_password_reset_email(request.email, reset_token)
+        pass
+
+    # Always return success message to prevent email enumeration
+    return MessageResponse(
+        message="If an account exists with this email, you will receive a password reset link."
+    )
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Reset password with token",
+    responses={
+        400: {"description": "Invalid token or password policy violation"},
+    },
+)
+async def reset_password(
+    request: ResetPasswordRequest,
+    auth_service: AuthServiceDep,
+) -> MessageResponse:
+    """
+    Reset password using a valid reset token.
+
+    The token is sent via email from the forgot-password endpoint.
+    """
+    try:
+        await auth_service.reset_password(
+            token=request.token,
+            new_password=request.new_password,
+        )
+
+        return MessageResponse(
+            message="Password reset successfully. Please login with your new password."
+        )
+    except PasswordResetError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except PasswordPolicyError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password does not meet requirements",
         ) from e
