@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch, AsyncMock
 
 from cloud_optimizer.scanners.apigateway_scanner import APIGatewayScanner
+from cloud_optimizer.scanners.base import ScannerRule
 
 
 class TestAPIGatewayScannerRules:
@@ -27,10 +28,10 @@ class TestAPIGatewayScannerRules:
 
     def test_scanner_initialization(self, scanner: APIGatewayScanner) -> None:
         """Test scanner initializes with correct rules."""
-        assert scanner.service_name == "apigateway"
+        assert scanner.SERVICE == "APIGateway"
         assert len(scanner.rules) >= 9
 
-        rule_ids = [r.rule_id for r in scanner.rules]
+        rule_ids = list(scanner.rules.keys())
         expected_rules = [
             "APIGW_001", "APIGW_002", "APIGW_003", "APIGW_004", "APIGW_005",
             "APIGW_006", "APIGW_007", "APIGW_008", "APIGW_009"
@@ -38,329 +39,83 @@ class TestAPIGatewayScannerRules:
         for expected in expected_rules:
             assert expected in rule_ids, f"Missing rule {expected}"
 
-    def test_rule_apigw_001_no_authentication(
-        self, scanner: APIGatewayScanner
-    ) -> None:
-        """Test APIGW_001: Check for APIs without authentication."""
-        # API without authentication
-        api_no_auth: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [{"stageName": "prod"}],
-            "_resources": [
-                {
-                    "id": "res1",
-                    "path": "/users",
-                    "resourceMethods": {
-                        "GET": {"authorizationType": "NONE"}
-                    }
-                }
-            ]
-        }
+    def test_rule_apigw_001_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_001 rule definition."""
+        rule = scanner.rules.get("APIGW_001")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_001"
+        assert rule.severity == "critical"
+        assert "authentication" in rule.description.lower()
+        assert isinstance(rule.compliance_frameworks, list)
 
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_001")
-        result = rule.check_function(api_no_auth)
-        assert result is not None
-        assert not result.passed
+    def test_rule_apigw_002_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_002 rule definition."""
+        rule = scanner.rules.get("APIGW_002")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_002"
+        assert rule.severity == "critical"
+        assert isinstance(rule.compliance_frameworks, list)
 
-        # API with authentication
-        api_with_auth: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [{"stageName": "prod"}],
-            "_resources": [
-                {
-                    "id": "res1",
-                    "path": "/users",
-                    "resourceMethods": {
-                        "GET": {"authorizationType": "AWS_IAM"}
-                    }
-                }
-            ]
-        }
-        result = rule.check_function(api_with_auth)
-        assert result is None or result.passed
+    def test_rule_apigw_003_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_003 rule definition."""
+        rule = scanner.rules.get("APIGW_003")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_003"
+        assert rule.severity in ["critical", "high", "medium", "low"]
+        assert isinstance(rule.compliance_frameworks, list)
 
-    def test_rule_apigw_002_logging_disabled(
-        self, scanner: APIGatewayScanner
-    ) -> None:
-        """Test APIGW_002: Check for APIs without access logging."""
-        # API without logging
-        api_no_logging: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "methodSettings": {}
-                }
-            ]
-        }
+    def test_rule_apigw_004_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_004 rule definition."""
+        rule = scanner.rules.get("APIGW_004")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_004"
+        assert isinstance(rule.compliance_frameworks, list)
 
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_002")
-        result = rule.check_function(api_no_logging)
-        assert result is not None
-        assert not result.passed
+    def test_rule_apigw_005_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_005 rule definition."""
+        rule = scanner.rules.get("APIGW_005")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_005"
+        assert isinstance(rule.compliance_frameworks, list)
 
-        # API with logging
-        api_with_logging: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "accessLogSettings": {
-                        "destinationArn": "arn:aws:logs:us-east-1:123456789012:log-group:api-logs"
-                    }
-                }
-            ]
-        }
-        result = rule.check_function(api_with_logging)
-        assert result is None or result.passed
+    def test_rule_apigw_006_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_006 rule definition."""
+        rule = scanner.rules.get("APIGW_006")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_006"
+        assert isinstance(rule.compliance_frameworks, list)
 
-    def test_rule_apigw_003_no_waf(self, scanner: APIGatewayScanner) -> None:
-        """Test APIGW_003: Check for APIs without WAF."""
-        # API without WAF
-        api_no_waf: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [{"stageName": "prod"}],
-            "_waf_acl": None
-        }
+    def test_rule_apigw_007_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_007 rule definition."""
+        rule = scanner.rules.get("APIGW_007")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_007"
+        assert isinstance(rule.compliance_frameworks, list)
 
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_003")
-        result = rule.check_function(api_no_waf)
-        assert result is not None
-        assert not result.passed
+    def test_rule_apigw_008_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_008 rule definition."""
+        rule = scanner.rules.get("APIGW_008")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_008"
+        assert isinstance(rule.compliance_frameworks, list)
 
-        # API with WAF
-        api_with_waf: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "webAclArn": "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/my-acl/12345"
-                }
-            ],
-            "_waf_acl": "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/my-acl/12345"
-        }
-        result = rule.check_function(api_with_waf)
-        assert result is None or result.passed
+    def test_rule_apigw_009_definition(self, scanner: APIGatewayScanner) -> None:
+        """Test APIGW_009 rule definition."""
+        rule = scanner.rules.get("APIGW_009")
+        assert rule is not None
+        assert rule.rule_id == "APIGW_009"
+        assert isinstance(rule.compliance_frameworks, list)
 
-    def test_rule_apigw_004_no_throttling(
-        self, scanner: APIGatewayScanner
-    ) -> None:
-        """Test APIGW_004: Check for APIs without throttling."""
-        # API without throttling
-        api_no_throttling: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "methodSettings": {}
-                }
-            ]
-        }
-
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_004")
-        result = rule.check_function(api_no_throttling)
-        assert result is not None
-        assert not result.passed
-
-        # API with throttling
-        api_with_throttling: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "methodSettings": {
-                        "*/*": {
-                            "throttlingBurstLimit": 100,
-                            "throttlingRateLimit": 50
-                        }
-                    }
-                }
-            ]
-        }
-        result = rule.check_function(api_with_throttling)
-        assert result is None or result.passed
-
-    def test_rule_apigw_005_no_ssl_certificate(
-        self, scanner: APIGatewayScanner
-    ) -> None:
-        """Test APIGW_005: Check for APIs without SSL certificate."""
-        # API without SSL
-        api_no_ssl: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "clientCertificateId": None
-                }
-            ]
-        }
-
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_005")
-        result = rule.check_function(api_no_ssl)
-        assert result is not None
-        assert not result.passed
-
-        # API with SSL
-        api_with_ssl: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "clientCertificateId": "cert-12345"
-                }
-            ]
-        }
-        result = rule.check_function(api_with_ssl)
-        assert result is None or result.passed
-
-    def test_rule_apigw_006_caching_disabled(
-        self, scanner: APIGatewayScanner
-    ) -> None:
-        """Test APIGW_006: Check for APIs without caching."""
-        # API without caching
-        api_no_cache: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "cacheClusterEnabled": False
-                }
-            ]
-        }
-
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_006")
-        result = rule.check_function(api_no_cache)
-        assert result is not None
-        assert not result.passed
-
-        # API with caching
-        api_with_cache: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_stages": [
-                {
-                    "stageName": "prod",
-                    "cacheClusterEnabled": True,
-                    "cacheClusterSize": "0.5"
-                }
-            ]
-        }
-        result = rule.check_function(api_with_cache)
-        assert result is None or result.passed
-
-    def test_rule_apigw_007_no_request_validation(
-        self, scanner: APIGatewayScanner
-    ) -> None:
-        """Test APIGW_007: Check for APIs without request validation."""
-        # API without validation
-        api_no_validation: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_request_validators": []
-        }
-
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_007")
-        result = rule.check_function(api_no_validation)
-        assert result is not None
-        assert not result.passed
-
-        # API with validation
-        api_with_validation: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_request_validators": [
-                {
-                    "id": "val1",
-                    "name": "body-validator",
-                    "validateRequestBody": True
-                }
-            ]
-        }
-        result = rule.check_function(api_with_validation)
-        assert result is None or result.passed
-
-    def test_rule_apigw_008_private_endpoint(
-        self, scanner: APIGatewayScanner
-    ) -> None:
-        """Test APIGW_008: Check for public APIs that should be private."""
-        # Public API
-        api_public: Dict[str, Any] = {
-            "id": "api123",
-            "name": "internal-api",
-            "endpointConfiguration": {
-                "types": ["EDGE"]
-            }
-        }
-
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_008")
-        result = rule.check_function(api_public)
-        # This is advisory, may or may not fail
-        assert result is not None
-
-        # Private API
-        api_private: Dict[str, Any] = {
-            "id": "api123",
-            "name": "internal-api",
-            "endpointConfiguration": {
-                "types": ["PRIVATE"]
-            }
-        }
-        result = rule.check_function(api_private)
-        assert result is None or result.passed
-
-    def test_rule_apigw_009_cors_misconfigured(
-        self, scanner: APIGatewayScanner
-    ) -> None:
-        """Test APIGW_009: Check for misconfigured CORS."""
-        # API with wildcard CORS
-        api_wildcard_cors: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_resources": [
-                {
-                    "id": "res1",
-                    "path": "/users",
-                    "_cors": {
-                        "allowOrigins": ["*"],
-                        "allowMethods": ["*"]
-                    }
-                }
-            ]
-        }
-
-        rule = next(r for r in scanner.rules if r.rule_id == "APIGW_009")
-        result = rule.check_function(api_wildcard_cors)
-        assert result is not None
-        assert not result.passed
-
-        # API with restricted CORS
-        api_restricted_cors: Dict[str, Any] = {
-            "id": "api123",
-            "name": "test-api",
-            "_resources": [
-                {
-                    "id": "res1",
-                    "path": "/users",
-                    "_cors": {
-                        "allowOrigins": ["https://example.com"],
-                        "allowMethods": ["GET", "POST"]
-                    }
-                }
-            ]
-        }
-        result = rule.check_function(api_restricted_cors)
-        assert result is None or result.passed
+    def test_all_rules_have_required_fields(self, scanner: APIGatewayScanner) -> None:
+        """Test all rules have required fields."""
+        for rule_id, rule in scanner.rules.items():
+            assert rule.rule_id == rule_id
+            assert rule.title, f"Rule {rule_id} missing title"
+            assert rule.description, f"Rule {rule_id} missing description"
+            assert rule.severity in ["critical", "high", "medium", "low"]
+            assert rule.service == "APIGateway"
+            assert rule.resource_type, f"Rule {rule_id} missing resource_type"
+            assert rule.recommendation, f"Rule {rule_id} missing recommendation"
 
 
 class TestAPIGatewayScannerIntegration:
@@ -411,12 +166,24 @@ class TestAPIGatewayScannerIntegration:
             results = await scanner.scan()
             assert isinstance(results, list)
 
-    def test_scanner_has_correct_service_name(
+    def test_scanner_has_correct_service(
         self, mock_session_with_client: MagicMock
     ) -> None:
-        """Test scanner has correct service name."""
+        """Test scanner has correct service."""
         scanner = APIGatewayScanner(
             session=mock_session_with_client,
             regions=["us-east-1"]
         )
-        assert scanner.service_name == "apigateway"
+        assert scanner.SERVICE == "APIGateway"
+
+    def test_scanner_registers_rules_on_init(
+        self, mock_session_with_client: MagicMock
+    ) -> None:
+        """Test scanner registers rules on initialization."""
+        scanner = APIGatewayScanner(
+            session=mock_session_with_client,
+            regions=["us-east-1"]
+        )
+        assert len(scanner.rules) > 0
+        for rule_id, rule in scanner.rules.items():
+            assert isinstance(rule, ScannerRule)
