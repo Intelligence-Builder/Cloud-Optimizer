@@ -88,7 +88,8 @@ def test_extract_text_with_encoding():
 
 
 @pytest.mark.skipif(
-    not hasattr(pytest, "importorskip") or pytest.importorskip("pypdf", reason="pypdf not installed"),
+    not hasattr(pytest, "importorskip")
+    or pytest.importorskip("pypdf", reason="pypdf not installed"),
     reason="pypdf not installed",
 )
 def test_extract_pdf_without_pypdf(monkeypatch):

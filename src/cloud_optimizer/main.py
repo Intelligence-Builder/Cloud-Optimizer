@@ -9,31 +9,27 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from cloud_optimizer.config import get_settings
+from cloud_optimizer.logging.config import LogConfig, configure_logging, get_logger
+from cloud_optimizer.middleware.correlation import CorrelationIdMiddleware
 from cloud_optimizer.middleware.license import LicenseMiddleware
 
-# Configure structured logging
-structlog.configure(
-    processors=[
-        structlog.stdlib.filter_by_level,
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer(),
-    ],
-    wrapper_class=structlog.stdlib.BoundLogger,
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-    cache_logger_on_first_use=True,
+# Configure structured logging with PII redaction and correlation IDs
+settings = get_settings()
+log_config = LogConfig(
+    level=settings.log_level,
+    format="json",
+    service_name="cloud-optimizer",
+    environment="development" if settings.debug else "production",
+    version=settings.app_version,
+    pii_redaction_enabled=True,
 )
+configure_logging(log_config)
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -128,6 +124,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Correlation ID middleware for request tracing
+    app.add_middleware(CorrelationIdMiddleware)
+
     # License enforcement middleware
     app.add_middleware(LicenseMiddleware)
 
@@ -136,6 +135,7 @@ def create_app() -> FastAPI:
         auth,
         aws_accounts,
         chat,
+        documents,
         findings,
         health,
         kb,
@@ -189,6 +189,12 @@ def create_app() -> FastAPI:
         chat.router,
         prefix="/api/v1/chat",
         tags=["Chat"],
+    )
+
+    app.include_router(
+        documents.router,
+        prefix="/api/v1/documents",
+        tags=["Documents"],
     )
 
     return app

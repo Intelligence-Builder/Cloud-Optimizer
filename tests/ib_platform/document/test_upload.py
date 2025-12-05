@@ -102,7 +102,9 @@ async def test_upload_empty_file(db_session, sample_user_id: UUID):
 
 
 @pytest.mark.asyncio
-async def test_get_document(db_session, sample_user_id: UUID, sample_document: Document):
+async def test_get_document(
+    db_session, sample_user_id: UUID, sample_document: Document
+):
     """Test retrieving a document."""
     service = DocumentService(db_session)
 
