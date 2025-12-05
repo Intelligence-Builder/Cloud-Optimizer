@@ -6,6 +6,7 @@ Provides request/response models for security API endpoints.
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -78,6 +79,41 @@ class SecurityScanResult(BaseModel):
         ..., description="Processing time in milliseconds"
     )
     timestamp: datetime = Field(..., description="Scan timestamp")
+
+
+class StartSecurityScanRequest(BaseModel):
+    """Request payload for starting an AWS security scan."""
+
+    aws_account_id: UUID = Field(..., description="AWS account connection identifier")
+    scan_types: List[str] = Field(
+        default_factory=list,
+        description="Optional subset of scan types (s3, security_groups, iam, encryption)",
+    )
+    region: str = Field(
+        "us-east-1",
+        min_length=2,
+        description="AWS region to target",
+    )
+
+
+class SecurityScanJobResponse(BaseModel):
+    """Response representing a scan job."""
+
+    job_id: UUID
+    aws_account_id: UUID
+    scan_type: str
+    status: str
+    services_to_scan: List[str]
+    progress: int
+    total_findings: int
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+    class Config:
+        """Allow ORM conversion."""
+
+        from_attributes = True
 
 
 # ============================================================================

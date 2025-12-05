@@ -1,13 +1,14 @@
 """
 Security Analysis API Router.
 
-Provides endpoints for security analysis using Intelligence-Builder platform.
+Provides endpoints for security analysis using Intelligence-Builder platform
+and the internal AWS security scanning engine.
 """
 
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
-from uuid import uuid4
+from typing import Annotated, Any, Dict, List, Optional
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -26,6 +27,8 @@ from cloud_optimizer.api.schemas.security import (
     SecurityRelationship,
     SecurityScanRequest,
     SecurityScanResult,
+    SecurityScanJobResponse,
+    StartSecurityScanRequest,
     Vulnerability,
     VulnerabilityCreate,
 )
@@ -35,6 +38,7 @@ from cloud_optimizer.middleware.trial import (
     RequireScanLimit,
     record_trial_usage,
 )
+from cloud_optimizer.services.security_scanner import SecurityScanEngine
 
 router = APIRouter()
 
@@ -152,6 +156,14 @@ async def get_ib_service(request: Request) -> Any:
     return request.app.state.ib_service
 
 
+def get_security_scanner(db: AsyncSessionDep) -> SecurityScanEngine:
+    """Provide security scanner engine."""
+    return SecurityScanEngine(db)
+
+
+SecurityScannerDep = Annotated[SecurityScanEngine, Depends(get_security_scanner)]
+
+
 # ============================================================================
 # Endpoints
 # ============================================================================
@@ -201,6 +213,53 @@ async def analyze_text(
         relationship_count=result.relationship_count,
         processing_time_ms=result.processing_time_ms,
     )
+
+
+@router.post(
+    "/scans",
+    response_model=SecurityScanJobResponse,
+    status_code=201,
+    summary="Start AWS security scan",
+)
+async def start_security_scan(
+    request: StartSecurityScanRequest,
+    user_id: CurrentUser,
+    db: AsyncSessionDep,
+    scanner: SecurityScannerDep,
+    _scan_limit: RequireScanLimit,
+) -> SecurityScanJobResponse:
+    """Start a security scan for an AWS account connection."""
+    try:
+        job = await scanner.start_security_scan(
+            user_id=user_id,
+            account_id=request.aws_account_id,
+            scan_types=request.scan_types or None,
+            region=request.region,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    await record_trial_usage("scans", user_id, db, count=1)
+    return SecurityScanJobResponse.model_validate(job)
+
+
+@router.get(
+    "/scans/{job_id}",
+    response_model=SecurityScanJobResponse,
+    summary="Get security scan status",
+)
+async def get_security_scan(
+    job_id: UUID,
+    user_id: CurrentUser,
+    scanner: SecurityScannerDep,
+) -> SecurityScanJobResponse:
+    """Retrieve scan job status for the authenticated user."""
+    try:
+        job = await scanner.get_scan_job(job_id, user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return SecurityScanJobResponse.model_validate(job)
 
 
 @router.post("/vulnerability-report", response_model=VulnerabilityReportResponse)

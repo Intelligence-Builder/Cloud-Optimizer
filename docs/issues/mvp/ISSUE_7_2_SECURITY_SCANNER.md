@@ -538,3 +538,9 @@ localstack:
 ## Labels
 
 `scanner`, `security`, `aws`, `mvp`, `phase-2`, `P0`
+
+## Implementation Notes (2025-12-03)
+
+- `SecurityScanEngine` orchestrates per-account AWS scans, enforces trial limits, and populates `ScanJob` records with progress and findings counts.
+- `/api/v1/security/scans` and `/api/v1/security/scans/{job_id}` provide APIs for starting scans and checking job status; responses use the new `SecurityScanJobResponse` schema.
+- `S3SecurityScanner` augments the existing scanner suite with public access, versioning, and logging checks, and `rule_metadata` maps scanner findings to compliance frameworks (HIPAA, SOC2, CIS).
