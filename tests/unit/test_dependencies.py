@@ -1,13 +1,36 @@
 """Tests for dependency injection module."""
 
 from typing import Optional
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import FastAPI
+from starlette.requests import Request
 
 from cloud_optimizer.config import Settings
 from cloud_optimizer.dependencies import get_current_settings, get_ib_client
 from cloud_optimizer.services.intelligence_builder import IntelligenceBuilderService
+
+
+def _create_request(parent_app: Optional[FastAPI] = None) -> Request:
+    """Create a minimal FastAPI request object for dependency tests."""
+    app = parent_app or FastAPI()
+    scope = {
+        "type": "http",
+        "http_version": "1.1",
+        "method": "GET",
+        "path": "/",
+        "root_path": "",
+        "scheme": "http",
+        "headers": [],
+        "client": ("testclient", 5000),
+        "server": ("testserver", 80),
+        "app": app,
+    }
+
+    async def receive() -> dict[str, object]:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    return Request(scope, receive)
 
 
 class TestGetIBClient:
@@ -16,26 +39,24 @@ class TestGetIBClient:
     @pytest.mark.asyncio
     async def test_get_ib_client_when_service_available(self) -> None:
         """Test getting IB client when service is available in app state."""
-        # Create a mock request with app state
-        mock_request = MagicMock()
-        mock_service = MagicMock(spec=IntelligenceBuilderService)
-        mock_request.app.state.ib_service = mock_service
+        app = FastAPI()
+        request = _create_request(app)
+        service = IntelligenceBuilderService()
+        app.state.ib_service = service
 
         # Get the service
-        result = await get_ib_client(mock_request)
+        result = await get_ib_client(request)
 
         # Assert we got the service
-        assert result is mock_service
+        assert result is service
 
     @pytest.mark.asyncio
     async def test_get_ib_client_when_service_not_available(self) -> None:
         """Test getting IB client when service is not in app state."""
-        # Create a mock request without ib_service
-        mock_request = MagicMock()
-        mock_request.app.state = MagicMock(spec=[])  # No ib_service attribute
+        request = _create_request()
 
         # Get the service
-        result = await get_ib_client(mock_request)
+        result = await get_ib_client(request)
 
         # Assert we got None
         assert result is None
@@ -43,12 +64,12 @@ class TestGetIBClient:
     @pytest.mark.asyncio
     async def test_get_ib_client_when_service_is_none(self) -> None:
         """Test getting IB client when service is explicitly None."""
-        # Create a mock request with None service
-        mock_request = MagicMock()
-        mock_request.app.state.ib_service = None
+        app = FastAPI()
+        request = _create_request(app)
+        app.state.ib_service = None
 
         # Get the service
-        result = await get_ib_client(mock_request)
+        result = await get_ib_client(request)
 
         # Assert we got None
         assert result is None

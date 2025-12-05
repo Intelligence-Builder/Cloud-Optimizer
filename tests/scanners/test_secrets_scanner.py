@@ -5,27 +5,19 @@ Tests for secrets security scanning rules SM_001-006 and SSM_001-004.
 """
 
 import pytest
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict
-from unittest.mock import MagicMock, patch, AsyncMock
 
-from cloud_optimizer.scanners.secrets_scanner import SecretsScanner
 from cloud_optimizer.scanners.base import ScannerRule
+from cloud_optimizer.scanners.secrets_scanner import SecretsScanner
+
+
+@pytest.fixture
+def scanner(boto_session) -> SecretsScanner:
+    """Create Secrets scanner using real boto3 session (LocalStack or AWS)."""
+    return SecretsScanner(session=boto_session, regions=["us-east-1"])
 
 
 class TestSecretsScannerRules:
     """Test Secrets scanner security rules."""
-
-    @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create mock boto3 session."""
-        session = MagicMock()
-        return session
-
-    @pytest.fixture
-    def scanner(self, mock_session: MagicMock) -> SecretsScanner:
-        """Create Secrets scanner with mock session."""
-        return SecretsScanner(session=mock_session, regions=["us-east-1"])
 
     def test_scanner_initialization(self, scanner: SecretsScanner) -> None:
         """Test scanner initializes with correct rules."""
@@ -43,16 +35,6 @@ class TestSecretsScannerRules:
 
 class TestSecretsManagerRules:
     """Test Secrets Manager-specific rules."""
-
-    @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create mock boto3 session."""
-        return MagicMock()
-
-    @pytest.fixture
-    def scanner(self, mock_session: MagicMock) -> SecretsScanner:
-        """Create Secrets scanner with mock session."""
-        return SecretsScanner(session=mock_session, regions=["us-east-1"])
 
     def test_rule_sm_001_definition(self, scanner: SecretsScanner) -> None:
         """Test SM_001 rule definition."""
@@ -95,16 +77,6 @@ class TestSecretsManagerRules:
 class TestSSMParameterRules:
     """Test SSM Parameter Store-specific rules."""
 
-    @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create mock boto3 session."""
-        return MagicMock()
-
-    @pytest.fixture
-    def scanner(self, mock_session: MagicMock) -> SecretsScanner:
-        """Create Secrets scanner with mock session."""
-        return SecretsScanner(session=mock_session, regions=["us-east-1"])
-
     def test_rule_ssm_001_definition(self, scanner: SecretsScanner) -> None:
         """Test SSM_001 rule definition."""
         rule = scanner.rules.get("SSM_001")
@@ -131,26 +103,8 @@ class TestSSMParameterRules:
         assert rule.rule_id == "SSM_004"
 
 
-class TestSecretsScannerIntegration:
-    """Integration tests for Secrets scanner."""
-
-    @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create mock boto3 session."""
-        return MagicMock()
-
-    @pytest.fixture
-    def scanner(self, mock_session: MagicMock) -> SecretsScanner:
-        """Create Secrets scanner with mock session."""
-        return SecretsScanner(session=mock_session, regions=["us-east-1"])
-
-    @pytest.mark.asyncio
-    async def test_scan_returns_results(self, scanner: SecretsScanner) -> None:
-        """Test that scan returns results."""
-        with patch.object(scanner, 'scan', new_callable=AsyncMock) as mock_scan:
-            mock_scan.return_value = []
-            results = await scanner.scan()
-            assert isinstance(results, list)
+class TestSecretsScannerMetadata:
+    """Metadata validation for Secrets scanner."""
 
     def test_scanner_has_correct_service(self, scanner: SecretsScanner) -> None:
         """Test scanner has correct service."""

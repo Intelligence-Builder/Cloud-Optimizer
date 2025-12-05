@@ -12,6 +12,7 @@ from cloud_optimizer.integrations.smart_scaffold.entity_migrator import (
     EntityTypeMapping,
     MigrationResult,
 )
+from cloud_optimizer.integrations.smart_scaffold.runtime import LocalIBService
 
 
 class TestEntityTypeMapping:
@@ -111,9 +112,9 @@ class TestEntityMigratorTransform:
 
     @pytest.fixture
     def migrator(self):
-        """Create migrator with mock IB service."""
-        mock_service = MockIBService()
-        return EntityMigrator(mock_service)
+        """Create migrator with LocalIBService."""
+        ib_service = LocalIBTestService()
+        return EntityMigrator(ib_service)
 
     def test_transform_issue_entity(self, migrator):
         """Transform Issue entity to IB format."""
@@ -252,8 +253,8 @@ class TestEntityMigratorMigration:
 
     @pytest.fixture
     def mock_service(self):
-        """Create mock IB service."""
-        return MockIBService()
+        """Create LocalIBService-based test double."""
+        return LocalIBTestService()
 
     @pytest.fixture
     def migrator(self, mock_service):
@@ -357,7 +358,7 @@ class TestCustomMappings:
             )
         ]
 
-        migrator = EntityMigrator(MockIBService(), type_mappings=custom_mappings)
+        migrator = EntityMigrator(LocalIBTestService(), type_mappings=custom_mappings)
         mapping = migrator.get_type_mapping("Issue")
 
         assert mapping.ib_domain == "custom"
@@ -365,40 +366,21 @@ class TestCustomMappings:
 
     def test_get_type_mapping_returns_none_for_unknown(self):
         """get_type_mapping returns None for unknown types."""
-        migrator = EntityMigrator(MockIBService())
+        migrator = EntityMigrator(LocalIBTestService())
         mapping = migrator.get_type_mapping("NonExistentType")
 
         assert mapping is None
 
 
-# ============================================================================
-# Mock Service for Testing
-# ============================================================================
-
-
-class MockIBService:
-    """Mock IB service for unit testing."""
+class LocalIBTestService(LocalIBService):
+    """LocalIBService extension that can simulate failures for specific entities."""
 
     def __init__(self):
-        self.created_entities = []
+        super().__init__()
         self.fail_on_id = None
-        self._counter = 0
 
     async def create_entity(self, entity_data: dict) -> dict:
-        """Mock entity creation."""
         original_id = entity_data.get("metadata", {}).get("original_id", "")
-
         if self.fail_on_id and original_id == self.fail_on_id:
             raise Exception(f"Simulated failure for {original_id}")
-
-        self._counter += 1
-        entity_id = f"ib-{self._counter:06d}"
-
-        result = {
-            "entity_id": entity_id,
-            "name": entity_data.get("name"),
-            "entity_type": entity_data.get("entity_type"),
-        }
-
-        self.created_entities.append(result)
-        return result
+        return await super().create_entity(entity_data)

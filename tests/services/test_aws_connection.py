@@ -2,63 +2,41 @@
 
 from __future__ import annotations
 
+import os
+import urllib.request
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
+import boto3
 import pytest
 from cryptography.fernet import Fernet
 
 from cloud_optimizer.models.aws_account import ConnectionStatus, ConnectionType
 from cloud_optimizer.services.aws_connection import AWSConnectionService
 
-
-class _StubSTSAssumeClient:
-    def assume_role(self, **kwargs):
-        return {
-            "Credentials": {
-                "AccessKeyId": "ASIAEXAMPLE",
-                "SecretAccessKey": "secret",
-                "SessionToken": "token",
-            }
-        }
+USE_REAL_AWS = os.getenv("USE_REAL_AWS", "false").lower() == "true"
+LOCALSTACK_ENDPOINT = os.getenv("LOCALSTACK_ENDPOINT", "http://localhost:4566")
+AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 
 
-class _StubSTSIdentityClient:
-    def get_caller_identity(self, **kwargs):
-        return {
-            "Account": "123456789012",
-            "Arn": "arn:aws:iam::123456789012:user/test",
-        }
+class _EndpointSession(boto3.session.Session):
+    """boto3 session that automatically targets LocalStack."""
+
+    def __init__(self, endpoint_url: str, **kwargs):
+        super().__init__(**kwargs)
+        self._endpoint_url = endpoint_url
+
+    def client(self, service_name: str, **kwargs):
+        kwargs.setdefault("endpoint_url", self._endpoint_url)
+        return super().client(service_name, **kwargs)
 
 
-class _StubIAMClient:
-    def list_users(self, **kwargs):
-        return {"Users": []}
-
-
-class _StubS3Client:
-    def list_buckets(self, **kwargs):
-        return {"Buckets": []}
-
-
-class _StubEC2Client:
-    def describe_regions(self, **kwargs):
-        return {"Regions": []}
-
-
-class _StubSession:
-    """Lightweight boto3.Session replacement used in tests."""
-
-    def client(self, name: str):
-        if name == "sts":
-            return _StubSTSIdentityClient()
-        if name == "iam":
-            return _StubIAMClient()
-        if name == "s3":
-            return _StubS3Client()
-        if name == "ec2":
-            return _StubEC2Client()
-        raise ValueError(f"Unsupported client requested: {name}")
+def _localstack_available() -> bool:
+    try:
+        urllib.request.urlopen(f"{LOCALSTACK_ENDPOINT}/_localstack/health", timeout=5)
+        return True
+    except Exception:
+        return False
 
 
 @pytest.fixture
@@ -77,17 +55,40 @@ def settings_factory(encryption_key: str):
     return _factory
 
 
-@pytest.fixture
-def boto_factories():
-    """Provide stubbed boto3 factories."""
+@pytest.fixture(scope="session")
+def aws_backend():
+    """Ensure either LocalStack or real AWS is available."""
+    if USE_REAL_AWS:
+        return {"type": "aws"}
+    if _localstack_available():
+        return {"type": "localstack"}
+    pytest.skip(
+        "LocalStack not running and USE_REAL_AWS is false; cannot run AWS connection tests"
+    )
+
+
+@pytest.fixture(scope="session")
+def boto_factories(aws_backend):
+    """Provide boto3 factories that hit the configured backend."""
 
     def client_factory(service: str):
-        if service != "sts":
-            raise ValueError(f"Unexpected client request: {service}")
-        return _StubSTSAssumeClient()
+        kwargs = {"region_name": AWS_REGION}
+        if aws_backend["type"] == "localstack":
+            kwargs.update(
+                endpoint_url=LOCALSTACK_ENDPOINT,
+                aws_access_key_id="test",
+                aws_secret_access_key="test",
+            )
+        return boto3.client(service, **kwargs)
 
     def session_factory(**kwargs):
-        return _StubSession()
+        params = dict(kwargs)
+        params.setdefault("region_name", AWS_REGION)
+        if aws_backend["type"] == "localstack":
+            params.setdefault("aws_access_key_id", "test")
+            params.setdefault("aws_secret_access_key", "test")
+            return _EndpointSession(LOCALSTACK_ENDPOINT, **params)
+        return boto3.session.Session(**params)
 
     return client_factory, session_factory
 
@@ -123,7 +124,9 @@ async def test_connect_with_keys_enforces_encryption(
     )
 
     assert account.connection_type == ConnectionType.ACCESS_KEYS
-    assert account.aws_account_id == "123456789012"
+    assert account.aws_account_id is not None
+    assert account.aws_account_id.isdigit()
+    assert len(account.aws_account_id) == 12
     assert account.access_key_encrypted is not None
     assert account.secret_key_encrypted is not None
 
@@ -146,7 +149,9 @@ async def test_trial_limit_enforced(
         secret_access_key="secret-1",
     )
 
-    with pytest.raises(ValueError, match="Trial plan allows only one connected AWS account"):
+    with pytest.raises(
+        ValueError, match="Trial plan allows only one connected AWS account"
+    ):
         await service.connect_with_keys(
             user_id=test_user.user_id,
             access_key_id="AKIA222222222222",
@@ -168,7 +173,9 @@ async def test_disconnect_clears_credentials(
 
     await service.disconnect_account(account.account_id, test_user.user_id)
 
-    refreshed = await service.get_account_for_user(account.account_id, test_user.user_id)
+    refreshed = await service.get_account_for_user(
+        account.account_id, test_user.user_id
+    )
     assert refreshed.status == ConnectionStatus.DISCONNECTED
     assert refreshed.access_key_encrypted is None
     assert refreshed.secret_key_encrypted is None

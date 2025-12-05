@@ -5,26 +5,19 @@ Tests for CloudFront security scanning rules CF_001-009.
 """
 
 import pytest
-from typing import Any, Dict
-from unittest.mock import MagicMock, patch, AsyncMock
 
-from cloud_optimizer.scanners.cloudfront_scanner import CloudFrontScanner
 from cloud_optimizer.scanners.base import ScannerRule
+from cloud_optimizer.scanners.cloudfront_scanner import CloudFrontScanner
+
+
+@pytest.fixture
+def scanner(boto_session) -> CloudFrontScanner:
+    """Create CloudFront scanner using real boto3 session (LocalStack or AWS)."""
+    return CloudFrontScanner(session=boto_session, regions=["us-east-1"])
 
 
 class TestCloudFrontScannerRules:
     """Test CloudFront scanner security rules."""
-
-    @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create mock boto3 session."""
-        session = MagicMock()
-        return session
-
-    @pytest.fixture
-    def scanner(self, mock_session: MagicMock) -> CloudFrontScanner:
-        """Create CloudFront scanner with mock session."""
-        return CloudFrontScanner(session=mock_session, regions=["us-east-1"])
 
     def test_scanner_initialization(self, scanner: CloudFrontScanner) -> None:
         """Test scanner initializes with correct rules."""
@@ -33,8 +26,15 @@ class TestCloudFrontScannerRules:
 
         rule_ids = list(scanner.rules.keys())
         expected_rules = [
-            "CF_001", "CF_002", "CF_003", "CF_004", "CF_005",
-            "CF_006", "CF_007", "CF_008", "CF_009"
+            "CF_001",
+            "CF_002",
+            "CF_003",
+            "CF_004",
+            "CF_005",
+            "CF_006",
+            "CF_007",
+            "CF_008",
+            "CF_009",
         ]
         for expected in expected_rules:
             assert expected in rule_ids, f"Missing rule {expected}"
@@ -115,68 +115,15 @@ class TestCloudFrontScannerRules:
             assert rule.recommendation, f"Rule {rule_id} missing recommendation"
 
 
-class TestCloudFrontScannerIntegration:
-    """Integration tests for CloudFront scanner."""
+class TestCloudFrontScannerMetadata:
+    """Metadata validation for CloudFront scanner."""
 
-    @pytest.fixture
-    def mock_cloudfront_client(self) -> MagicMock:
-        """Create mock CloudFront client."""
-        client = MagicMock()
-        client.list_distributions.return_value = {
-            "DistributionList": {
-                "Items": [
-                    {
-                        "Id": "dist123",
-                        "DomainName": "d123.cloudfront.net",
-                        "Status": "Deployed"
-                    }
-                ]
-            }
-        }
-        return client
-
-    @pytest.fixture
-    def mock_session_with_client(
-        self, mock_cloudfront_client: MagicMock
-    ) -> MagicMock:
-        """Create mock session with CloudFront client."""
-        session = MagicMock()
-        session.client.return_value = mock_cloudfront_client
-        return session
-
-    @pytest.mark.asyncio
-    async def test_scan_returns_results(
-        self, mock_session_with_client: MagicMock
-    ) -> None:
-        """Test that scan returns results."""
-        scanner = CloudFrontScanner(
-            session=mock_session_with_client,
-            regions=["us-east-1"]
-        )
-
-        with patch.object(scanner, 'scan', new_callable=AsyncMock) as mock_scan:
-            mock_scan.return_value = []
-            results = await scanner.scan()
-            assert isinstance(results, list)
-
-    def test_scanner_has_correct_service(
-        self, mock_session_with_client: MagicMock
-    ) -> None:
+    def test_scanner_has_correct_service(self, scanner: CloudFrontScanner) -> None:
         """Test scanner has correct service."""
-        scanner = CloudFrontScanner(
-            session=mock_session_with_client,
-            regions=["us-east-1"]
-        )
         assert scanner.SERVICE == "CloudFront"
 
-    def test_scanner_registers_rules_on_init(
-        self, mock_session_with_client: MagicMock
-    ) -> None:
+    def test_scanner_registers_rules_on_init(self, scanner: CloudFrontScanner) -> None:
         """Test scanner registers rules on initialization."""
-        scanner = CloudFrontScanner(
-            session=mock_session_with_client,
-            regions=["us-east-1"]
-        )
         assert len(scanner.rules) > 0
         for rule_id, rule in scanner.rules.items():
             assert isinstance(rule, ScannerRule)

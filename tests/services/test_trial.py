@@ -617,14 +617,11 @@ async def test_check_limit_with_nonexistent_user(trial_service, db_session):
 
 
 @pytest.mark.asyncio
-async def test_service_initialization():
-    """Test that TrialService can be initialized with a session."""
-    from unittest.mock import MagicMock
+async def test_service_initialization(db_session):
+    """Test that TrialService can be initialized with a real session."""
+    service = TrialService(db_session)
 
-    mock_session = MagicMock()
-    service = TrialService(mock_session)
-
-    assert service.db is mock_session
+    assert service.db is db_session
 
 
 # TRL-006: Analytics Tests
@@ -717,9 +714,7 @@ async def test_get_usage_analytics_with_usage(
     assert analytics["least_used_dimension"] == "documents"
 
     # Verify dimension data
-    scans_data = next(
-        d for d in analytics["dimensions"] if d["dimension"] == "scans"
-    )
+    scans_data = next(d for d in analytics["dimensions"] if d["dimension"] == "scans")
     assert scans_data["total_usage"] == 10
     assert scans_data["average_usage"] == 10.0
 
@@ -736,7 +731,5 @@ async def test_get_usage_analytics_limit_reached(
 
     analytics = await trial_service.get_usage_analytics()
 
-    scans_data = next(
-        d for d in analytics["dimensions"] if d["dimension"] == "scans"
-    )
+    scans_data = next(d for d in analytics["dimensions"] if d["dimension"] == "scans")
     assert scans_data["limit_reached_count"] == 1

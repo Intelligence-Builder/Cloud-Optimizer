@@ -1,29 +1,62 @@
-"""Tests for Findings API.
-
-Note: These tests require auth middleware to be mocked or bypassed.
-For now, they test the basic structure and will return 401 without proper auth.
-"""
-from uuid import uuid4
+"""Tests for Findings API."""
+from uuid import UUID, uuid4
 
 import pytest
+import pytest_asyncio
 
+from cloud_optimizer.models.aws_account import (
+    AWSAccount,
+    ConnectionStatus,
+    ConnectionType,
+)
 from cloud_optimizer.models.finding import FindingSeverity, FindingStatus, FindingType
 from cloud_optimizer.models.scan_job import ScanJob, ScanStatus, ScanType
 from cloud_optimizer.services.findings import FindingsService
 
 
-@pytest.mark.asyncio
-async def test_findings_api_structure(async_client, db_session):
-    """Test that findings API endpoints exist (will fail auth without token)."""
-    # This test verifies the API structure exists
-    # In a full integration test, we would:
-    # 1. Create a user
-    # 2. Get an auth token
-    # 3. Make authenticated requests
+@pytest_asyncio.fixture
+async def authorized_account(async_client, db_session):
+    """Register a user via API and create an AWS account owned by that user."""
+    email = f"findings-{uuid4()}@example.com"
+    password = "ValidPass123!"
+    response = await async_client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": password, "name": "Findings Tester"},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    user_id = UUID(payload["user"]["user_id"])
+    headers = {"Authorization": f"Bearer {payload['tokens']['access_token']}"}
 
-    response = await async_client.get("/api/v1/findings/accounts/{}".format(uuid4()))
-    # Should return 401/403 without auth token or 404 if endpoint doesn't exist
-    assert response.status_code in [401, 403, 404]
+    account = AWSAccount(
+        user_id=user_id,
+        aws_account_id="123456789012",
+        friendly_name="api-test-account",
+        connection_type=ConnectionType.IAM_ROLE,
+        role_arn="arn:aws:iam::123456789012:role/CloudOptimizerRole",
+        external_id=str(uuid4()),
+        status=ConnectionStatus.ACTIVE,
+    )
+    db_session.add(account)
+    await db_session.commit()
+    await db_session.refresh(account)
+
+    return {"headers": headers, "account": account}
+
+
+@pytest.mark.asyncio
+async def test_findings_api_structure(async_client, authorized_account):
+    """Test that findings API endpoints can be queried with real auth."""
+    account = authorized_account["account"]
+    headers = authorized_account["headers"]
+
+    response = await async_client.get(
+        f"/api/v1/findings/accounts/{account.account_id}", headers=headers
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["findings"] == []
 
 
 @pytest.mark.asyncio

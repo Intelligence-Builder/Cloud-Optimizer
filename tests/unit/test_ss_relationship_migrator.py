@@ -12,6 +12,7 @@ from cloud_optimizer.integrations.smart_scaffold.relationship_migrator import (
     RelationshipMigrator,
     RelationshipTypeMapping,
 )
+from cloud_optimizer.integrations.smart_scaffold.runtime import LocalIBService
 
 
 class TestRelationshipTypeMapping:
@@ -104,7 +105,7 @@ class TestRelationshipMigratorTransform:
     @pytest.fixture
     def migrator(self, entity_mapping):
         """Create migrator with mock service and entity mapping."""
-        mock_service = MockRelIBService()
+        mock_service = RelationshipIBTestService()
         return RelationshipMigrator(mock_service, entity_mapping)
 
     def test_transform_implements_relationship(self, migrator):
@@ -237,7 +238,7 @@ class TestRelationshipMigratorMigration:
     @pytest.fixture
     def mock_service(self):
         """Create mock IB service."""
-        return MockRelIBService()
+        return RelationshipIBTestService()
 
     @pytest.fixture
     def migrator(self, mock_service, entity_mapping):
@@ -349,7 +350,7 @@ class TestCustomRelationshipMappings:
         ]
 
         migrator = RelationshipMigrator(
-            MockRelIBService(),
+            RelationshipIBTestService(),
             {"a": "b"},
             type_mappings=custom_mappings,
         )
@@ -364,25 +365,15 @@ class TestCustomRelationshipMappings:
 # ============================================================================
 
 
-class MockRelIBService:
-    """Mock IB service for relationship testing."""
+class RelationshipIBTestService(LocalIBService):
+    """LocalIBService specialized for relationship migration tests."""
 
     def __init__(self):
-        self.created_relationships = []
+        super().__init__()
         self.fail_count = 0
 
     async def create_relationship(self, rel_data: dict) -> dict:
-        """Mock relationship creation."""
         if self.fail_count > 0:
             self.fail_count -= 1
             raise Exception("Simulated failure")
-
-        result = {
-            "relationship_id": f"rel-{len(self.created_relationships) + 1}",
-            "source_id": rel_data.get("source_id"),
-            "target_id": rel_data.get("target_id"),
-            "relationship_type": rel_data.get("relationship_type"),
-        }
-
-        self.created_relationships.append(result)
-        return result
+        return await super().create_relationship(rel_data)

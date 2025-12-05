@@ -7,23 +7,23 @@ from typing import Any, Dict, List
 import pytest
 
 from cloud_optimizer.integrations.smart_scaffold.hybrid import HybridKnowledgeGraph
+from cloud_optimizer.integrations.smart_scaffold.runtime import LocalIBService
 
 
-class MockIBService:
-    """Minimal IB service mock."""
+class IBTestService(LocalIBService):
+    """LocalIBService wrapper exposing recorded operations."""
 
     def __init__(self) -> None:
-        self.created_entities: List[Dict[str, Any]] = []
-        self.created_relationships: List[Dict[str, Any]] = []
+        super().__init__()
         self.queries: List[Dict[str, Any]] = []
 
-    async def create_entity(self, entity_data: Dict[str, Any]) -> Dict[str, Any]:
-        self.created_entities.append(entity_data)
-        return {"entity_id": f"ib-{len(self.created_entities)}", **entity_data}
+    @property
+    def created_entities(self) -> List[Dict[str, Any]]:
+        return list(self._entities.values())
 
-    async def create_relationship(self, rel_data: Dict[str, Any]) -> Dict[str, Any]:
-        self.created_relationships.append(rel_data)
-        return {"relationship_id": f"rel-{len(self.created_relationships)}", **rel_data}
+    @property
+    def created_relationships(self) -> List[Dict[str, Any]]:
+        return list(self._relationships)
 
     async def search_entities(
         self, query_text: str, entity_types=None, limit: int = 10
@@ -31,29 +31,27 @@ class MockIBService:
         self.queries.append(
             {"query_text": query_text, "entity_types": entity_types, "limit": limit}
         )
-        return {"total": 0, "entities": []}
+        return await super().search_entities(
+            query_text=query_text, entity_types=entity_types, limit=limit
+        )
 
 
-class MockSSKG:
-    """Simulated Smart-Scaffold client."""
+class SSKnowledgeGraphTestStore(LocalIBService):
+    """Local implementation of Smart-Scaffold graph for dual-write checks."""
 
-    def __init__(self) -> None:
-        self.entities: List[Dict[str, Any]] = []
-        self.relationships: List[Dict[str, Any]] = []
+    @property
+    def entities(self) -> List[Dict[str, Any]]:
+        return list(self._entities.values())
 
-    async def create_entity(self, entity_data: Dict[str, Any]) -> Dict[str, Any]:
-        self.entities.append(entity_data)
-        return entity_data
-
-    async def create_relationship(self, rel_data: Dict[str, Any]) -> Dict[str, Any]:
-        self.relationships.append(rel_data)
-        return rel_data
+    @property
+    def relationships(self) -> List[Dict[str, Any]]:
+        return list(self._relationships)
 
 
 @pytest.mark.asyncio
 async def test_query_uses_ib_search():
-    ib_service = MockIBService()
-    ss_kg = MockSSKG()
+    ib_service = IBTestService()
+    ss_kg = SSKnowledgeGraphTestStore()
     hybrid = HybridKnowledgeGraph(ss_kg, ib_service)
 
     await hybrid.query("auth bug", ["github_issue"], limit=5)
@@ -64,22 +62,22 @@ async def test_query_uses_ib_search():
 
 @pytest.mark.asyncio
 async def test_create_entity_dual_writes():
-    ib_service = MockIBService()
-    ss_kg = MockSSKG()
+    ib_service = IBTestService()
+    ss_kg = SSKnowledgeGraphTestStore()
     hybrid = HybridKnowledgeGraph(ss_kg, ib_service, dual_write=True)
 
     result = await hybrid.create_entity(
         {"entity_type": "context_record", "name": "ctx"}
     )
 
-    assert result["entity_id"] == "ib-1"
+    assert result["entity_id"].startswith("ib-")
     assert ss_kg.entities[0]["name"] == "ctx"
 
 
 @pytest.mark.asyncio
 async def test_create_relationship_dual_writes():
-    ib_service = MockIBService()
-    ss_kg = MockSSKG()
+    ib_service = IBTestService()
+    ss_kg = SSKnowledgeGraphTestStore()
     hybrid = HybridKnowledgeGraph(ss_kg, ib_service, dual_write=True)
 
     rel = {
@@ -89,14 +87,15 @@ async def test_create_relationship_dual_writes():
     }
     await hybrid.create_relationship(rel)
 
-    assert ib_service.created_relationships[0] == rel
-    assert ss_kg.relationships[0] == rel
+    assert ib_service.created_relationships[0]["source_id"] == rel["source_id"]
+    assert ib_service.created_relationships[0]["target_id"] == rel["target_id"]
+    assert ss_kg.relationships[0]["relationship_type"] == rel["relationship_type"]
 
 
 @pytest.mark.asyncio
 async def test_dual_write_toggle():
-    ib_service = MockIBService()
-    ss_kg = MockSSKG()
+    ib_service = IBTestService()
+    ss_kg = SSKnowledgeGraphTestStore()
     hybrid = HybridKnowledgeGraph(ss_kg, ib_service, dual_write=False)
 
     await hybrid.create_entity({"entity_type": "context_record", "name": "ctx"})
