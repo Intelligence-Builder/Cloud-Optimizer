@@ -52,9 +52,11 @@ RUN poetry install --only main --no-interaction
 FROM python:3.11-slim AS runtime
 
 # Prevent Python from writing .pyc files and buffer stdout/stderr
+# Set API_PORT to match EXPOSE and HEALTHCHECK port
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/home/appuser/.local/bin:$PATH"
+    PATH="/home/appuser/.local/bin:$PATH" \
+    API_PORT=8000
 
 WORKDIR /app
 
@@ -81,10 +83,6 @@ COPY --chown=appuser:appuser alembic.ini .
 # Create data directory for compliance files
 RUN mkdir -p data/compliance && chown -R appuser:appuser data/
 
-# Copy container entrypoint wrapper
-COPY --chown=appuser:appuser docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 # Switch to non-root user
 USER appuser
 
@@ -95,5 +93,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -fsS http://localhost:8000/health || exit 1
 
-# Use entrypoint script for startup
-ENTRYPOINT ["/entrypoint.sh"]
+# Launch the FastAPI app via the Python entrypoint module
+ENTRYPOINT ["python", "-m", "cloud_optimizer.entrypoint"]

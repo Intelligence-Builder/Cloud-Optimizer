@@ -68,7 +68,7 @@ class TestS3ScannerWithInsecureBucket:
     @pytest.mark.asyncio
     @pytest.mark.skipif(
         os.getenv("USE_REAL_AWS", "false").lower() != "true",
-        reason="Full scan test requires real AWS or properly configured scanner"
+        reason="Full scan test requires real AWS or properly configured scanner",
     )
     async def test_scan_insecure_bucket_finds_issues(
         self,
@@ -83,9 +83,7 @@ class TestS3ScannerWithInsecureBucket:
         results = await scanner.scan()
 
         # Filter results for our test bucket
-        bucket_results = [
-            r for r in results if insecure_s3_bucket in r.resource_id
-        ]
+        bucket_results = [r for r in results if insecure_s3_bucket in r.resource_id]
 
         # Should find multiple issues
         assert len(bucket_results) >= 1, f"Expected findings for {insecure_s3_bucket}"
@@ -94,9 +92,9 @@ class TestS3ScannerWithInsecureBucket:
         rule_ids = [r.rule_id for r in bucket_results]
 
         # Encryption should definitely be flagged
-        assert "S3_002" in rule_ids or "S3_003" in rule_ids, (
-            f"Expected encryption or versioning findings, got: {rule_ids}"
-        )
+        assert (
+            "S3_002" in rule_ids or "S3_003" in rule_ids
+        ), f"Expected encryption or versioning findings, got: {rule_ids}"
 
     @pytest.mark.asyncio
     async def test_encryption_check_on_insecure_bucket(
@@ -186,9 +184,7 @@ class TestS3ScannerWithSecureBucket:
         results = await scanner.scan()
 
         # Filter results for our test bucket
-        bucket_results = [
-            r for r in results if secure_s3_bucket in r.resource_id
-        ]
+        bucket_results = [r for r in results if secure_s3_bucket in r.resource_id]
 
         # Should not find encryption or versioning issues
         rule_ids = [r.rule_id for r in bucket_results]
@@ -382,8 +378,19 @@ class TestS3ScannerRealAWS:
         region = location.get("LocationConstraint") or "us-east-1"
 
         assert region in [
-            "us-east-1", "us-east-2", "us-west-1", "us-west-2",
-            "eu-west-1", "eu-west-2", "eu-west-3", "eu-central-1",
-            "ap-northeast-1", "ap-northeast-2", "ap-southeast-1", "ap-southeast-2",
-            "ap-south-1", "sa-east-1", "ca-central-1",
+            "us-east-1",
+            "us-east-2",
+            "us-west-1",
+            "us-west-2",
+            "eu-west-1",
+            "eu-west-2",
+            "eu-west-3",
+            "eu-central-1",
+            "ap-northeast-1",
+            "ap-northeast-2",
+            "ap-southeast-1",
+            "ap-southeast-2",
+            "ap-south-1",
+            "sa-east-1",
+            "ca-central-1",
         ]

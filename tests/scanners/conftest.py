@@ -336,9 +336,7 @@ def secure_s3_bucket(
             versions = page.get("Versions", [])
             delete_markers = page.get("DeleteMarkers", [])
 
-            objects = [
-                {"Key": v["Key"], "VersionId": v["VersionId"]} for v in versions
-            ]
+            objects = [{"Key": v["Key"], "VersionId": v["VersionId"]} for v in versions]
             objects.extend(
                 {"Key": d["Key"], "VersionId": d["VersionId"]} for d in delete_markers
             )
