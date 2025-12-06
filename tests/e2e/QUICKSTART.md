@@ -73,8 +73,9 @@ docker-compose -f docker/docker-compose.e2e.yml down -v
 When services are running:
 - **API**: http://localhost:18080
 - **API Docs**: http://localhost:18080/docs
-- **PostgreSQL**: localhost:5434 (user: test, password: test, db: test_intelligence)
-- **LocalStack**: http://localhost:4566
+- **PostgreSQL**: localhost:5546 (user: test, password: test, db: test_intelligence)
+- **LocalStack**: http://localhost:5566
+- **Intelligence-Builder**: http://localhost:8100 (runs outside the compose stack)
 
 ## Troubleshooting
 
@@ -93,12 +94,33 @@ docker-compose -f docker/docker-compose.e2e.yml logs
 
 ### Port conflicts
 
-The E2E environment uses non-standard ports to avoid conflicts:
+The E2E environment uses dedicated ports to avoid conflicts:
 - 18080 (API) instead of 8080
-- 5434 (PostgreSQL) instead of 5432
-- 4566 (LocalStack) - standard
+- 5546 (PostgreSQL) instead of 5432/5434
+- 5566 (LocalStack) instead of the default 4566
+- 8100 (Intelligence-Builder API exposed from the host)
 
 If you still have conflicts, you can modify ports in `docker/docker-compose.e2e.yml`.
+
+### Intelligence-Builder API
+
+E2E tests require the Intelligence-Builder API to be reachable on the host.
+
+1. Start the IB docker stack (see the Intelligence-Builder repository) and expose port 8100.
+2. Export your IB API key so the compose file can inject it into the Cloud Optimizer service:
+   ```bash
+   export IB_API_KEY=test-api-key  # replace with your real key
+   ```
+3. Optionally override the host/port:
+   ```bash
+   export E2E_IB_PLATFORM_URL=http://127.0.0.1:9000
+   ```
+4. Verify the service:
+   ```bash
+   curl http://localhost:8100/
+   ```
+
+If the security tests skip with `"IB service not available"`, the API key or IB stack was not configured correctly.
 
 ### Tests are slow
 
@@ -130,7 +152,7 @@ docker volume prune -f
    ```bash
    curl http://localhost:18080/health
    docker exec co-e2e-postgres psql -U test -c "SELECT 1"
-   curl http://localhost:4566/_localstack/health
+   curl http://localhost:5566/_localstack/health
    ```
 4. Open a GitHub issue with logs attached
 

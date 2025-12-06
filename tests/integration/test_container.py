@@ -16,11 +16,12 @@ import time
 from pathlib import Path
 from typing import Generator
 
-import docker
 import httpx
 import pytest
 from docker.models.containers import Container
 from docker.models.images import Image
+
+import docker
 
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -213,7 +214,9 @@ def test_container_starts(test_container: Container) -> None:
         "created",
     ], f"Container not running: {test_container.status}"
 
-    print(f"✓ Container started: {test_container.name} (status: {test_container.status})")
+    print(
+        f"✓ Container started: {test_container.name} (status: {test_container.status})"
+    )
 
 
 @pytest.mark.integration
@@ -259,7 +262,10 @@ def test_container_healthcheck_passes(test_container: Container) -> None:
 
             # Check container logs for database connection errors
             container_logs = test_container.logs().decode("utf-8")
-            if "psycopg2" in container_logs or "Database connection failed" in container_logs:
+            if (
+                "psycopg2" in container_logs
+                or "Database connection failed" in container_logs
+            ):
                 pytest.skip(
                     "Container requires PostgreSQL database to be available. "
                     "Run with docker-compose for full integration testing."
@@ -316,9 +322,7 @@ def test_health_endpoint_returns_200(test_container: Container) -> None:
                 # Verify response structure
                 assert "status" in data, "Health response missing 'status' field"
                 assert "version" in data, "Health response missing 'version' field"
-                assert (
-                    "timestamp" in data
-                ), "Health response missing 'timestamp' field"
+                assert "timestamp" in data, "Health response missing 'timestamp' field"
                 assert (
                     "components" in data
                 ), "Health response missing 'components' field"

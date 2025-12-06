@@ -112,9 +112,7 @@ class ResponseFormatter:
         return "\n".join(parts)
 
     @staticmethod
-    def format_finding_summary(
-        findings: list[Any], max_count: int = 10
-    ) -> str:
+    def format_finding_summary(findings: list[Any], max_count: int = 10) -> str:
         """Format summary of findings with severity grouping.
 
         Args:
@@ -155,7 +153,9 @@ class ResponseFormatter:
             findings_list = by_severity[severity]
             if findings_list:
                 icon = ResponseFormatter.get_severity_icon(severity)
-                parts.append(f"\n### {icon} {severity.upper()} ({len(findings_list)})\n")
+                parts.append(
+                    f"\n### {icon} {severity.upper()} ({len(findings_list)})\n"
+                )
                 for finding in findings_list:
                     parts.append(f"- **{finding.title}**")
                     parts.append(f"  Service: {finding.service}")

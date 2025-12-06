@@ -345,9 +345,8 @@ class TrialService:
         avg_days_result = await self.db.execute(
             select(
                 func.avg(
-                    func.extract(
-                        "epoch", Trial.converted_at - Trial.started_at
-                    ) / 86400  # seconds to days
+                    func.extract("epoch", Trial.converted_at - Trial.started_at)
+                    / 86400  # seconds to days
                 )
             ).where(Trial.converted_at.isnot(None))
         )
@@ -410,13 +409,15 @@ class TrialService:
             # Calculate utilization rate
             utilization = (avg / limit * 100) if limit > 0 else 0.0
 
-            dimensions.append({
-                "dimension": dimension,
-                "total_usage": total,
-                "average_usage": round(avg, 1),
-                "limit_reached_count": limit_reached,
-                "utilization_rate": round(utilization, 1),
-            })
+            dimensions.append(
+                {
+                    "dimension": dimension,
+                    "total_usage": total,
+                    "average_usage": round(avg, 1),
+                    "limit_reached_count": limit_reached,
+                    "utilization_rate": round(utilization, 1),
+                }
+            )
 
             # Track most/least used
             if total > max_usage:

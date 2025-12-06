@@ -128,15 +128,18 @@ docker-compose -f docker/docker-compose.e2e.yml down -v
 Tests read configuration from docker-compose.e2e.yml:
 
 - **API_BASE_URL**: `http://localhost:18080` (configured in conftest.py)
-- **POSTGRES_URL**: `postgresql+asyncpg://test:test@localhost:5434/test_intelligence`
-- **LOCALSTACK_URL**: `http://localhost:4566`
+- **POSTGRES_URL**: `postgresql+asyncpg://test:test@localhost:5546/test_intelligence`
+- **LOCALSTACK_URL**: `http://localhost:5566`
+- **IB_PLATFORM_URL**: Defaults to `http://host.docker.internal:8100` (override with `E2E_IB_PLATFORM_URL`)
+- **IB_API_KEY**: Pulled from the host environment (`export IB_API_KEY=<local key>` before running tests)
 
 ### Ports Used
 
 The E2E environment uses non-conflicting ports:
 - **18080**: Cloud Optimizer API (vs. 8080 for local dev)
-- **5434**: PostgreSQL (vs. 5432 for local postgres)
-- **4566**: LocalStack (standard port)
+- **5546**: PostgreSQL (dedicated E2E port)
+- **5566**: LocalStack (dedicated E2E port)
+- **8100**: Intelligence-Builder API (runs outside the compose stack)
 
 This allows E2E tests to run alongside local development.
 
@@ -271,13 +274,33 @@ docker inspect co-e2e-app | grep -A 10 Health
 
 **Verify LocalStack is healthy:**
 ```bash
-curl http://localhost:4566/_localstack/health
+curl http://localhost:5566/_localstack/health
 ```
 
 **Check available services:**
 ```bash
-aws --endpoint-url=http://localhost:4566 s3 ls
+aws --endpoint-url=http://localhost:5566 s3 ls
 ```
+
+### Intelligence-Builder Issues
+
+The Intelligence-Builder API must be reachable on the host (default `http://localhost:8100`) with a valid API key.
+
+1. Start the IB docker stack (see the Intelligence-Builder repository) so the API listens on port 8100.
+2. Export the API key so the E2E compose file can inject it:
+   ```bash
+   export IB_API_KEY=test-api-key  # replace with your local key
+   ```
+3. Override the host/port if needed:
+   ```bash
+   export E2E_IB_PLATFORM_URL=http://127.0.0.1:9000
+   ```
+4. Verify the service:
+   ```bash
+   curl http://localhost:8100/
+   ```
+
+If you still see `"IB service not available"` skips, the API key or IB container is not configured correctly.
 
 ### Port Conflicts
 

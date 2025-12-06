@@ -21,7 +21,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cloud_optimizer.config import Settings, get_settings
-from cloud_optimizer.models.aws_account import AWSAccount, ConnectionStatus, ConnectionType
+from cloud_optimizer.models.aws_account import (
+    AWSAccount,
+    ConnectionStatus,
+    ConnectionType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +141,11 @@ class AWSConnectionService:
         identity = await self._verify_permissions(session)
         identity_account_id = identity.get("Account")
 
-        if identity_account_id and aws_account_id and identity_account_id != aws_account_id:
+        if (
+            identity_account_id
+            and aws_account_id
+            and identity_account_id != aws_account_id
+        ):
             raise ValueError(
                 "AWS credentials resolved to a different account than the provided ID"
             )
@@ -198,7 +206,11 @@ class AWSConnectionService:
         identity = await self._verify_permissions(session)
         identity_account_id = identity.get("Account")
 
-        if identity_account_id and aws_account_id and identity_account_id != aws_account_id:
+        if (
+            identity_account_id
+            and aws_account_id
+            and identity_account_id != aws_account_id
+        ):
             raise ValueError(
                 "AWS credentials resolved to a different account than the provided ID"
             )
@@ -243,7 +255,9 @@ class AWSConnectionService:
         account.last_validated_at = None
         await self.db.commit()
         await self.db.refresh(account)
-        logger.info("Disconnected AWS account %s for user %s", account.aws_account_id, user_id)
+        logger.info(
+            "Disconnected AWS account %s for user %s", account.aws_account_id, user_id
+        )
         return account
 
     async def validate_account(self, account_id: UUID, user_id: UUID) -> AWSAccount:

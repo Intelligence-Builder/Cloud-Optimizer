@@ -84,7 +84,9 @@ class NLUResult:
     def __post_init__(self) -> None:
         """Validate NLU result after initialization."""
         if not 0.0 <= self.confidence <= 1.0:
-            raise ValueError(f"Confidence must be between 0.0 and 1.0, got {self.confidence}")
+            raise ValueError(
+                f"Confidence must be between 0.0 and 1.0, got {self.confidence}"
+            )
 
         # Set flags based on intent
         if self.intent == Intent.FINDING_EXPLANATION:

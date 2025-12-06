@@ -26,10 +26,7 @@ from cloud_optimizer.api.schemas.documents import (
 )
 from cloud_optimizer.database import AsyncSessionDep
 from cloud_optimizer.middleware.auth import CurrentUser, get_current_user
-from cloud_optimizer.middleware.trial import (
-    RequireDocumentLimit,
-    record_trial_usage,
-)
+from cloud_optimizer.middleware.trial import RequireDocumentLimit, record_trial_usage
 from ib_platform.document import (
     DocumentAnalyzer,
     DocumentContext,

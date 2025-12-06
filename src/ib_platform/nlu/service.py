@@ -223,9 +223,7 @@ Confidence should be a number between 0.0 and 1.0.
             try:
                 intent = Intent(intent_str)
             except ValueError:
-                logger.warning(
-                    "Unknown intent returned", intent_str=intent_str
-                )
+                logger.warning("Unknown intent returned", intent_str=intent_str)
                 intent = Intent.GENERAL_QUESTION
                 confidence = 0.3
 

@@ -90,7 +90,9 @@ class TestFindingCorrelator:
         for cluster in compliance_clusters:
             assert cluster.common_attributes.get("common_value") is not None
 
-    def test_cluster_by_rule_pattern(self, same_resource_type_findings: list[Finding]) -> None:
+    def test_cluster_by_rule_pattern(
+        self, same_resource_type_findings: list[Finding]
+    ) -> None:
         """Test clustering by rule pattern."""
         correlator = FindingCorrelator(min_cluster_size=2)
         clusters = correlator.correlate_findings(same_resource_type_findings)
@@ -120,7 +122,9 @@ class TestFindingCorrelator:
         for cluster in clusters:
             assert len(cluster.findings) >= min_size
 
-    def test_cluster_severity_is_highest(self, multiple_findings: list[Finding]) -> None:
+    def test_cluster_severity_is_highest(
+        self, multiple_findings: list[Finding]
+    ) -> None:
         """Test that cluster severity is the highest in the group."""
         correlator = FindingCorrelator(min_cluster_size=2)
         clusters = correlator.correlate_findings(multiple_findings)
@@ -131,9 +135,7 @@ class TestFindingCorrelator:
             cluster_severity_priority = severity_order.index(cluster.severity)
 
             for finding in cluster.findings:
-                finding_severity_priority = severity_order.index(
-                    finding.severity.value
-                )
+                finding_severity_priority = severity_order.index(finding.severity.value)
                 # Cluster severity should be at least as high as any finding
                 assert cluster_severity_priority <= finding_severity_priority
 
@@ -254,7 +256,9 @@ class TestFindingCorrelator:
             # Title should include count
             assert any(char.isdigit() for char in cluster.title)
 
-    def test_clusters_sorted_by_priority(self, multiple_findings: list[Finding]) -> None:
+    def test_clusters_sorted_by_priority(
+        self, multiple_findings: list[Finding]
+    ) -> None:
         """Test that clusters are sorted by severity."""
         correlator = FindingCorrelator(min_cluster_size=2)
         clusters = correlator.correlate_findings(multiple_findings)

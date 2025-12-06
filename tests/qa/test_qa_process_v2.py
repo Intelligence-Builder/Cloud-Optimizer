@@ -132,7 +132,9 @@ class TestEvidenceValidator:
         assert result["valid"] is False
         assert any("pytest-summary.md" in issue for issue in result["issues"])
 
-    def test_validate_missing_qa_directory(self, missing_evidence_structure: Path) -> None:
+    def test_validate_missing_qa_directory(
+        self, missing_evidence_structure: Path
+    ) -> None:
         """Test validation fails when qa directory is missing."""
         from scripts.qa_process_v2 import EvidenceValidator, IssueContext, QAConfig
 
@@ -151,7 +153,9 @@ class TestEvidenceValidator:
         result = validator.validate(context)
 
         assert result["valid"] is False
-        assert any("QA evidence directory not found" in issue for issue in result["issues"])
+        assert any(
+            "QA evidence directory not found" in issue for issue in result["issues"]
+        )
 
     def test_validate_malformed_json(self, malformed_json_evidence: Path) -> None:
         """Test validation fails for malformed JSON manifest."""
@@ -212,7 +216,9 @@ class TestEvidenceValidator:
 class TestGitHubHandOff:
     """Tests for GitHubHandOff class."""
 
-    def test_handoff_dry_run_valid(self, valid_evidence_structure: Path, capsys: pytest.CaptureFixture) -> None:
+    def test_handoff_dry_run_valid(
+        self, valid_evidence_structure: Path, capsys: pytest.CaptureFixture
+    ) -> None:
         """Test GitHub hand-off in dry-run mode with valid evidence."""
         from scripts.qa_process_v2 import GitHubHandOff, IssueContext, QAConfig
 
@@ -228,7 +234,10 @@ class TestGitHubHandOff:
             config=config,
         )
 
-        validation_result = {"valid": True, "metadata": {"artifacts_found": ["test1", "test2"]}}
+        validation_result = {
+            "valid": True,
+            "metadata": {"artifacts_found": ["test1", "test2"]},
+        }
 
         success = handoff.execute(context, validation_result)
 
@@ -239,7 +248,9 @@ class TestGitHubHandOff:
         assert "issue comment 123" in captured.out
         assert "qa-verified" in captured.out
 
-    def test_handoff_dry_run_invalid(self, invalid_evidence_structure: Path, capsys: pytest.CaptureFixture) -> None:
+    def test_handoff_dry_run_invalid(
+        self, invalid_evidence_structure: Path, capsys: pytest.CaptureFixture
+    ) -> None:
         """Test GitHub hand-off in dry-run mode with invalid evidence."""
         from scripts.qa_process_v2 import GitHubHandOff, IssueContext, QAConfig
 
@@ -305,7 +316,9 @@ class TestCLICommands:
         assert result.returncode != 0
         assert "required" in result.stderr.lower() or "missing" in result.stderr.lower()
 
-    def test_validate_dry_run(self, qa_process_v2_script: Path, valid_evidence_structure: Path) -> None:
+    def test_validate_dry_run(
+        self, qa_process_v2_script: Path, valid_evidence_structure: Path
+    ) -> None:
         """Test validate command with dry-run flag."""
         result = subprocess.run(
             [
@@ -319,7 +332,10 @@ class TestCLICommands:
             ],
             capture_output=True,
             text=True,
-            env={**subprocess.os.environ, "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent)},
+            env={
+                **subprocess.os.environ,
+                "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent),
+            },
         )
 
         # Should succeed with valid structure
@@ -341,14 +357,19 @@ class TestCLICommands:
             ],
             capture_output=True,
             text=True,
-            env={**subprocess.os.environ, "QA_EVIDENCE_PATH": str(invalid_evidence_structure.parent)},
+            env={
+                **subprocess.os.environ,
+                "QA_EVIDENCE_PATH": str(invalid_evidence_structure.parent),
+            },
         )
 
         # Should fail with invalid structure
         assert result.returncode == 1
         assert "Validation FAILED" in result.stdout
 
-    def test_handoff_missing_report(self, qa_process_v2_script: Path, temp_evidence_dir: Path) -> None:
+    def test_handoff_missing_report(
+        self, qa_process_v2_script: Path, temp_evidence_dir: Path
+    ) -> None:
         """Test handoff command fails when validation report is missing."""
         result = subprocess.run(
             [
@@ -366,9 +387,14 @@ class TestCLICommands:
 
         assert result.returncode == 1
         # Error message goes to stdout (not stderr due to click.echo)
-        assert "Validation report not found" in result.stdout or "Validation report not found" in result.stderr
+        assert (
+            "Validation report not found" in result.stdout
+            or "Validation report not found" in result.stderr
+        )
 
-    def test_handoff_with_report(self, qa_process_v2_script: Path, valid_evidence_structure: Path) -> None:
+    def test_handoff_with_report(
+        self, qa_process_v2_script: Path, valid_evidence_structure: Path
+    ) -> None:
         """Test handoff command with valid validation report."""
         # Create validation report
         report_dir = valid_evidence_structure / "qa"
@@ -392,14 +418,19 @@ class TestCLICommands:
             ],
             capture_output=True,
             text=True,
-            env={**subprocess.os.environ, "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent)},
+            env={
+                **subprocess.os.environ,
+                "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent),
+            },
         )
 
         assert result.returncode == 0
         assert "Hand-off completed successfully" in result.stdout
         assert "[DRY-RUN]" in result.stdout
 
-    def test_run_command_dry_run(self, qa_process_v2_script: Path, valid_evidence_structure: Path) -> None:
+    def test_run_command_dry_run(
+        self, qa_process_v2_script: Path, valid_evidence_structure: Path
+    ) -> None:
         """Test run command (validate + handoff) in dry-run mode."""
         result = subprocess.run(
             [
@@ -413,7 +444,10 @@ class TestCLICommands:
             ],
             capture_output=True,
             text=True,
-            env={**subprocess.os.environ, "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent)},
+            env={
+                **subprocess.os.environ,
+                "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent),
+            },
         )
 
         assert result.returncode == 0
@@ -422,7 +456,10 @@ class TestCLICommands:
         assert "QA Run Completed" in result.stdout
 
     def test_config_file_loading(
-        self, qa_process_v2_script: Path, temp_config_file: Path, valid_evidence_structure: Path
+        self,
+        qa_process_v2_script: Path,
+        temp_config_file: Path,
+        valid_evidence_structure: Path,
     ) -> None:
         """Test loading configuration from file."""
         # Config file already has the correct evidence_base_path set by fixture
@@ -444,7 +481,9 @@ class TestCLICommands:
         # Config should load successfully
         assert result.returncode == 0
 
-    def test_project_number_override(self, qa_process_v2_script: Path, valid_evidence_structure: Path) -> None:
+    def test_project_number_override(
+        self, qa_process_v2_script: Path, valid_evidence_structure: Path
+    ) -> None:
         """Test --project flag overrides default project number."""
         result = subprocess.run(
             [
@@ -459,13 +498,18 @@ class TestCLICommands:
             ],
             capture_output=True,
             text=True,
-            env={**subprocess.os.environ, "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent)},
+            env={
+                **subprocess.os.environ,
+                "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent),
+            },
         )
 
         # Should accept custom project number
         assert result.returncode == 0
 
-    def test_custom_output_path(self, qa_process_v2_script: Path, valid_evidence_structure: Path) -> None:
+    def test_custom_output_path(
+        self, qa_process_v2_script: Path, valid_evidence_structure: Path
+    ) -> None:
         """Test validate command with custom output path."""
         import tempfile
 
@@ -485,7 +529,10 @@ class TestCLICommands:
                 ],
                 capture_output=True,
                 text=True,
-                env={**subprocess.os.environ, "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent)},
+                env={
+                    **subprocess.os.environ,
+                    "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent),
+                },
             )
 
             assert result.returncode == 0
@@ -523,7 +570,13 @@ class TestEdgeCases:
     def test_invalid_issue_number(self, qa_process_v2_script: Path) -> None:
         """Test validation with invalid issue number format."""
         result = subprocess.run(
-            ["python", str(qa_process_v2_script), "validate", "--issue", "not-a-number"],
+            [
+                "python",
+                str(qa_process_v2_script),
+                "validate",
+                "--issue",
+                "not-a-number",
+            ],
             capture_output=True,
             text=True,
         )
@@ -531,7 +584,9 @@ class TestEdgeCases:
         # Click should handle type validation
         assert result.returncode != 0
 
-    def test_custom_validation_manifest(self, qa_process_v2_script: Path, valid_evidence_structure: Path) -> None:
+    def test_custom_validation_manifest(
+        self, qa_process_v2_script: Path, valid_evidence_structure: Path
+    ) -> None:
         """Test validate command with custom manifest (feature for future)."""
         manifest_path = valid_evidence_structure / "qa" / "context_manifest.json"
 
@@ -547,7 +602,10 @@ class TestEdgeCases:
             ],
             capture_output=True,
             text=True,
-            env={**subprocess.os.environ, "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent)},
+            env={
+                **subprocess.os.environ,
+                "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent),
+            },
         )
 
         # Should accept custom manifest path
@@ -557,7 +615,9 @@ class TestEdgeCases:
 class TestIntegration:
     """Integration tests for complete workflows."""
 
-    def test_full_workflow_valid(self, qa_process_v2_script: Path, valid_evidence_structure: Path) -> None:
+    def test_full_workflow_valid(
+        self, qa_process_v2_script: Path, valid_evidence_structure: Path
+    ) -> None:
         """Test complete workflow: validate -> handoff with valid evidence."""
         base_path = str(valid_evidence_structure.parent)
         env = {**subprocess.os.environ, "QA_EVIDENCE_PATH": base_path}
@@ -599,7 +659,9 @@ class TestIntegration:
         assert handoff_result.returncode == 0
         assert "Hand-off completed" in handoff_result.stdout
 
-    def test_full_workflow_invalid(self, qa_process_v2_script: Path, invalid_evidence_structure: Path) -> None:
+    def test_full_workflow_invalid(
+        self, qa_process_v2_script: Path, invalid_evidence_structure: Path
+    ) -> None:
         """Test complete workflow: validate -> handoff with invalid evidence."""
         base_path = str(invalid_evidence_structure.parent)
         env = {**subprocess.os.environ, "QA_EVIDENCE_PATH": base_path}
@@ -625,7 +687,9 @@ class TestIntegration:
         report_path = invalid_evidence_structure / "qa" / "validation_report.json"
         assert report_path.exists()
 
-    def test_run_command_creates_report(self, qa_process_v2_script: Path, valid_evidence_structure: Path) -> None:
+    def test_run_command_creates_report(
+        self, qa_process_v2_script: Path, valid_evidence_structure: Path
+    ) -> None:
         """Test run command creates validation report."""
         result = subprocess.run(
             [
@@ -638,7 +702,10 @@ class TestIntegration:
             ],
             capture_output=True,
             text=True,
-            env={**subprocess.os.environ, "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent)},
+            env={
+                **subprocess.os.environ,
+                "QA_EVIDENCE_PATH": str(valid_evidence_structure.parent),
+            },
         )
 
         assert result.returncode == 0

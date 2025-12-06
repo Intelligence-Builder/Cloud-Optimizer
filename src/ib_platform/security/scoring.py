@@ -140,9 +140,7 @@ class RiskScorer:
         exposure_score = self._calculate_exposure_score(finding)
 
         # Total risk score
-        risk_score = (
-            severity_score + compliance_score + resource_score + exposure_score
-        )
+        risk_score = severity_score + compliance_score + resource_score + exposure_score
 
         # Determine priority rank
         priority_rank = self._determine_priority_rank(risk_score)

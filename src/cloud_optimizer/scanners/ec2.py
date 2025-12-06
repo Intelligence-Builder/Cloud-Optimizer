@@ -168,7 +168,11 @@ class EC2Scanner(BaseScanner):
 
                         if cidr == "0.0.0.0/0":
                             # Check for SSH (port 22)
-                            if from_port == 22 or to_port == 22 or (from_port is None and to_port is None):
+                            if (
+                                from_port == 22
+                                or to_port == 22
+                                or (from_port is None and to_port is None)
+                            ):
                                 results.append(
                                     self.create_result(
                                         rule_id="EC2_001",

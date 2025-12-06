@@ -45,7 +45,9 @@ class BaseScanner(ABC):
 
     SERVICE: str = "unknown"
 
-    def __init__(self, session: boto3.Session, regions: Optional[List[str]] = None) -> None:
+    def __init__(
+        self, session: boto3.Session, regions: Optional[List[str]] = None
+    ) -> None:
         """
         Initialize scanner.
 

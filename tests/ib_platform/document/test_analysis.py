@@ -2,6 +2,7 @@
 
 import pytest
 
+from cloud_optimizer.config import get_settings
 from ib_platform.document.analysis import AnalysisError, DocumentAnalyzer
 
 
@@ -40,24 +41,22 @@ def test_extract_entities_no_matches():
     assert len(resources) == 0
 
 
-def test_analyzer_requires_api_key():
+def test_analyzer_requires_api_key(monkeypatch):
     """Test that analyzer requires API key."""
-    # Clear environment
-    import os
-
-    old_key = os.environ.get("ANTHROPIC_API_KEY")
-    if old_key:
-        del os.environ["ANTHROPIC_API_KEY"]
+    settings = get_settings()
+    original_key = settings.anthropic_api_key
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    get_settings.cache_clear()
 
     try:
         with pytest.raises(AnalysisError) as exc_info:
             DocumentAnalyzer()
 
         assert "API key not configured" in str(exc_info.value)
-
     finally:
-        if old_key:
-            os.environ["ANTHROPIC_API_KEY"] = old_key
+        if original_key:
+            monkeypatch.setenv("ANTHROPIC_API_KEY", original_key)
+        get_settings.cache_clear()
 
 
 @pytest.mark.asyncio

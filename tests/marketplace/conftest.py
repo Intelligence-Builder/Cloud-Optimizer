@@ -12,7 +12,6 @@ See localstack_conftest.py for LocalStack-specific fixtures (S3, IAM, etc.)
 
 import pytest
 
-
 # This file intentionally minimal - fixtures moved to test files
 # to keep test dependencies clear and avoid mock complexity.
 #

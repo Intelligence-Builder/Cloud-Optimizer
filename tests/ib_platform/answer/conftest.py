@@ -1,8 +1,9 @@
 """Pytest fixtures for answer generation tests."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
+
+import pytest
 
 from ib_platform.kb.models import KBEntry
 from ib_platform.kb.service import KnowledgeBaseService

@@ -60,9 +60,7 @@ class TestProcessQuery:
         assert "SEC-001" in result.entities.finding_ids
 
     @pytest.mark.asyncio
-    async def test_process_query_adds_to_context(
-        self, nlu_service: NLUService
-    ) -> None:
+    async def test_process_query_adds_to_context(self, nlu_service: NLUService) -> None:
         """Test that query is added to conversation context."""
         query = "How do I secure S3?"
         await nlu_service.process_query(query)
@@ -120,9 +118,7 @@ class TestIntentClassification:
         assert result.confidence > 0.8
 
     @pytest.mark.asyncio
-    async def test_classify_finding_explanation(
-        self, nlu_service: NLUService
-    ) -> None:
+    async def test_classify_finding_explanation(self, nlu_service: NLUService) -> None:
         """Test classification of finding explanation query."""
         mock_content = Mock()
         mock_content.text = json.dumps(
@@ -138,9 +134,7 @@ class TestIntentClassification:
         assert result.requires_findings is True
 
     @pytest.mark.asyncio
-    async def test_classify_compliance_question(
-        self, nlu_service: NLUService
-    ) -> None:
+    async def test_classify_compliance_question(self, nlu_service: NLUService) -> None:
         """Test classification of compliance query."""
         mock_content = Mock()
         mock_content.text = json.dumps(
@@ -411,9 +405,7 @@ class TestIntegrationScenarios:
     """Integration tests for complete NLU scenarios."""
 
     @pytest.mark.asyncio
-    async def test_complete_security_query_flow(
-        self, nlu_service: NLUService
-    ) -> None:
+    async def test_complete_security_query_flow(self, nlu_service: NLUService) -> None:
         """Test complete flow for security query."""
         mock_content = Mock()
         mock_content.text = json.dumps(

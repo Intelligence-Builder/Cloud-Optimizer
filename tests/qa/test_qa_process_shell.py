@@ -60,7 +60,9 @@ class TestQAProcessShellScript:
         assert result.returncode == 1
         assert "Usage:" in result.stderr
 
-    def test_force_tests_flag(self, qa_process_script: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_force_tests_flag(
+        self, qa_process_script: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test --force-tests flag is recognized."""
         # We can't run the full script without smart-scaffold, but we can test parsing
         result = subprocess.run(
@@ -126,7 +128,9 @@ class TestQAProcessShellScript:
             )
             assert result.returncode == 0
 
-    def test_environment_variable_qa_refresh_context(self, qa_process_script: Path) -> None:
+    def test_environment_variable_qa_refresh_context(
+        self, qa_process_script: Path
+    ) -> None:
         """Test QA_REFRESH_CONTEXT environment variable."""
         result = subprocess.run(
             [str(qa_process_script), "--help"],
@@ -137,7 +141,9 @@ class TestQAProcessShellScript:
 
         assert result.returncode == 0
 
-    def test_environment_variable_qa_force_context(self, qa_process_script: Path) -> None:
+    def test_environment_variable_qa_force_context(
+        self, qa_process_script: Path
+    ) -> None:
         """Test QA_FORCE_CONTEXT environment variable (alias)."""
         result = subprocess.run(
             [str(qa_process_script), "--help"],
@@ -243,7 +249,9 @@ class TestQAProcessIntegration:
         """Test script handles missing Smart-Scaffold context gracefully."""
         content = qa_process_script.read_text()
 
-        assert "context ${CTX_FILE} not found" in content.lower() or "context" in content
+        assert (
+            "context ${CTX_FILE} not found" in content.lower() or "context" in content
+        )
 
     def test_script_skips_optional_steps(self, qa_process_script: Path) -> None:
         """Test script skips optional steps when tools unavailable."""
@@ -339,7 +347,9 @@ class TestContextCaching:
         """Test script messages about context caching."""
         content = qa_process_script.read_text()
 
-        assert "context already exists" in content.lower() or "skipping" in content.lower()
+        assert (
+            "context already exists" in content.lower() or "skipping" in content.lower()
+        )
         assert "--refresh-context" in content
 
 

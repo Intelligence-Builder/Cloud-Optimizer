@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import socket
 import subprocess
 import time
 import uuid
@@ -27,6 +28,13 @@ def _run_command(cmd: list[str]) -> None:
 
 
 @pytest.mark.integration
+def _get_free_port() -> str:
+    """Return an available host port for binding."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return str(sock.getsockname()[1])
+
+
 def test_container_build_and_healthcheck() -> None:
     """Build the Docker image and verify /health returns 200."""
     if shutil.which("docker") is None:
@@ -34,7 +42,7 @@ def test_container_build_and_healthcheck() -> None:
 
     image_tag = f"cloud-optimizer-test:{uuid.uuid4().hex[:8]}"
     container_name = f"cloud-optimizer-test-{uuid.uuid4().hex[:8]}"
-    host_port = "18080"
+    host_port = _get_free_port()
 
     try:
         _run_command(

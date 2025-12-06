@@ -16,6 +16,9 @@ from cloud_optimizer.config import get_settings
 from cloud_optimizer.logging.config import LogConfig, configure_logging, get_logger
 from cloud_optimizer.middleware.correlation import CorrelationIdMiddleware
 from cloud_optimizer.middleware.license import LicenseMiddleware
+from cloud_optimizer.middleware.metrics import MetricsMiddleware
+from cloud_optimizer.middleware.security_headers import SecurityHeadersMiddleware
+from cloud_optimizer.tracing import XRayMiddleware, TracingConfig
 
 # Configure structured logging with PII redaction and correlation IDs
 settings = get_settings()
@@ -127,8 +130,23 @@ def create_app() -> FastAPI:
     # Correlation ID middleware for request tracing
     app.add_middleware(CorrelationIdMiddleware)
 
+    # X-Ray distributed tracing middleware (Issue #167)
+    # Added after CorrelationIdMiddleware so correlation IDs are available
+    xray_config = TracingConfig(
+        enabled=settings.xray_enabled if hasattr(settings, "xray_enabled") else True,
+        service_name="cloud-optimizer",
+    )
+    app.add_middleware(XRayMiddleware, config=xray_config)
+
+    # CloudWatch metrics middleware (Issue #166)
+    # Records request count, latency, and errors to CloudWatch
+    app.add_middleware(MetricsMiddleware)
+
     # License enforcement middleware
     app.add_middleware(LicenseMiddleware)
+
+    # Security headers middleware (HSTS, X-Frame-Options, etc.)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # Register routers
     from cloud_optimizer.api.routers import (

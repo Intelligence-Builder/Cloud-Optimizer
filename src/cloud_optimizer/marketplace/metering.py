@@ -157,7 +157,9 @@ class UsageMeteringService:
             logger.error(f"Metering failed for {dimension}: {e}")
             # Re-add to buffer for retry
             async with self._buffer_lock:
-                self._buffer.append(UsageRecord(dimension, quantity, datetime.now(timezone.utc)))
+                self._buffer.append(
+                    UsageRecord(dimension, quantity, datetime.now(timezone.utc))
+                )
             return False
 
 

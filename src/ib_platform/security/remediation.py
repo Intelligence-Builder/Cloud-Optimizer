@@ -236,14 +236,14 @@ class RemediationGenerator:
 
         # Step 2: Apply fix
         if prefer_terraform:
-            tf_code = f'''resource "aws_s3_bucket_public_access_block" "{finding.resource_id.replace("-", "_")}" {{
+            tf_code = f"""resource "aws_s3_bucket_public_access_block" "{finding.resource_id.replace("-", "_")}" {{
   bucket = "{finding.resource_id}"
 
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-}}'''
+}}"""
             steps.append(
                 RemediationStep(
                     step_number=2,
@@ -604,9 +604,7 @@ data "aws_iam_policy_document" "least_privilege" {
 
         # Compliance framework references
         if finding.compliance_frameworks:
-            references.append(
-                "https://aws.amazon.com/compliance/services-in-scope/"
-            )
+            references.append("https://aws.amazon.com/compliance/services-in-scope/")
 
         # General security references
         references.extend(
@@ -634,9 +632,7 @@ data "aws_iam_policy_document" "least_privilege" {
         """
         logger.info(f"Generating remediation plans for {len(findings)} findings")
 
-        plans = [
-            self.generate_plan(finding, prefer_terraform) for finding in findings
-        ]
+        plans = [self.generate_plan(finding, prefer_terraform) for finding in findings]
 
         logger.info(f"Generated {len(plans)} remediation plans")
         return plans

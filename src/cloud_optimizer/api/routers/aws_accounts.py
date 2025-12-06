@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from cloud_optimizer.database import AsyncSessionDep
 from cloud_optimizer.middleware.auth import CurrentUser
+from cloud_optimizer.models.aws_account import AWSAccount
 from cloud_optimizer.services.aws_connection import AWSConnectionService
 
 router = APIRouter()
@@ -51,9 +52,7 @@ class ConnectWithRoleRequest(BaseModel):
 class ConnectWithKeysRequest(BaseModel):
     """Request schema for connecting with access keys."""
 
-    aws_account_id: str | None = Field(
-        default=None, min_length=12, max_length=12
-    )
+    aws_account_id: str | None = Field(default=None, min_length=12, max_length=12)
     access_key_id: str = Field(..., min_length=16, max_length=128)
     secret_access_key: str = Field(..., min_length=1)
     friendly_name: str | None = None

@@ -5,6 +5,7 @@ Provides endpoints for security analysis using Intelligence-Builder platform
 and the internal AWS security scanning engine.
 """
 
+import os
 import time
 from datetime import datetime, timezone
 from typing import Annotated, Any, Dict, List, Optional
@@ -25,20 +26,19 @@ from cloud_optimizer.api.schemas.security import (
     SecurityFinding,
     SecurityGraph,
     SecurityRelationship,
+    SecurityScanJobResponse,
     SecurityScanRequest,
     SecurityScanResult,
-    SecurityScanJobResponse,
     StartSecurityScanRequest,
     Vulnerability,
     VulnerabilityCreate,
 )
 from cloud_optimizer.database import AsyncSessionDep
 from cloud_optimizer.middleware.auth import CurrentUser
-from cloud_optimizer.middleware.trial import (
-    RequireScanLimit,
-    record_trial_usage,
-)
+from cloud_optimizer.middleware.trial import RequireScanLimit, record_trial_usage
+from cloud_optimizer.services.findings import FindingsService
 from cloud_optimizer.services.security_scanner import SecurityScanEngine
+from ib_platform.security import SecurityAnalysisService
 
 router = APIRouter()
 
@@ -162,6 +162,7 @@ def get_security_scanner(db: AsyncSessionDep) -> SecurityScanEngine:
 
 
 SecurityScannerDep = Annotated[SecurityScanEngine, Depends(get_security_scanner)]
+_security_analysis_service: SecurityAnalysisService | None = None
 
 
 # ============================================================================
@@ -886,11 +887,21 @@ class AnalyzeFindingsRequest(BaseModel):
     """Request for comprehensive finding analysis."""
 
     finding_ids: List[str] = Field(..., description="List of finding IDs to analyze")
-    include_explanations: bool = Field(default=True, description="Generate LLM explanations")
-    include_remediation: bool = Field(default=True, description="Generate remediation plans")
-    include_clusters: bool = Field(default=True, description="Correlate and cluster findings")
-    target_audience: str = Field(default="general", description="Target audience (general, technical, executive)")
-    prefer_terraform: bool = Field(default=True, description="Prefer Terraform in remediation examples")
+    include_explanations: bool = Field(
+        default=True, description="Generate LLM explanations"
+    )
+    include_remediation: bool = Field(
+        default=True, description="Generate remediation plans"
+    )
+    include_clusters: bool = Field(
+        default=True, description="Correlate and cluster findings"
+    )
+    target_audience: str = Field(
+        default="general", description="Target audience (general, technical, executive)"
+    )
+    prefer_terraform: bool = Field(
+        default=True, description="Prefer Terraform in remediation examples"
+    )
 
 
 class AnalyzeFindingsResponse(BaseModel):
@@ -922,14 +933,18 @@ class ExplainFindingRequest(BaseModel):
 
     finding_id: str = Field(..., description="Finding ID to explain")
     target_audience: str = Field(default="general", description="Target audience")
-    include_technical_details: bool = Field(default=True, description="Include technical details")
+    include_technical_details: bool = Field(
+        default=True, description="Include technical details"
+    )
 
 
 class RemediationPlanRequest(BaseModel):
     """Request for remediation plan."""
 
     finding_id: str = Field(..., description="Finding ID")
-    prefer_terraform: bool = Field(default=True, description="Prefer Terraform examples")
+    prefer_terraform: bool = Field(
+        default=True, description="Prefer Terraform examples"
+    )
 
 
 class CorrelateFindingsRequest(BaseModel):
@@ -946,38 +961,18 @@ class CorrelateFindingsResponse(BaseModel):
     cluster_summary: Dict[str, Any]
 
 
-async def get_findings_service(request: Request) -> Any:
-    """Get findings service from app state.
-
-    Returns:
-        FindingsService instance
-
-    Raises:
-        HTTPException: If service not available
-    """
-    if not hasattr(request.app.state, "findings_service"):
-        raise HTTPException(
-            status_code=503,
-            detail="Findings service not available",
-        )
-    return request.app.state.findings_service
+def get_findings_service(db: AsyncSessionDep) -> FindingsService:
+    """Get a FindingsService backed by a database session."""
+    return FindingsService(db)
 
 
-async def get_security_analysis_service(request: Request) -> Any:
-    """Get security analysis service from app state.
-
-    Returns:
-        SecurityAnalysisService instance
-
-    Raises:
-        HTTPException: If service not available
-    """
-    if not hasattr(request.app.state, "security_analysis_service"):
-        raise HTTPException(
-            status_code=503,
-            detail="Security analysis service not available",
-        )
-    return request.app.state.security_analysis_service
+def get_security_analysis_service() -> SecurityAnalysisService:
+    """Get or create the SecurityAnalysisService singleton."""
+    global _security_analysis_service
+    if _security_analysis_service is None:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        _security_analysis_service = SecurityAnalysisService(anthropic_api_key=api_key)
+    return _security_analysis_service
 
 
 @router.post("/analysis/comprehensive", response_model=AnalyzeFindingsResponse)

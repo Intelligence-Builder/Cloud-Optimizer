@@ -139,20 +139,8 @@ async def check_intelligence_builder(request: Request) -> ComponentStatus:
         )
 
 
-async def check_redis() -> ComponentStatus:
-    """
-    Check Redis connectivity (placeholder for future implementation).
-
-    Returns:
-        ComponentStatus: Redis health status.
-    """
-    # Placeholder - Redis integration not yet implemented
-    return ComponentStatus(
-        name="redis",
-        status="degraded",
-        message="Redis not yet implemented",
-        response_time_ms=0.0,
-    )
+# Note: Redis health check removed - Redis not used in MVP
+# When Redis is added, implement check_redis() function here
 
 
 @router.get(
@@ -178,11 +166,10 @@ async def health_check(request: Request, response: Response) -> HealthResponse:
     """
     settings = get_settings()
 
-    # Check all components
+    # Check all components (Redis not included - not used in MVP)
     components = [
         await check_database(),
         await check_intelligence_builder(request),
-        await check_redis(),
     ]
 
     # Determine overall status

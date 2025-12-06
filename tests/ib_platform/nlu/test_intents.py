@@ -89,7 +89,8 @@ class TestIntentExamples:
         # Check that examples mention compliance frameworks
         combined = " ".join(examples).lower()
         assert any(
-            keyword in combined for keyword in ["soc2", "hipaa", "pci", "gdpr", "compliance"]
+            keyword in combined
+            for keyword in ["soc2", "hipaa", "pci", "gdpr", "compliance"]
         )
 
     def test_document_analysis_examples(self) -> None:
@@ -194,7 +195,9 @@ class TestGetIntentDescription:
     def test_descriptions_are_meaningful(self) -> None:
         """Test that descriptions contain relevant keywords."""
         description = get_intent_description(Intent.SECURITY_ADVICE)
-        assert "security" in description.lower() or "recommendation" in description.lower()
+        assert (
+            "security" in description.lower() or "recommendation" in description.lower()
+        )
 
         description = get_intent_description(Intent.COMPLIANCE_QUESTION)
         assert "compliance" in description.lower() or "framework" in description.lower()

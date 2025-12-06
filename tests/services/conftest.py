@@ -11,7 +11,11 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from cloud_optimizer.database import Base
-from cloud_optimizer.models.aws_account import AWSAccount, ConnectionStatus, ConnectionType
+from cloud_optimizer.models.aws_account import (
+    AWSAccount,
+    ConnectionStatus,
+    ConnectionType,
+)
 from cloud_optimizer.models.user import User
 
 # PostgreSQL test configuration

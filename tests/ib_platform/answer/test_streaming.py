@@ -1,8 +1,9 @@
 """Tests for SSE streaming handler."""
 
 import json
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from ib_platform.answer.streaming import StreamingHandler
 
@@ -110,8 +111,9 @@ async def test_stream_answer_handles_errors(
     mock_kb_service, mock_findings_service, simple_nlu_result
 ):
     """Test that streaming handles errors gracefully."""
-    from ib_platform.answer.service import AnswerService
     from unittest.mock import AsyncMock
+
+    from ib_platform.answer.service import AnswerService
 
     # Create a client that raises an error
     class ErrorMessages:

@@ -1,7 +1,8 @@
 """Tests for finding explanation generation."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from cloud_optimizer.models.finding import Finding
 from ib_platform.security.explanation import FindingExplainer
@@ -33,9 +34,7 @@ class TestFindingExplainer:
         assert explainer.client is not None
 
     @pytest.mark.asyncio
-    async def test_explain_finding_fallback_mode(
-        self, sample_finding: Finding
-    ) -> None:
+    async def test_explain_finding_fallback_mode(self, sample_finding: Finding) -> None:
         """Test that fallback explanation works without API key."""
         explainer = FindingExplainer()  # No API key
         explanation = await explainer.explain_finding(sample_finding)
@@ -180,9 +179,7 @@ TECHNICAL DETAILS: The bucket policy or ACL configuration allows public read acc
         """Test that errors fall back to non-LLM explanation."""
         with patch("ib_platform.security.explanation.Anthropic") as mock_anthropic:
             mock_client = MagicMock()
-            mock_client.messages.create = MagicMock(
-                side_effect=Exception("API Error")
-            )
+            mock_client.messages.create = MagicMock(side_effect=Exception("API Error"))
             mock_anthropic.return_value = mock_client
 
             explainer = FindingExplainer(api_key="test-key")

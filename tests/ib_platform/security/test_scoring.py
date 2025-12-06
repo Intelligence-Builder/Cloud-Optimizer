@@ -89,8 +89,8 @@ class TestRiskScorer:
 
     def test_compliance_score_other_frameworks(self) -> None:
         """Test that other frameworks get moderate scores."""
-        from uuid import uuid4
         from datetime import datetime, timezone
+        from uuid import uuid4
 
         finding = Finding(
             finding_id=uuid4(),
@@ -124,8 +124,8 @@ class TestRiskScorer:
         high_risk_types = ["iam", "s3", "rds", "kms", "secretsmanager", "lambda", "ec2"]
 
         for resource_type in high_risk_types:
-            from uuid import uuid4
             from datetime import datetime, timezone
+            from uuid import uuid4
 
             finding = Finding(
                 finding_id=uuid4(),
@@ -152,8 +152,8 @@ class TestRiskScorer:
     def test_exposure_score_keywords(self) -> None:
         """Test that exposure keywords increase score."""
         scorer = RiskScorer()
-        from uuid import uuid4
         from datetime import datetime, timezone
+        from uuid import uuid4
 
         keywords = ["public", "internet", "0.0.0.0/0", "world", "anonymous"]
 

@@ -16,7 +16,6 @@ from fastapi.testclient import TestClient
 from cloud_optimizer.marketplace.license import LicenseStatus
 from cloud_optimizer.middleware.license import LicenseMiddleware
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================

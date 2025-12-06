@@ -119,7 +119,9 @@ class S3SecurityScanner(BaseAWSScanner):
             code = exc.response.get("Error", {}).get("Code", "")
             if code == "NoSuchPublicAccessBlockConfiguration":
                 return True
-            logger.debug("Unable to determine public access for %s: %s", bucket_name, exc)
+            logger.debug(
+                "Unable to determine public access for %s: %s", bucket_name, exc
+            )
             return False
 
     def _is_versioning_enabled(self, bucket_name: str, s3_client) -> bool:
@@ -150,8 +152,8 @@ class S3SecurityScanner(BaseAWSScanner):
         remediation: str,
     ) -> Dict[str, Any]:
         resource_arn = (
-            f"arn:aws:s3:::{bucket_name}"
-        )  # S3 bucket ARNs omit region/account
+            f"arn:aws:s3:::{bucket_name}"  # S3 bucket ARNs omit region/account
+        )
         return {
             "finding_type": finding_type,
             "severity": severity,

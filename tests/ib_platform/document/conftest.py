@@ -1,5 +1,6 @@
 """Shared fixtures for document tests."""
 
+import os
 import tempfile
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -128,21 +129,37 @@ def temp_storage_dir() -> Path:
         yield Path(tmpdir)
 
 
-@pytest.fixture
-async def db_engine():
-    """Create test database engine."""
-    # Use in-memory SQLite for tests
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        echo=False,
+POSTGRES_TEST_CONFIG = {
+    "host": os.getenv("TEST_POSTGRES_HOST", "localhost"),
+    "port": int(os.getenv("TEST_POSTGRES_PORT", "5434")),
+    "user": os.getenv("TEST_POSTGRES_USER", "test"),
+    "password": os.getenv("TEST_POSTGRES_PASSWORD", "test"),
+    "database": os.getenv("TEST_POSTGRES_DB", "test_intelligence"),
+}
+
+
+def _test_database_url() -> str:
+    """Build async test database URL."""
+    return (
+        f"postgresql+asyncpg://{POSTGRES_TEST_CONFIG['user']}:"
+        f"{POSTGRES_TEST_CONFIG['password']}@{POSTGRES_TEST_CONFIG['host']}:"
+        f"{POSTGRES_TEST_CONFIG['port']}/{POSTGRES_TEST_CONFIG['database']}"
     )
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
-    yield engine
-
-    await engine.dispose()
+@pytest.fixture
+async def db_engine():
+    """Create PostgreSQL database engine for document tests."""
+    try:
+        engine = create_async_engine(_test_database_url(), echo=False)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        yield engine
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        await engine.dispose()
+    except Exception as exc:
+        pytest.skip(f"Test PostgreSQL database not available: {exc}")
 
 
 @pytest.fixture

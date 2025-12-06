@@ -31,9 +31,7 @@ class DocumentListItem(BaseModel):
     file_size: int = Field(..., description="File size in bytes")
     status: str = Field(..., description="Processing status")
     created_at: datetime = Field(..., description="Upload timestamp")
-    has_extracted_text: bool = Field(
-        ..., description="Whether text has been extracted"
-    )
+    has_extracted_text: bool = Field(..., description="Whether text has been extracted")
 
     class Config:
         """Pydantic config."""
@@ -76,7 +74,9 @@ class DocumentAnalysisResponse(BaseModel):
     compliance_frameworks: list[str] = Field(
         ..., description="Compliance frameworks mentioned"
     )
-    security_concerns: list[str] = Field(..., description="Security concerns identified")
+    security_concerns: list[str] = Field(
+        ..., description="Security concerns identified"
+    )
     key_topics: list[str] = Field(..., description="Key topics discussed")
     summary: str = Field(..., description="Document summary")
 

@@ -50,6 +50,11 @@ COMPLIANCE_DATA = {
         "version": "2016",
         "description": "General Data Protection Regulation",
     },
+    "ISO27001": {
+        "display_name": "ISO/IEC 27001:2022",
+        "version": "2022",
+        "description": "Information Security Management System (ISMS) - Annex A Controls",
+    },
 }
 
 
@@ -93,9 +98,7 @@ class ComplianceService:
         result = await self.db.execute(select(ComplianceFramework))
         return list(result.scalars().all())
 
-    async def get_finding_compliance(
-        self, finding: Finding
-    ) -> Dict[str, List[str]]:
+    async def get_finding_compliance(self, finding: Finding) -> Dict[str, List[str]]:
         """Get compliance frameworks affected by a finding.
 
         Args:
@@ -157,7 +160,9 @@ class ComplianceService:
 
         # Calculate compliance percentage
         total_findings = len(framework_findings)
-        passed_findings = len([f for f in framework_findings if f.status.value == "resolved"])
+        passed_findings = len(
+            [f for f in framework_findings if f.status.value == "resolved"]
+        )
         failed_findings = total_findings - passed_findings
 
         compliance_percentage = (

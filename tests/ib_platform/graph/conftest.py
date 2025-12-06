@@ -35,7 +35,7 @@ POSTGRES_TEST_CONFIG = {
 }
 
 MEMGRAPH_TEST_CONFIG = {
-    "uri": os.getenv("TEST_MEMGRAPH_URI", "bolt://localhost:7688"),
+    "uri": os.getenv("TEST_MEMGRAPH_URI", "bolt://localhost:7687"),
     "username": os.getenv("TEST_MEMGRAPH_USER", ""),
     "password": os.getenv("TEST_MEMGRAPH_PASSWORD", ""),
 }

@@ -53,7 +53,9 @@ def test_dockerfile_entrypoint_runs_app() -> None:
     contents = "\n".join(_load_dockerfile())
     # Accept either CMD with uvicorn or ENTRYPOINT with entrypoint module
     has_uvicorn_cmd = 'CMD ["uvicorn", "cloud_optimizer.main:app"' in contents
-    has_entrypoint = 'ENTRYPOINT ["python", "-m", "cloud_optimizer.entrypoint"]' in contents
-    assert has_uvicorn_cmd or has_entrypoint, (
-        "Dockerfile must use either CMD with uvicorn or ENTRYPOINT with entrypoint module"
+    has_entrypoint = (
+        'ENTRYPOINT ["python", "-m", "cloud_optimizer.entrypoint"]' in contents
     )
+    assert (
+        has_uvicorn_cmd or has_entrypoint
+    ), "Dockerfile must use either CMD with uvicorn or ENTRYPOINT with entrypoint module"

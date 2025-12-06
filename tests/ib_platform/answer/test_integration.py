@@ -4,8 +4,9 @@ These tests validate the entire answer generation pipeline from NLU result
 to streaming response, including context assembly and formatting.
 """
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from ib_platform.answer.context import ContextAssembler
 from ib_platform.answer.service import AnswerService
@@ -217,7 +218,10 @@ async def test_streaming_error_handling(mock_kb_service, simple_nlu_result):
 
 @pytest.mark.asyncio
 async def test_conversation_history_included(
-    mock_anthropic_client, mock_kb_service, simple_nlu_result, sample_conversation_history
+    mock_anthropic_client,
+    mock_kb_service,
+    simple_nlu_result,
+    sample_conversation_history,
 ):
     """Test that conversation history is properly included in context."""
     answer_service = AnswerService(

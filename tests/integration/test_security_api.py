@@ -19,7 +19,9 @@ import os
 os.environ["TESTING"] = "true"
 os.environ["MARKETPLACE_ENABLED"] = "false"
 os.environ["MARKETPLACE_PRODUCT_CODE"] = "test-product-code"
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://test:test@localhost:5434/test_intelligence"
+os.environ[
+    "DATABASE_URL"
+] = "postgresql+asyncpg://test:test@localhost:5434/test_intelligence"
 
 import asyncio
 from datetime import datetime, timezone
@@ -30,11 +32,7 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from cloud_optimizer.api.schemas.security import (
     ComplianceCheckRequest,
@@ -43,12 +41,12 @@ from cloud_optimizer.api.schemas.security import (
     VulnerabilityCreate,
 )
 from cloud_optimizer.database import Base, get_db
-from cloud_optimizer.marketplace.models import LicenseStatus
-from cloud_optimizer.middleware.auth import get_current_user
-from cloud_optimizer.models.user import User
 
 # Import app AFTER setting env vars
 from cloud_optimizer.main import create_app
+from cloud_optimizer.marketplace.models import LicenseStatus
+from cloud_optimizer.middleware.auth import get_current_user
+from cloud_optimizer.models.user import User
 
 # Create app with test configuration
 app = create_app()
@@ -553,9 +551,7 @@ async def test_list_vulnerabilities_with_filter(test_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_list_vulnerabilities_pagination(test_client: AsyncClient):
     """Test vulnerabilities endpoint pagination."""
-    response = await test_client.get(
-        "/api/v1/security/vulnerabilities?skip=0&limit=10"
-    )
+    response = await test_client.get("/api/v1/security/vulnerabilities?skip=0&limit=10")
 
     assert response.status_code == 200
     data = response.json()

@@ -247,9 +247,7 @@ class TestFollowUpDetection:
         conversation_context.add_message(content="First question", role="user")
         conversation_context.add_message(content="Response", role="assistant")
 
-        is_follow_up = conversation_context.is_follow_up_question(
-            "How do I fix that?"
-        )
+        is_follow_up = conversation_context.is_follow_up_question("How do I fix that?")
         assert is_follow_up
 
     def test_follow_up_with_it(self, conversation_context: ConversationContext) -> None:
@@ -361,9 +359,7 @@ class TestClearAndCounts:
         assert conversation_context.session_id is None
         assert len(conversation_context.metadata) == 0
 
-    def test_get_message_count(
-        self, conversation_context: ConversationContext
-    ) -> None:
+    def test_get_message_count(self, conversation_context: ConversationContext) -> None:
         """Test getting total message count."""
         assert conversation_context.get_message_count() == 0
 

@@ -1,8 +1,9 @@
 """Pytest fixtures for security module tests."""
 
-import pytest
 from datetime import datetime, timezone
 from uuid import uuid4
+
+import pytest
 
 from cloud_optimizer.models.finding import (
     Finding,

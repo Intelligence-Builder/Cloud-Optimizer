@@ -1,7 +1,8 @@
 """Tests for answer generation service."""
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from ib_platform.answer.service import AnswerService, create_answer_service
 
@@ -168,7 +169,10 @@ async def test_build_messages(
 
 @pytest.mark.asyncio
 async def test_build_messages_with_history(
-    mock_anthropic_client, mock_kb_service, simple_nlu_result, sample_conversation_history
+    mock_anthropic_client,
+    mock_kb_service,
+    simple_nlu_result,
+    sample_conversation_history,
 ):
     """Test message building with conversation history."""
     service = AnswerService(
@@ -187,7 +191,9 @@ async def test_build_messages_with_history(
 
     # Should include history
     assert len(messages) > 1
-    assert any(msg["role"] == "user" and "What is MFA?" in msg["content"] for msg in messages)
+    assert any(
+        msg["role"] == "user" and "What is MFA?" in msg["content"] for msg in messages
+    )
     assert any(msg["role"] == "assistant" for msg in messages)
 
 

@@ -227,7 +227,9 @@ class DocumentContext:
         documents = result.scalars().all()
 
         total_docs = len(documents)
-        completed = sum(1 for d in documents if d.status == DocumentStatus.COMPLETED.value)
+        completed = sum(
+            1 for d in documents if d.status == DocumentStatus.COMPLETED.value
+        )
         processing = sum(
             1 for d in documents if d.status == DocumentStatus.PROCESSING.value
         )

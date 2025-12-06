@@ -30,6 +30,7 @@ class LicenseMiddleware(BaseHTTPMiddleware):
     def license_validator(self):
         if self._license_validator is None:
             from cloud_optimizer.marketplace.license import get_license_validator
+
             self._license_validator = get_license_validator()
         return self._license_validator
 

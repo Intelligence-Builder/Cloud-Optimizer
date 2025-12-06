@@ -269,8 +269,13 @@ class IAMScanner(BaseScanner):
                                 )
 
                         except ClientError as e:
-                            if e.response.get("Error", {}).get("Code") != "NoSuchEntity":
-                                logger.error(f"Error checking login profile for {user_name}: {e}")
+                            if (
+                                e.response.get("Error", {}).get("Code")
+                                != "NoSuchEntity"
+                            ):
+                                logger.error(
+                                    f"Error checking login profile for {user_name}: {e}"
+                                )
 
                     except ClientError as e:
                         logger.error(f"Error checking MFA for {user_name}: {e}")
@@ -280,14 +285,17 @@ class IAMScanner(BaseScanner):
                         # Get credential report for user
                         # Note: This requires generate_credential_report to be called first
                         user_created = user["CreateDate"]
-                        days_since_creation = (datetime.now(user_created.tzinfo) - user_created).days
+                        days_since_creation = (
+                            datetime.now(user_created.tzinfo) - user_created
+                        ).days
 
                         # Get access keys
                         access_keys = iam.list_access_keys(UserName=user_name)
                         for key in access_keys.get("AccessKeyMetadata", []):
                             if key["Status"] == "Active":
                                 key_age = (
-                                    datetime.now(key["CreateDate"].tzinfo) - key["CreateDate"]
+                                    datetime.now(key["CreateDate"].tzinfo)
+                                    - key["CreateDate"]
                                 ).days
 
                                 # Check if key is old and potentially unused
@@ -333,7 +341,9 @@ class IAMScanner(BaseScanner):
                             PolicyArn=policy_arn, VersionId=policy["DefaultVersionId"]
                         )
 
-                        document = policy_version.get("PolicyVersion", {}).get("Document", {})
+                        document = policy_version.get("PolicyVersion", {}).get(
+                            "Document", {}
+                        )
 
                         # Check for overly permissive statements
                         if "Statement" in document:

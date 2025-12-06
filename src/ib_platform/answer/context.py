@@ -100,9 +100,7 @@ class ContextAssembler:
 
         return context
 
-    async def _gather_kb_entries(
-        self, nlu_result: Any, context: AnswerContext
-    ) -> None:
+    async def _gather_kb_entries(self, nlu_result: Any, context: AnswerContext) -> None:
         """Gather relevant KB entries based on NLU entities.
 
         Args:

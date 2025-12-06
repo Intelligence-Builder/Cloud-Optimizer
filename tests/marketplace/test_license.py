@@ -27,7 +27,6 @@ from cloud_optimizer.marketplace.license import (
     get_license_validator,
 )
 
-
 # ============================================================================
 # Unit Tests - Internal Logic (No AWS Dependencies)
 # ============================================================================

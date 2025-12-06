@@ -1,7 +1,8 @@
 """Tests for context assembly."""
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from ib_platform.answer.context import AnswerContext, ContextAssembler
 

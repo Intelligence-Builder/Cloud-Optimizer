@@ -218,14 +218,28 @@ check_port() {
 print_check "Port 18080 (API)"
 check_port 18080
 
-print_check "Port 5434 (PostgreSQL)"
-check_port 5434
+print_check "Port 5546 (PostgreSQL)"
+check_port 5546
 
-print_check "Port 4566 (LocalStack)"
-check_port 4566
+print_check "Port 5566 (LocalStack)"
+check_port 5566
+
+print_check "Intelligence-Builder API (localhost:8100)"
+if curl -sf http://localhost:8100/ >/dev/null 2>&1; then
+    print_pass
+else
+    print_warning "IB API not reachable on localhost:8100 (start the Intelligence-Builder stack)"
+fi
 
 # Check optional dependencies
 print_header "Checking Optional Dependencies"
+
+print_check "IB API Key"
+if [ -n "$IB_API_KEY" ]; then
+    print_pass
+else
+    print_warning "IB_API_KEY not set (security tests will skip if IB rejects requests)"
+fi
 
 print_check "Anthropic API Key"
 if [ -n "$ANTHROPIC_API_KEY" ]; then

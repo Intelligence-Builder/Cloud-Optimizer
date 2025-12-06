@@ -1,6 +1,7 @@
 """Tests for document upload service."""
 
 import io
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import UUID
 
@@ -155,6 +156,7 @@ async def test_list_documents(db_session, sample_user_id: UUID):
     from uuid import uuid4
 
     service = DocumentService(db_session)
+    base_time = datetime.now(timezone.utc)
 
     # Create multiple documents
     for i in range(3):
@@ -166,6 +168,8 @@ async def test_list_documents(db_session, sample_user_id: UUID):
             file_size=100 * i,
             storage_path=f"/tmp/test_{i}.txt",
             status=DocumentStatus.COMPLETED.value,
+            created_at=base_time + timedelta(seconds=i),
+            updated_at=base_time + timedelta(seconds=i),
         )
         db_session.add(doc)
 

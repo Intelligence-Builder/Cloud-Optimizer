@@ -11,7 +11,9 @@ from ib_platform.nlu.models import NLUEntities
 class TestEntityExtractor:
     """Tests for EntityExtractor class."""
 
-    def test_extract_returns_nlu_entities(self, entity_extractor: EntityExtractor) -> None:
+    def test_extract_returns_nlu_entities(
+        self, entity_extractor: EntityExtractor
+    ) -> None:
         """Test that extract returns NLUEntities object."""
         result = entity_extractor.extract("What about S3 buckets?")
         assert isinstance(result, NLUEntities)
@@ -39,7 +41,9 @@ class TestAWSServiceExtraction:
         assert "EC2" in result.aws_services
         assert "IAM" in result.aws_services
 
-    def test_case_insensitive_extraction(self, entity_extractor: EntityExtractor) -> None:
+    def test_case_insensitive_extraction(
+        self, entity_extractor: EntityExtractor
+    ) -> None:
         """Test that service extraction is case-insensitive."""
         result = entity_extractor.extract("What about s3 and ec2?")
         assert "S3" in result.aws_services
@@ -95,7 +99,9 @@ class TestComplianceFrameworkExtraction:
         result = entity_extractor.extract("PCI-DSS requirements for payment data")
         assert "PCI-DSS" in result.compliance_frameworks
 
-    def test_extract_pci_dss_with_space(self, entity_extractor: EntityExtractor) -> None:
+    def test_extract_pci_dss_with_space(
+        self, entity_extractor: EntityExtractor
+    ) -> None:
         """Test extracting PCI DSS (with space)."""
         result = entity_extractor.extract("PCI DSS compliance checklist")
         assert "PCI-DSS" in result.compliance_frameworks
@@ -114,9 +120,7 @@ class TestComplianceFrameworkExtraction:
         self, entity_extractor: EntityExtractor
     ) -> None:
         """Test extracting multiple compliance frameworks."""
-        result = entity_extractor.extract(
-            "We need SOC2, HIPAA, and GDPR compliance"
-        )
+        result = entity_extractor.extract("We need SOC2, HIPAA, and GDPR compliance")
         assert "SOC2" in result.compliance_frameworks
         assert "HIPAA" in result.compliance_frameworks
         assert "GDPR" in result.compliance_frameworks
@@ -204,7 +208,9 @@ class TestResourceIDExtraction:
         result = entity_extractor.extract("Subnet subnet-1234567890abcdef0")
         assert "subnet-1234567890abcdef0" in result.resource_ids
 
-    def test_extract_multiple_resources(self, entity_extractor: EntityExtractor) -> None:
+    def test_extract_multiple_resources(
+        self, entity_extractor: EntityExtractor
+    ) -> None:
         """Test extracting multiple resource IDs."""
         result = entity_extractor.extract(
             "Check i-123456789 and sg-abcdef123 in vpc-999888777"

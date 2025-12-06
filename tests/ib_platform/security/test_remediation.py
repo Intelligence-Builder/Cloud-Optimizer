@@ -54,9 +54,7 @@ class TestRemediationGenerator:
         plan = generator.generate_plan(sample_finding, prefer_terraform=True)
 
         # Should have at least one terraform command
-        terraform_steps = [
-            s for s in plan.steps if s.command_type == "terraform"
-        ]
+        terraform_steps = [s for s in plan.steps if s.command_type == "terraform"]
         assert len(terraform_steps) > 0
 
     def test_generate_plan_prefer_aws_cli(self, sample_finding: Finding) -> None:
@@ -148,7 +146,11 @@ class TestRemediationGenerator:
 
         assert len(plan.rollback_steps) > 0
         rollback_text = " ".join(plan.rollback_steps).lower()
-        assert "backup" in rollback_text or "rollback" in rollback_text or "revert" in rollback_text
+        assert (
+            "backup" in rollback_text
+            or "rollback" in rollback_text
+            or "revert" in rollback_text
+        )
 
     def test_references_include_aws_docs(self, sample_finding: Finding) -> None:
         """Test that references include AWS documentation."""
@@ -158,11 +160,9 @@ class TestRemediationGenerator:
         assert len(plan.references) > 0
         # Parse each reference to check for required AWS documentation domains
         from urllib.parse import urlparse
+
         allowed_domains = {"docs.aws.amazon.com", "aws.amazon.com"}
-        found = any(
-            urlparse(ref).netloc in allowed_domains
-            for ref in plan.references
-        )
+        found = any(urlparse(ref).netloc in allowed_domains for ref in plan.references)
         assert found
 
     def test_s3_specific_remediation(self, sample_finding: Finding) -> None:
@@ -176,9 +176,7 @@ class TestRemediationGenerator:
         assert "public" in steps_text or "access" in steps_text
 
     @pytest.mark.asyncio
-    async def test_generate_plans_batch(
-        self, multiple_findings: list[Finding]
-    ) -> None:
+    async def test_generate_plans_batch(self, multiple_findings: list[Finding]) -> None:
         """Test batch generation of remediation plans."""
         generator = RemediationGenerator()
         plans = await generator.generate_plans_batch(multiple_findings)
@@ -193,9 +191,7 @@ class TestRemediationGenerator:
         generator = RemediationGenerator()
         plan = generator.generate_plan(sample_finding, prefer_terraform=True)
 
-        terraform_steps = [
-            s for s in plan.steps if s.command_type == "terraform"
-        ]
+        terraform_steps = [s for s in plan.steps if s.command_type == "terraform"]
 
         if terraform_steps:
             # Check for basic Terraform syntax

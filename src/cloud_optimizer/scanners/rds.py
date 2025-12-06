@@ -166,7 +166,9 @@ class RDSScanner(BaseScanner):
                     db_instance_id = instance["DBInstanceIdentifier"]
                     db_arn = instance["DBInstanceArn"]
                     engine = instance.get("Engine", "").lower()
-                    port = instance.get("DbInstancePort") or instance.get("Endpoint", {}).get("Port")
+                    port = instance.get("DbInstancePort") or instance.get(
+                        "Endpoint", {}
+                    ).get("Port")
 
                     # Check public accessibility (RDS_001)
                     if instance.get("PubliclyAccessible", False):
@@ -225,7 +227,9 @@ class RDSScanner(BaseScanner):
                                 resource_name=db_instance_id,
                                 region=region,
                                 metadata={
-                                    "availability_zone": instance.get("AvailabilityZone"),
+                                    "availability_zone": instance.get(
+                                        "AvailabilityZone"
+                                    ),
                                     "engine": engine,
                                 },
                             )

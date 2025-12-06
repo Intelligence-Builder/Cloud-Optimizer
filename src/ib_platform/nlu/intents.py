@@ -9,7 +9,7 @@ from typing import Dict, List
 
 
 class Intent(str, Enum):
-    """Intent types for user queries."""
+    """Intent types for user queries handled by the expert system."""
 
     SECURITY_ADVICE = "security_advice"
     FINDING_EXPLANATION = "finding_explanation"
@@ -22,61 +22,73 @@ class Intent(str, Enum):
     OUT_OF_SCOPE = "out_of_scope"
 
 
+INTENT_DESCRIPTIONS: Dict[Intent, str] = {
+    Intent.SECURITY_ADVICE: "User is asking for AWS security recommendations or best practices.",
+    Intent.FINDING_EXPLANATION: "User wants an explanation of a scanner/security finding.",
+    Intent.COMPLIANCE_QUESTION: "User is mapping controls to frameworks like HIPAA, SOC 2, PCI, or CIS.",
+    Intent.DOCUMENT_ANALYSIS: "User needs an uploaded architecture or policy document analyzed for risk.",
+    Intent.COST_OPTIMIZATION: "User is looking for AWS cost savings opportunities or forecasting.",
+    Intent.REMEDIATION_HELP: "User needs concrete remediation steps or code to fix a finding.",
+    Intent.GENERAL_QUESTION: "User has a general AWS/cloud security question not tied to a specific finding.",
+    Intent.GREETING: "Conversation openers such as hello, hi, or good morning.",
+    Intent.OUT_OF_SCOPE: "Requests unrelated to AWS, cloud, or security topics.",
+}
+
 # Intent examples for training and classification
 INTENT_EXAMPLES: Dict[Intent, List[str]] = {
     Intent.SECURITY_ADVICE: [
-        "What are the best practices for securing my S3 buckets?",
-        "How can I improve my IAM security posture?",
-        "What security controls should I implement for EC2 instances?",
-        "How do I protect my RDS databases from unauthorized access?",
+        "What security concerns should I have with S3 to Glue to Redshift?",
+        "How should I secure my API Gateway before it calls Lambda?",
+        "Is my Redshift cluster configured securely by default?",
+        "What security controls should I enable on S3 buckets used for analytics?",
     ],
     Intent.FINDING_EXPLANATION: [
-        "Why is finding SEC-001 marked as critical?",
-        "Can you explain what this security finding means?",
-        "What does the 'publicly accessible S3 bucket' finding indicate?",
-        "Tell me more about finding FND-12345",
+        "Explain this finding about public S3 buckets.",
+        "What does the IAM_002 finding mean?",
+        "Why is SEC-001 marked as critical?",
+        "Can you break down why this finding flagged my CloudTrail logs?",
     ],
     Intent.COMPLIANCE_QUESTION: [
-        "How do I achieve SOC2 compliance in AWS?",
-        "What are the HIPAA requirements for storing PHI in the cloud?",
-        "Does my current setup meet PCI-DSS standards?",
-        "What GDPR controls do I need for EU data?",
+        "What do I need for HIPAA compliance?",
+        "How does this finding relate to SOC 2?",
+        "Is this configuration a PCI-DSS violation?",
+        "Which CIS controls cover this AWS Config rule?",
     ],
     Intent.DOCUMENT_ANALYSIS: [
-        "Can you analyze this CloudFormation template for security issues?",
-        "Review this IAM policy document for vulnerabilities",
-        "What security risks are in my terraform configuration?",
-        "Check this security group configuration",
+        "Review this architecture PDF and tell me the security gaps.",
+        "What security issues do you see in this VPC diagram?",
+        "Analyze this IAM policy document for risk.",
+        "Can you inspect my Terraform plan for vulnerabilities?",
     ],
     Intent.COST_OPTIMIZATION: [
-        "How can I reduce my AWS costs?",
-        "What are the most expensive resources in my account?",
-        "Suggest cost optimizations for my EC2 fleet",
-        "How much can I save by using Reserved Instances?",
+        "How can I reduce my AWS costs this quarter?",
+        "Are there unused EC2 instances I can shut down?",
+        "Should I migrate this workload to reserved instances?",
+        "Do I have idle RDS clusters burning money?",
     ],
     Intent.REMEDIATION_HELP: [
-        "How do I fix this security finding?",
-        "What steps should I take to remediate SEC-001?",
-        "Can you help me resolve this vulnerability?",
-        "Walk me through fixing this compliance issue",
+        "How do I fix SEC-001 in my account?",
+        "Show me the Terraform to remediate this S3 bucket finding.",
+        "What steps fix this IAM_002 critical issue?",
+        "Walk me through resolving this GuardDuty alert.",
     ],
     Intent.GENERAL_QUESTION: [
-        "What is AWS Config?",
-        "How does AWS Security Hub work?",
+        "What is AWS Config and when should I use it?",
+        "How does AWS Security Hub aggregate findings?",
+        "Explain AWS GuardDuty to me.",
         "What's the difference between KMS and CloudHSM?",
-        "Explain AWS GuardDuty to me",
     ],
     Intent.GREETING: [
-        "Hello",
-        "Hi there",
-        "Good morning",
-        "Hey, can you help me?",
+        "Hello there!",
+        "Hi, can you help me?",
+        "Good morning Cloud Optimizer.",
+        "Hey team!",
     ],
     Intent.OUT_OF_SCOPE: [
-        "What's the weather like today?",
+        "What's the weather like in Seattle?",
         "Can you book a flight for me?",
-        "How do I cook pasta?",
-        "Tell me a joke",
+        "How do I bake sourdough bread?",
+        "Tell me a joke about penguins.",
     ],
 }
 
@@ -114,15 +126,4 @@ def get_intent_description(intent: Intent) -> str:
     Returns:
         Description of what the intent represents
     """
-    descriptions = {
-        Intent.SECURITY_ADVICE: "User is asking for security best practices or recommendations",
-        Intent.FINDING_EXPLANATION: "User wants to understand a specific security finding",
-        Intent.COMPLIANCE_QUESTION: "User is asking about compliance frameworks or requirements",
-        Intent.DOCUMENT_ANALYSIS: "User wants to analyze a document or configuration for security issues",
-        Intent.COST_OPTIMIZATION: "User is asking about reducing AWS costs",
-        Intent.REMEDIATION_HELP: "User needs help fixing a security issue or vulnerability",
-        Intent.GENERAL_QUESTION: "User has a general question about AWS services or concepts",
-        Intent.GREETING: "User is greeting the system or starting a conversation",
-        Intent.OUT_OF_SCOPE: "User's query is not related to AWS security or cloud optimization",
-    }
-    return descriptions.get(intent, "Unknown intent")
+    return INTENT_DESCRIPTIONS.get(intent, "Unknown intent")

@@ -15,7 +15,6 @@ import pytest
 
 from cloud_optimizer.marketplace.metering import UsageMeteringService, UsageRecord
 
-
 # ============================================================================
 # Unit Tests - Internal Logic (No AWS Dependencies)
 # ============================================================================
@@ -256,7 +255,9 @@ async def test_send_metering_record_failure_requeues() -> None:
 
     # Mock client error
     mock_client = MagicMock()
-    error_response = {"Error": {"Code": "ThrottlingException", "Message": "Rate exceeded"}}
+    error_response = {
+        "Error": {"Code": "ThrottlingException", "Message": "Rate exceeded"}
+    }
     mock_client.meter_usage.side_effect = ClientError(error_response, "MeterUsage")
     service._client = mock_client
 

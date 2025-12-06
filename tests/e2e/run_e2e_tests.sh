@@ -98,8 +98,8 @@ Environment Requirements:
   - Python 3.11+ with test dependencies
 
 Services Started:
-  - PostgreSQL (port 5434)
-  - LocalStack (port 4566)
+  - PostgreSQL (port 5546)
+  - LocalStack (port 5566)
   - Cloud Optimizer API (port 18080)
 
 For more information, see tests/e2e/README.md
@@ -322,8 +322,8 @@ cleanup_services() {
         print_info "Service URLs:"
         print_info "  API:        http://localhost:18080"
         print_info "  API Docs:   http://localhost:18080/docs"
-        print_info "  PostgreSQL: localhost:5434 (user: test, db: test_intelligence)"
-        print_info "  LocalStack: http://localhost:4566"
+        print_info "  PostgreSQL: localhost:5546 (user: test, db: test_intelligence)"
+        print_info "  LocalStack: http://localhost:5566"
         print_info ""
         print_info "To stop services manually:"
         print_info "  docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME down -v"
@@ -345,6 +345,13 @@ cleanup_on_exit() {
     if [ $exit_code -ne 0 ]; then
         print_warning "Script interrupted or failed"
         show_logs
+        if [ "$KEEP_RUNNING" != true ]; then
+            KEEP_RUNNING=true
+            print_info ""
+            print_info "Keeping containers running for debugging."
+            print_info "Stop them manually with:"
+            print_info "  docker-compose -f $COMPOSE_FILE -p $PROJECT_NAME down -v"
+        fi
     fi
     if [ "$KEEP_RUNNING" != true ]; then
         cleanup_services

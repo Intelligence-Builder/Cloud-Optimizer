@@ -214,7 +214,12 @@ class FindingsService:
         summary = {
             "total": 0,
             "by_severity": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
-            "by_status": {"open": 0, "resolved": 0, "suppressed": 0, "false_positive": 0},
+            "by_status": {
+                "open": 0,
+                "resolved": 0,
+                "suppressed": 0,
+                "false_positive": 0,
+            },
         }
 
         for row in result:

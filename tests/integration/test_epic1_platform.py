@@ -16,6 +16,7 @@ Test IDs:
 """
 
 import asyncio
+import os
 from typing import List, Set
 from uuid import uuid4
 
@@ -442,7 +443,7 @@ class TestE1INT05BackendSwitching:
 
         backend = GraphBackendFactory.create(
             GraphBackendType.MEMGRAPH,
-            uri="bolt://localhost:7688",
+            uri=os.getenv("TEST_MEMGRAPH_URI", "bolt://localhost:7687"),
         )
 
         await backend.connect()

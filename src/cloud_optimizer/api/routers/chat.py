@@ -7,25 +7,24 @@ import logging
 import os
 from typing import Annotated, Any
 
-from anthropic import AsyncAnthropic
+from anthropic import Anthropic, AsyncAnthropic
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from cloud_optimizer.api.schemas.chat import (
+    ChatMessage,
     ChatRequest,
     ChatResponse,
     HealthCheckResponse,
 )
 from cloud_optimizer.database import AsyncSessionDep
 from cloud_optimizer.middleware.auth import CurrentUser
-from cloud_optimizer.middleware.trial import (
-    RequireQuestionLimit,
-    record_trial_usage,
-)
+from cloud_optimizer.middleware.trial import RequireQuestionLimit, record_trial_usage
 from cloud_optimizer.services.findings import FindingsService
 from ib_platform.answer.service import AnswerService
 from ib_platform.answer.streaming import StreamingHandler
 from ib_platform.kb.service import KnowledgeBaseService, get_kb_service
+from ib_platform.nlu.service import NLUService
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +34,7 @@ router = APIRouter()
 # Service dependencies
 _answer_service: AnswerService | None = None
 _streaming_handler: StreamingHandler | None = None
+_nlu_client: Anthropic | None = None
 
 
 def get_kb() -> KnowledgeBaseService:
@@ -104,6 +104,22 @@ def get_answer_service(
     return _answer_service
 
 
+def get_nlu_service() -> NLUService:
+    """Create an NLU service configured with the Anthropic client."""
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="ANTHROPIC_API_KEY not configured",
+        )
+
+    global _nlu_client
+    if _nlu_client is None:
+        _nlu_client = Anthropic(api_key=api_key)
+
+    return NLUService(anthropic_client=_nlu_client)
+
+
 def get_streaming_handler(
     answer_service: Annotated[AnswerService, Depends(get_answer_service)],
 ) -> StreamingHandler:
@@ -122,6 +138,32 @@ def get_streaming_handler(
         logger.info("StreamingHandler initialized")
 
     return _streaming_handler
+
+
+def _prepare_conversation_history(
+    history: list[ChatMessage],
+) -> list[dict[str, str]]:
+    """Normalize conversation history for downstream services."""
+    if not history:
+        return []
+
+    return [{"role": msg.role, "content": msg.content} for msg in history]
+
+
+def _seed_nlu_context(nlu_service: NLUService, history: list[ChatMessage]) -> None:
+    """Populate the NLU context with prior chat messages."""
+    if not history:
+        return
+
+    for message in history:
+        role = message.role.lower()
+        normalized_role = role if role in {"user", "assistant"} else "user"
+        try:
+            nlu_service.context.add_message(
+                content=message.content, role=normalized_role
+            )
+        except ValueError:
+            nlu_service.context.add_message(content=message.content, role="user")
 
 
 @router.get(  # type: ignore[misc]
@@ -162,6 +204,7 @@ async def health_check(
 async def send_message(
     request: ChatRequest,
     answer_service: Annotated[AnswerService, Depends(get_answer_service)],
+    nlu_service: Annotated[NLUService, Depends(get_nlu_service)],
     user_id: CurrentUser = None,
     db: AsyncSessionDep = None,
     _question_limit: RequireQuestionLimit = None,
@@ -179,15 +222,11 @@ async def send_message(
         HTTPException: If message processing fails
     """
     try:
-        # For now, create a simple NLU result placeholder
-        # This will be replaced with actual NLU service integration
-        nlu_result = _create_simple_nlu_result(request.message)
-
-        # Convert conversation history to dict format
-        conversation_history = [
-            {"role": msg.role, "content": msg.content}
-            for msg in request.conversation_history
-        ]
+        conversation_history = _prepare_conversation_history(
+            request.conversation_history
+        )
+        _seed_nlu_context(nlu_service, request.conversation_history)
+        nlu_result = await nlu_service.process_query(request.message)
 
         # Generate answer
         answer = await answer_service.generate(
@@ -245,6 +284,7 @@ async def send_message(
 async def stream_message(
     request: ChatRequest,
     streaming_handler: Annotated[StreamingHandler, Depends(get_streaming_handler)],
+    nlu_service: Annotated[NLUService, Depends(get_nlu_service)],
     user_id: CurrentUser = None,
     db: AsyncSessionDep = None,
     _question_limit: RequireQuestionLimit = None,
@@ -262,15 +302,11 @@ async def stream_message(
         HTTPException: If streaming setup fails
     """
     try:
-        # For now, create a simple NLU result placeholder
-        # This will be replaced with actual NLU service integration
-        nlu_result = _create_simple_nlu_result(request.message)
-
-        # Convert conversation history to dict format
-        conversation_history = [
-            {"role": msg.role, "content": msg.content}
-            for msg in request.conversation_history
-        ]
+        conversation_history = _prepare_conversation_history(
+            request.conversation_history
+        )
+        _seed_nlu_context(nlu_service, request.conversation_history)
+        nlu_result = await nlu_service.process_query(request.message)
 
         # Create streaming generator
         async def generate() -> Any:
@@ -293,61 +329,11 @@ async def stream_message(
             headers=StreamingHandler.create_streaming_headers(),
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error setting up stream: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to start stream: {str(e)}",
         ) from e
-
-
-def _create_simple_nlu_result(message: str) -> Any:
-    """Create a simple NLU result placeholder.
-
-    This is a temporary implementation until the full NLU pipeline is integrated.
-    It performs basic keyword extraction for AWS services and compliance frameworks.
-
-    Args:
-        message: User's message
-
-    Returns:
-        Simple NLU result object
-    """
-
-    class SimpleEntities:
-        def __init__(self) -> None:
-            self.aws_services: list[str] = []
-            self.compliance_frameworks: list[str] = []
-
-    class SimpleNLUResult:
-        def __init__(self, query: str) -> None:
-            self.query = query
-            self.intent = "general_question"
-            self.entities = SimpleEntities()
-
-            # Simple keyword extraction
-            message_lower = query.lower()
-
-            # Detect AWS services
-            services = [
-                "s3",
-                "ec2",
-                "rds",
-                "lambda",
-                "iam",
-                "vpc",
-                "cloudtrail",
-                "cloudwatch",
-                "kms",
-            ]
-            for service in services:
-                if service in message_lower:
-                    self.entities.aws_services.append(service.upper())
-
-            # Detect compliance frameworks
-            frameworks = ["cis", "nist", "hipaa", "pci", "soc2", "gdpr"]
-            for framework in frameworks:
-                if framework in message_lower:
-                    self.entities.compliance_frameworks.append(framework.upper())
-
-    return SimpleNLUResult(message)

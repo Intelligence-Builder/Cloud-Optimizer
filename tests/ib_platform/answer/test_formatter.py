@@ -1,7 +1,8 @@
 """Tests for response formatter."""
 
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from cloud_optimizer.models.finding import Finding, FindingSeverity, FindingStatus
 from ib_platform.answer.formatter import ResponseFormatter

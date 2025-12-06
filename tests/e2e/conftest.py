@@ -16,12 +16,15 @@ import time
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Generator
 
-import docker
 import httpx
 import pytest
+import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+
+import docker
+from docker.errors import NotFound
 
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -31,7 +34,8 @@ DOCKER_COMPOSE_TEST = PROJECT_ROOT / "docker" / "docker-compose.test.yml"
 # Test configuration
 API_BASE_URL = "http://localhost:18080"
 API_TIMEOUT = 120  # seconds to wait for services to be healthy
-POSTGRES_TEST_URL = "postgresql+asyncpg://test:test@localhost:5434/test_intelligence"
+POSTGRES_TEST_URL = "postgresql+asyncpg://test:test@localhost:5546/test_intelligence"
+LOCALSTACK_HOST_URL = "http://localhost:5566"
 
 
 # ============================================================================
@@ -120,6 +124,25 @@ class DockerComposeManager:
 
         subprocess.run(cmd, capture_output=True, check=False)
 
+    def _get_container(self, service: str):
+        """Locate the Docker container for a compose service."""
+        default_name = f"{self.project_name}-{service}-1"
+        try:
+            return self.client.containers.get(default_name)
+        except NotFound:
+            containers = self.client.containers.list(
+                all=True,
+                filters={
+                    "label": [
+                        f"com.docker.compose.service={service}",
+                        f"com.docker.compose.project={self.project_name}",
+                    ]
+                },
+            )
+            if containers:
+                return containers[0]
+            raise
+
     def get_service_logs(self, service: str, tail: int = 50) -> str:
         """Get logs from a service.
 
@@ -131,8 +154,7 @@ class DockerComposeManager:
             Service logs as string
         """
         try:
-            container_name = f"{self.project_name}-{service}-1"
-            container = self.client.containers.get(container_name)
+            container = self._get_container(service)
             logs = container.logs(tail=tail).decode("utf-8")
             return logs
         except Exception as e:
@@ -148,8 +170,7 @@ class DockerComposeManager:
             True if service is healthy
         """
         try:
-            container_name = f"{self.project_name}-{service}-1"
-            container = self.client.containers.get(container_name)
+            container = self._get_container(service)
             container.reload()
 
             # Check container is running
@@ -258,6 +279,14 @@ async def wait_for_postgres_ready(
 
 
 @pytest.fixture(scope="session")
+def event_loop():
+    """Create a session-scoped event loop for async fixtures."""
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(scope="session")
 def docker_compose_manager() -> Generator[DockerComposeManager, None, None]:
     """Provide docker-compose manager for E2E tests."""
     if not is_docker_available():
@@ -310,8 +339,7 @@ def docker_compose_up(
             logs = docker_compose_manager.get_service_logs(service)
             docker_compose_manager.down()
             pytest.fail(
-                f"Service {service} never became healthy.\n"
-                f"Last logs:\n{logs}"
+                f"Service {service} never became healthy.\n" f"Last logs:\n{logs}"
             )
 
     # Additional check: wait for API to respond
@@ -338,7 +366,7 @@ def docker_compose_up(
     print("✓ Services stopped and cleaned up")
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture
 async def api_client(
     docker_compose_up: DockerComposeManager,
 ) -> AsyncGenerator[httpx.AsyncClient, None]:
@@ -358,7 +386,7 @@ async def api_client(
         yield client
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture
 async def db_session(
     docker_compose_up: DockerComposeManager,
 ) -> AsyncGenerator[AsyncSession, None]:
@@ -408,8 +436,8 @@ async def _truncate_test_tables(session: AsyncSession) -> None:
     """
     # List of tables to truncate (add more as needed)
     tables = [
-        "security_findings",
-        "security_scan_results",
+        "findings",
+        "scan_jobs",
         "aws_accounts",
         "users",
     ]
@@ -450,7 +478,7 @@ def localstack_endpoint(docker_compose_up: DockerComposeManager) -> str:
     Returns:
         LocalStack endpoint URL
     """
-    return "http://localhost:4566"
+    return LOCALSTACK_HOST_URL
 
 
 @pytest.fixture

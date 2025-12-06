@@ -143,9 +143,7 @@ class ConversationContext:
         for msg in recent:
             role_prefix = "User" if msg.is_user_message() else "Assistant"
             content_preview = (
-                msg.content[:100] + "..."
-                if len(msg.content) > 100
-                else msg.content
+                msg.content[:100] + "..." if len(msg.content) > 100 else msg.content
             )
             lines.append(f"{role_prefix}: {content_preview}")
 

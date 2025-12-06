@@ -79,7 +79,9 @@ def build_context_message(
             if entry.framework:
                 parts.append(f"- **{entry.framework}**: {entry.control_name}")
             else:
-                parts.append(f"- **{entry.service or 'General'}**: {entry.control_name}")
+                parts.append(
+                    f"- **{entry.service or 'General'}**: {entry.control_name}"
+                )
             parts.append(f"  {entry.description[:200]}...")
             if entry.guidance:
                 parts.append(f"  Guidance: {entry.guidance[:200]}...\n")

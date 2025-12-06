@@ -137,9 +137,15 @@ class S3Scanner(BaseScanner):
                     region = location_response.get("LocationConstraint") or "us-east-1"
 
                     # Check each rule
-                    results.extend(await self._check_public_access(s3, bucket_name, region))
-                    results.extend(await self._check_encryption(s3, bucket_name, region))
-                    results.extend(await self._check_versioning(s3, bucket_name, region))
+                    results.extend(
+                        await self._check_public_access(s3, bucket_name, region)
+                    )
+                    results.extend(
+                        await self._check_encryption(s3, bucket_name, region)
+                    )
+                    results.extend(
+                        await self._check_versioning(s3, bucket_name, region)
+                    )
                     results.extend(await self._check_logging(s3, bucket_name, region))
                     results.extend(await self._check_lifecycle(s3, bucket_name, region))
 

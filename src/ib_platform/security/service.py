@@ -343,7 +343,9 @@ class SecurityAnalysisService:
 
         return {
             "top_findings_count": len(top_findings),
-            "prioritized_findings": [prioritized[i].to_dict() for i in range(min(top_n, len(prioritized)))],
+            "prioritized_findings": [
+                prioritized[i].to_dict() for i in range(min(top_n, len(prioritized)))
+            ],
             "explanations": explanations,
             "remediation_plans": [p.to_dict() for p in plans],
             "executive_summary": self._generate_executive_summary(

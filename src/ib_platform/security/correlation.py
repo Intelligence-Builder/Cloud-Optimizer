@@ -123,13 +123,13 @@ class FindingCorrelator:
             )
         )
 
-        logger.info(
-            f"Created {len(clusters)} clusters from {len(findings)} findings"
-        )
+        logger.info(f"Created {len(clusters)} clusters from {len(findings)} findings")
 
         return clusters
 
-    def _cluster_by_resource_type(self, findings: List[Finding]) -> List[FindingCluster]:
+    def _cluster_by_resource_type(
+        self, findings: List[Finding]
+    ) -> List[FindingCluster]:
         """Cluster findings by resource type.
 
         Args:
@@ -270,7 +270,9 @@ class FindingCorrelator:
         cluster_id = f"{cluster_type}_{common_attribute}_{len(findings)}"
 
         # Determine title
-        title = self._generate_cluster_title(cluster_type, common_attribute, len(findings))
+        title = self._generate_cluster_title(
+            cluster_type, common_attribute, len(findings)
+        )
 
         # Find highest severity
         severity_order = ["critical", "high", "medium", "low", "info"]
@@ -284,7 +286,9 @@ class FindingCorrelator:
         correlation_score = self._calculate_correlation_score(findings, cluster_type)
 
         # Generate recommended action
-        recommended_action = self._generate_cluster_action(cluster_type, common_attribute, len(findings))
+        recommended_action = self._generate_cluster_action(
+            cluster_type, common_attribute, len(findings)
+        )
 
         # Common attributes
         common_attributes = {

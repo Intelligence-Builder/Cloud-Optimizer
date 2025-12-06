@@ -110,7 +110,9 @@ class ParallelValidator:
             if key in ib_props:
                 ib_value = ib_props[key]
                 if ss_value != ib_value:
-                    severity = self._determine_mismatch_severity(key, ss_value, ib_value)
+                    severity = self._determine_mismatch_severity(
+                        key, ss_value, ib_value
+                    )
                     self.divergences.append(
                         {
                             "type": "property_mismatch",
@@ -173,8 +175,12 @@ class ParallelValidator:
 
         for key in relationship_keys:
             if key in ss_props and key in ib_props:
-                ss_related = set(ss_props[key]) if isinstance(ss_props[key], list) else set()
-                ib_related = set(ib_props[key]) if isinstance(ib_props[key], list) else set()
+                ss_related = (
+                    set(ss_props[key]) if isinstance(ss_props[key], list) else set()
+                )
+                ib_related = (
+                    set(ib_props[key]) if isinstance(ib_props[key], list) else set()
+                )
 
                 if ss_related != ib_related:
                     missing_in_ib = list(ss_related - ib_related)
@@ -271,7 +277,9 @@ class TestParallelValidatorDivergence:
 
         # Verify expected divergence matches
         expected = scenario_missing_entity.expected_divergences[0]
-        actual = next(d for d in missing_divergences if d["entity_id"] == expected["entity_id"])
+        actual = next(
+            d for d in missing_divergences if d["entity_id"] == expected["entity_id"]
+        )
         assert actual["entity_type"] == expected["entity_type"]
         assert actual["severity"] == expected["severity"]
 
@@ -294,7 +302,9 @@ class TestParallelValidatorDivergence:
         divergences = validator.validate()
 
         # Should detect property mismatches
-        mismatch_divergences = [d for d in divergences if d["type"] == "property_mismatch"]
+        mismatch_divergences = [
+            d for d in divergences if d["type"] == "property_mismatch"
+        ]
         assert len(mismatch_divergences) >= 2
 
         # Verify severity mismatch detected
@@ -361,7 +371,9 @@ class TestParallelValidatorDivergence:
         divergences = validator.validate()
 
         # Should detect relationship divergence
-        rel_divergences = [d for d in divergences if d["type"] == "relationship_divergence"]
+        rel_divergences = [
+            d for d in divergences if d["type"] == "relationship_divergence"
+        ]
         assert len(rel_divergences) >= 1
 
         # Verify missing relationship detected
@@ -432,9 +444,8 @@ class TestSmartScaffoldCLIIntegration:
     """
 
     @pytest.mark.skipif(
-        not subprocess.run(
-            ["which", "smart-scaffold"], capture_output=True
-        ).returncode == 0,
+        not subprocess.run(["which", "smart-scaffold"], capture_output=True).returncode
+        == 0,
         reason="smart-scaffold CLI not installed",
     )
     def test_smart_scaffold_ukg_query(self) -> None:
@@ -450,9 +461,8 @@ class TestSmartScaffoldCLIIntegration:
         assert result.returncode in [0, 1]  # Success or graceful failure
 
     @pytest.mark.skipif(
-        not subprocess.run(
-            ["which", "smart-scaffold"], capture_output=True
-        ).returncode == 0,
+        not subprocess.run(["which", "smart-scaffold"], capture_output=True).returncode
+        == 0,
         reason="smart-scaffold CLI not installed",
     )
     def test_smart_scaffold_analyze(self, divergent_data_dir: Path) -> None:
@@ -633,9 +643,7 @@ class TestValidatorEdgeCases:
         divergences = validator.validate()
 
         # Should detect nested property mismatch
-        config_mismatch = [
-            d for d in divergences if d.get("property") == "config"
-        ]
+        config_mismatch = [d for d in divergences if d.get("property") == "config"]
         assert len(config_mismatch) == 1
 
 
