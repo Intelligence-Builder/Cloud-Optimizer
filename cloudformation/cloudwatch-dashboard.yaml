@@ -1,0 +1,518 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudWatch Dashboard for Cloud Optimizer Application Metrics'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name (production, staging, development)
+    Type: String
+    Default: production
+    AllowedValues:
+      - production
+      - staging
+      - development
+
+  MetricNamespace:
+    Description: CloudWatch metrics namespace
+    Type: String
+    Default: CloudOptimizer
+
+  DashboardName:
+    Description: Name for the CloudWatch dashboard
+    Type: String
+    Default: CloudOptimizer-Dashboard
+
+  AlarmEmailEndpoint:
+    Description: Email address for alarm notifications
+    Type: String
+    Default: ''
+
+  EnableAlarms:
+    Description: Enable CloudWatch alarms
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+Conditions:
+  CreateAlarms: !Equals [!Ref EnableAlarms, 'true']
+  HasAlarmEmail: !Not [!Equals [!Ref AlarmEmailEndpoint, '']]
+
+Resources:
+  # SNS Topic for Alarm Notifications
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    Condition: CreateAlarms
+    Properties:
+      TopicName: !Sub ${EnvironmentName}-cloud-optimizer-alarms
+      DisplayName: Cloud Optimizer Alerts
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  AlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlarmEmail
+    Properties:
+      TopicArn: !Ref AlarmNotificationTopic
+      Protocol: email
+      Endpoint: !Ref AlarmEmailEndpoint
+
+  # Main Application Dashboard
+  ApplicationDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub ${DashboardName}-${EnvironmentName}
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "# Cloud Optimizer - ${EnvironmentName} Environment\n**Real-time application metrics and SLI/SLO tracking**"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 1,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Request Rate",
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+                  ["${MetricNamespace}", "RequestCount", "Environment", "${EnvironmentName}", "Service", "cloud-optimizer", {"stat": "Sum", "period": 60}]
+                ],
+                "region": "${AWS::Region}",
+                "period": 60,
+                "annotations": {
+                  "horizontal": [
+                    {"label": "Target: 1000 req/min", "value": 1000}
+                  ]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8,
+              "y": 1,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Request Latency (P50, P95, P99)",
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+                  ["${MetricNamespace}", "RequestLatency", "Environment", "${EnvironmentName}", "Service", "cloud-optimizer", {"stat": "p50", "period": 60, "label": "P50"}],
+                  ["...", {"stat": "p95", "period": 60, "label": "P95"}],
+                  ["...", {"stat": "p99", "period": 60, "label": "P99"}]
+                ],
+                "region": "${AWS::Region}",
+                "yAxis": {"left": {"label": "Milliseconds"}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16,
+              "y": 1,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Error Rate",
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+                  ["${MetricNamespace}", "RequestErrors", "Environment", "${EnvironmentName}", "Service", "cloud-optimizer", {"stat": "Sum", "period": 60}]
+                ],
+                "region": "${AWS::Region}",
+                "annotations": {
+                  "horizontal": [
+                    {"label": "Alert: > 10 errors/min", "value": 10, "color": "#ff0000"}
+                  ]
+                }
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 7,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## Scanner Performance"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 8,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Scan Duration by Type",
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+                  ["${MetricNamespace}", "ScanDuration", "ScannerType", "iam", "Environment", "${EnvironmentName}", {"stat": "Average", "period": 300, "label": "IAM"}],
+                  ["...", "ScannerType", "s3", "...", {"stat": "Average", "period": 300, "label": "S3"}],
+                  ["...", "ScannerType", "lambda", "...", {"stat": "Average", "period": 300, "label": "Lambda"}],
+                  ["...", "ScannerType", "ec2", "...", {"stat": "Average", "period": 300, "label": "EC2"}]
+                ],
+                "region": "${AWS::Region}",
+                "yAxis": {"left": {"label": "Milliseconds"}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8,
+              "y": 8,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Resources Scanned",
+                "view": "timeSeries",
+                "stacked": true,
+                "metrics": [
+                  ["${MetricNamespace}", "ResourcesScanned", "ScannerType", "iam", "Environment", "${EnvironmentName}", {"stat": "Sum", "period": 300}],
+                  ["...", "ScannerType", "s3", "..."],
+                  ["...", "ScannerType", "lambda", "..."],
+                  ["...", "ScannerType", "ec2", "..."]
+                ],
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16,
+              "y": 8,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Scan Errors",
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+                  ["${MetricNamespace}", "ScanErrors", "Environment", "${EnvironmentName}", "Service", "cloud-optimizer", {"stat": "Sum", "period": 300}]
+                ],
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 14,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## Security Findings"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 15,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Findings by Severity",
+                "view": "timeSeries",
+                "stacked": true,
+                "metrics": [
+                  ["${MetricNamespace}", "CriticalFindings", "Environment", "${EnvironmentName}", {"stat": "Sum", "period": 300, "color": "#d13212"}],
+                  ["${MetricNamespace}", "HighFindings", "...", {"stat": "Sum", "period": 300, "color": "#ff9900"}],
+                  ["${MetricNamespace}", "MediumFindings", "...", {"stat": "Sum", "period": 300, "color": "#f9e076"}],
+                  ["${MetricNamespace}", "LowFindings", "...", {"stat": "Sum", "period": 300, "color": "#2ca02c"}]
+                ],
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 15,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Total Findings",
+                "view": "singleValue",
+                "metrics": [
+                  ["${MetricNamespace}", "FindingsCount", "Environment", "${EnvironmentName}", "Service", "cloud-optimizer", {"stat": "Sum", "period": 86400, "label": "Last 24 Hours"}]
+                ],
+                "region": "${AWS::Region}",
+                "setPeriodToTimeRange": true
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 21,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## Database & Infrastructure"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 22,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Database Latency",
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+                  ["${MetricNamespace}", "DatabaseLatency", "Operation", "query", "Environment", "${EnvironmentName}", {"stat": "Average", "period": 60}],
+                  ["...", "Operation", "insert", "..."],
+                  ["...", "Operation", "update", "..."]
+                ],
+                "region": "${AWS::Region}",
+                "yAxis": {"left": {"label": "Milliseconds"}}
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8,
+              "y": 22,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Database Operations",
+                "view": "timeSeries",
+                "stacked": true,
+                "metrics": [
+                  ["${MetricNamespace}", "DatabaseOperations", "Operation", "query", "Environment", "${EnvironmentName}", {"stat": "Sum", "period": 60}],
+                  ["...", "Operation", "insert", "..."],
+                  ["...", "Operation", "update", "..."],
+                  ["...", "Operation", "delete", "..."]
+                ],
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16,
+              "y": 22,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Database Errors",
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+                  ["${MetricNamespace}", "DatabaseErrors", "Environment", "${EnvironmentName}", "Service", "cloud-optimizer", {"stat": "Sum", "period": 60}]
+                ],
+                "region": "${AWS::Region}"
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 28,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## SLI/SLO Metrics"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 29,
+              "width": 8,
+              "height": 4,
+              "properties": {
+                "title": "Availability (SLO: 99.9%)",
+                "view": "gauge",
+                "metrics": [
+                  ["${MetricNamespace}", "Availability", "Environment", "${EnvironmentName}", {"stat": "Average", "period": 3600}]
+                ],
+                "region": "${AWS::Region}",
+                "yAxis": {"left": {"min": 99, "max": 100}},
+                "annotations": {
+                  "horizontal": [
+                    {"label": "SLO", "value": 99.9, "color": "#2ca02c"}
+                  ]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8,
+              "y": 29,
+              "width": 8,
+              "height": 4,
+              "properties": {
+                "title": "Error Rate (SLO: < 0.1%)",
+                "view": "gauge",
+                "metrics": [
+                  ["${MetricNamespace}", "ErrorRate", "Environment", "${EnvironmentName}", {"stat": "Average", "period": 3600}]
+                ],
+                "region": "${AWS::Region}",
+                "yAxis": {"left": {"min": 0, "max": 1}},
+                "annotations": {
+                  "horizontal": [
+                    {"label": "SLO", "value": 0.1, "color": "#d13212"}
+                  ]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16,
+              "y": 29,
+              "width": 8,
+              "height": 4,
+              "properties": {
+                "title": "P99 Latency (SLO: < 500ms)",
+                "view": "gauge",
+                "metrics": [
+                  ["${MetricNamespace}", "P99Latency", "Environment", "${EnvironmentName}", {"stat": "Average", "period": 3600}]
+                ],
+                "region": "${AWS::Region}",
+                "yAxis": {"left": {"min": 0, "max": 1000}},
+                "annotations": {
+                  "horizontal": [
+                    {"label": "SLO", "value": 500, "color": "#ff9900"}
+                  ]
+                }
+              }
+            }
+          ]
+        }
+
+  # Critical Alarms
+  HighErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CreateAlarms
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-CloudOptimizer-HighErrorRate
+      AlarmDescription: Error rate exceeds 1% for 5 minutes
+      MetricName: RequestErrors
+      Namespace: !Ref MetricNamespace
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 50
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Environment
+          Value: !Ref EnvironmentName
+        - Name: Service
+          Value: cloud-optimizer
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+      OKActions:
+        - !Ref AlarmNotificationTopic
+      TreatMissingData: notBreaching
+
+  HighLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CreateAlarms
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-CloudOptimizer-HighLatency
+      AlarmDescription: P99 latency exceeds 500ms for 5 minutes
+      MetricName: RequestLatency
+      Namespace: !Ref MetricNamespace
+      ExtendedStatistic: p99
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 500
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Environment
+          Value: !Ref EnvironmentName
+        - Name: Service
+          Value: cloud-optimizer
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+      TreatMissingData: notBreaching
+
+  CriticalFindingsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CreateAlarms
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-CloudOptimizer-CriticalFindings
+      AlarmDescription: Critical security findings detected
+      MetricName: CriticalFindings
+      Namespace: !Ref MetricNamespace
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Environment
+          Value: !Ref EnvironmentName
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+      TreatMissingData: notBreaching
+
+  ScanFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CreateAlarms
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-CloudOptimizer-ScanFailures
+      AlarmDescription: Scanner errors detected
+      MetricName: ScanErrors
+      Namespace: !Ref MetricNamespace
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Environment
+          Value: !Ref EnvironmentName
+        - Name: Service
+          Value: cloud-optimizer
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+      TreatMissingData: notBreaching
+
+  DatabaseLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CreateAlarms
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-CloudOptimizer-DatabaseLatency
+      AlarmDescription: Database latency exceeds 100ms average
+      MetricName: DatabaseLatency
+      Namespace: !Ref MetricNamespace
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 100
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Environment
+          Value: !Ref EnvironmentName
+      AlarmActions:
+        - !Ref AlarmNotificationTopic
+      TreatMissingData: notBreaching
+
+Outputs:
+  DashboardURL:
+    Description: URL to the CloudWatch Dashboard
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${DashboardName}-${EnvironmentName}
+    Export:
+      Name: !Sub ${EnvironmentName}-CloudOptimizer-Dashboard-URL
+
+  AlarmTopicArn:
+    Description: ARN of the SNS topic for alarms
+    Condition: CreateAlarms
+    Value: !Ref AlarmNotificationTopic
+    Export:
+      Name: !Sub ${EnvironmentName}-CloudOptimizer-Alarm-Topic
+
+  MetricNamespace:
+    Description: CloudWatch metrics namespace
+    Value: !Ref MetricNamespace
+    Export:
+      Name: !Sub ${EnvironmentName}-CloudOptimizer-Metric-Namespace

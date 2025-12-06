@@ -1,0 +1,531 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Cloud Optimizer Alerting Integration Stack
+  Configures SNS topics, Lambda handler, and integrations with PagerDuty/OpsGenie
+  for CloudWatch alarm routing.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Deployment environment
+
+  AlertingPlatform:
+    Type: String
+    Default: pagerduty
+    AllowedValues:
+      - pagerduty
+      - opsgenie
+    Description: Alerting platform to integrate with
+
+  PagerDutyRoutingKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: PagerDuty Events API v2 routing key (required if using PagerDuty)
+
+  OpsGenieApiKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: OpsGenie API key (required if using OpsGenie)
+
+  OpsGenieTeamId:
+    Type: String
+    Default: ''
+    Description: OpsGenie team ID for alert routing
+
+  SlackWebhookUrl:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Optional Slack webhook URL for notifications
+
+  EnableAutoResolve:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Auto-resolve alerts when CloudWatch alarm clears
+
+Conditions:
+  IsPagerDuty: !Equals [!Ref AlertingPlatform, 'pagerduty']
+  IsOpsGenie: !Equals [!Ref AlertingPlatform, 'opsgenie']
+  HasSlackWebhook: !Not [!Equals [!Ref SlackWebhookUrl, '']]
+  IsProduction: !Equals [!Ref Environment, 'production']
+
+Resources:
+  # SNS Topics for different severity levels
+  CriticalAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'cloud-optimizer-${Environment}-critical-alerts'
+      DisplayName: 'Critical Alerts'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Severity
+          Value: critical
+        - Key: Service
+          Value: cloud-optimizer
+
+  HighAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'cloud-optimizer-${Environment}-high-alerts'
+      DisplayName: 'High Severity Alerts'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Severity
+          Value: high
+        - Key: Service
+          Value: cloud-optimizer
+
+  MediumAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'cloud-optimizer-${Environment}-medium-alerts'
+      DisplayName: 'Medium Severity Alerts'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Severity
+          Value: medium
+        - Key: Service
+          Value: cloud-optimizer
+
+  LowAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'cloud-optimizer-${Environment}-low-alerts'
+      DisplayName: 'Low Severity Alerts'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Severity
+          Value: low
+        - Key: Service
+          Value: cloud-optimizer
+
+  # General alerts topic for all CloudWatch alarms
+  CloudWatchAlarmsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'cloud-optimizer-${Environment}-cloudwatch-alarms'
+      DisplayName: 'CloudWatch Alarms'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: cloud-optimizer
+
+  # SNS Topic Policy allowing CloudWatch to publish
+  CloudWatchAlarmsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref CloudWatchAlarmsTopic
+        - !Ref CriticalAlertsTopic
+        - !Ref HighAlertsTopic
+        - !Ref MediumAlertsTopic
+        - !Ref LowAlertsTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudWatchAlarms
+            Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action: 'sns:Publish'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'aws:SourceAccount': !Ref 'AWS::AccountId'
+
+  # Lambda execution role
+  AlertHandlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'cloud-optimizer-${Environment}-alert-handler-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: AlertHandlerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:cloud-optimizer/${Environment}/*'
+              - Effect: Allow
+                Action:
+                  - 'sns:Publish'
+                Resource:
+                  - !Ref CloudWatchAlarmsTopic
+                  - !Ref CriticalAlertsTopic
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: cloud-optimizer
+
+  # Lambda function for processing alerts
+  AlertHandlerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'cloud-optimizer-${Environment}-alert-handler'
+      Description: Processes CloudWatch alarms and forwards to PagerDuty/OpsGenie
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt AlertHandlerRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          ALERTING_PLATFORM: !Ref AlertingPlatform
+          PAGERDUTY_ROUTING_KEY: !Ref PagerDutyRoutingKey
+          OPSGENIE_API_KEY: !Ref OpsGenieApiKey
+          OPSGENIE_TEAM_ID: !Ref OpsGenieTeamId
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          AUTO_RESOLVE: !Ref EnableAutoResolve
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import urllib.request
+          import hashlib
+          from datetime import datetime
+
+          def handler(event, context):
+              """Process SNS message and forward to alerting platform."""
+              print(f"Received event: {json.dumps(event)}")
+
+              platform = os.environ.get('ALERTING_PLATFORM', 'pagerduty')
+              environment = os.environ.get('ENVIRONMENT', 'production')
+              auto_resolve = os.environ.get('AUTO_RESOLVE', 'true') == 'true'
+
+              for record in event.get('Records', []):
+                  sns_message = record.get('Sns', {})
+                  message_body = sns_message.get('Message', '{}')
+
+                  try:
+                      alarm = json.loads(message_body)
+                  except json.JSONDecodeError:
+                      print(f"Failed to parse message: {message_body}")
+                      continue
+
+                  # Extract alarm details
+                  alarm_name = alarm.get('AlarmName', 'Unknown')
+                  new_state = alarm.get('NewStateValue', 'UNKNOWN')
+                  old_state = alarm.get('OldStateValue', 'UNKNOWN')
+                  reason = alarm.get('NewStateReason', '')
+                  region = alarm.get('Region', '')
+                  account_id = alarm.get('AWSAccountId', '')
+
+                  # Generate dedup key
+                  dedup_key = hashlib.sha256(
+                      f"{account_id}:{region}:{alarm_name}".encode()
+                  ).hexdigest()[:32]
+
+                  print(f"Processing alarm: {alarm_name}, state: {old_state} -> {new_state}")
+
+                  # Determine action based on state
+                  if new_state == 'ALARM':
+                      action = 'trigger'
+                  elif new_state == 'OK' and auto_resolve:
+                      action = 'resolve'
+                  else:
+                      print(f"No action for state: {new_state}")
+                      continue
+
+                  # Send to appropriate platform
+                  if platform == 'pagerduty':
+                      send_pagerduty(alarm, action, dedup_key, environment)
+                  else:
+                      send_opsgenie(alarm, action, dedup_key, environment)
+
+                  # Send to Slack if configured
+                  slack_url = os.environ.get('SLACK_WEBHOOK_URL')
+                  if slack_url:
+                      send_slack(alarm, new_state, slack_url)
+
+              return {'statusCode': 200, 'body': 'Processed'}
+
+          def send_pagerduty(alarm, action, dedup_key, environment):
+              """Send event to PagerDuty Events API v2."""
+              routing_key = os.environ.get('PAGERDUTY_ROUTING_KEY')
+              if not routing_key:
+                  print("PagerDuty routing key not configured")
+                  return
+
+              # Determine severity from alarm name
+              alarm_name = alarm.get('AlarmName', '').lower()
+              severity = 'warning'
+              if 'critical' in alarm_name or '-p1-' in alarm_name:
+                  severity = 'critical'
+              elif 'error' in alarm_name or '-p2-' in alarm_name:
+                  severity = 'error'
+              elif 'info' in alarm_name:
+                  severity = 'info'
+
+              payload = {
+                  'routing_key': routing_key,
+                  'event_action': action,
+                  'dedup_key': dedup_key,
+              }
+
+              if action == 'trigger':
+                  payload['payload'] = {
+                      'summary': f"[{alarm.get('NewStateValue')}] {alarm.get('AlarmName')}",
+                      'severity': severity,
+                      'source': 'cloudwatch',
+                      'custom_details': {
+                          'description': alarm.get('AlarmDescription', ''),
+                          'reason': alarm.get('NewStateReason', ''),
+                          'region': alarm.get('Region', ''),
+                          'account_id': alarm.get('AWSAccountId', ''),
+                          'environment': environment,
+                      }
+                  }
+                  # Add CloudWatch console link
+                  region = alarm.get('Region', 'us-east-1')
+                  payload['links'] = [{
+                      'href': f"https://{region}.console.aws.amazon.com/cloudwatch/home?region={region}#alarmsV2:alarm/{alarm.get('AlarmName')}",
+                      'text': 'View in CloudWatch'
+                  }]
+
+              url = 'https://events.pagerduty.com/v2/enqueue'
+              send_request(url, payload)
+
+          def send_opsgenie(alarm, action, dedup_key, environment):
+              """Send alert to OpsGenie."""
+              api_key = os.environ.get('OPSGENIE_API_KEY')
+              if not api_key:
+                  print("OpsGenie API key not configured")
+                  return
+
+              headers = {
+                  'Content-Type': 'application/json',
+                  'Authorization': f'GenieKey {api_key}'
+              }
+
+              # Determine priority
+              alarm_name = alarm.get('AlarmName', '').lower()
+              priority = 'P3'
+              if 'critical' in alarm_name or '-p1-' in alarm_name:
+                  priority = 'P1'
+              elif 'error' in alarm_name or '-p2-' in alarm_name:
+                  priority = 'P2'
+              elif 'info' in alarm_name:
+                  priority = 'P5'
+
+              if action == 'trigger':
+                  url = 'https://api.opsgenie.com/v2/alerts'
+                  payload = {
+                      'message': f"[{alarm.get('NewStateValue')}] {alarm.get('AlarmName')}"[:130],
+                      'alias': dedup_key,
+                      'description': f"{alarm.get('AlarmDescription', '')}\n\nReason: {alarm.get('NewStateReason', '')}",
+                      'priority': priority,
+                      'source': 'cloudwatch',
+                      'tags': [environment, alarm.get('Region', ''), 'cloudwatch'],
+                      'details': {
+                          'region': alarm.get('Region', ''),
+                          'account_id': alarm.get('AWSAccountId', ''),
+                          'environment': environment,
+                      }
+                  }
+                  team_id = os.environ.get('OPSGENIE_TEAM_ID')
+                  if team_id:
+                      payload['responders'] = [{'type': 'team', 'id': team_id}]
+              else:
+                  url = f'https://api.opsgenie.com/v2/alerts/{dedup_key}/close?identifierType=alias'
+                  payload = {'note': f"Alarm cleared: {alarm.get('NewStateReason', '')}"}
+
+              send_request(url, payload, headers)
+
+          def send_slack(alarm, state, webhook_url):
+              """Send notification to Slack."""
+              color = '#ff0000' if state == 'ALARM' else '#36a64f'
+              emoji = ':rotating_light:' if state == 'ALARM' else ':white_check_mark:'
+
+              payload = {
+                  'attachments': [{
+                      'color': color,
+                      'title': f"{emoji} CloudWatch Alarm: {alarm.get('AlarmName')}",
+                      'text': alarm.get('NewStateReason', ''),
+                      'fields': [
+                          {'title': 'State', 'value': state, 'short': True},
+                          {'title': 'Region', 'value': alarm.get('Region', ''), 'short': True},
+                      ],
+                      'footer': 'Cloud Optimizer',
+                      'ts': int(datetime.now().timestamp())
+                  }]
+              }
+              send_request(webhook_url, payload)
+
+          def send_request(url, payload, headers=None):
+              """Send HTTP request."""
+              if headers is None:
+                  headers = {'Content-Type': 'application/json'}
+
+              data = json.dumps(payload).encode('utf-8')
+              req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+
+              try:
+                  with urllib.request.urlopen(req, timeout=10) as response:
+                      print(f"Request to {url}: {response.status}")
+              except Exception as e:
+                  print(f"Request failed: {e}")
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: cloud-optimizer
+
+  # Lambda permission for SNS to invoke
+  AlertHandlerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AlertHandlerFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref CloudWatchAlarmsTopic
+
+  CriticalAlertsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AlertHandlerFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref CriticalAlertsTopic
+
+  HighAlertsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AlertHandlerFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref HighAlertsTopic
+
+  # SNS Subscriptions - Lambda
+  CloudWatchAlarmsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref CloudWatchAlarmsTopic
+      Protocol: lambda
+      Endpoint: !GetAtt AlertHandlerFunction.Arn
+
+  CriticalAlertsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref CriticalAlertsTopic
+      Protocol: lambda
+      Endpoint: !GetAtt AlertHandlerFunction.Arn
+
+  HighAlertsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref HighAlertsTopic
+      Protocol: lambda
+      Endpoint: !GetAtt AlertHandlerFunction.Arn
+
+  # CloudWatch Alarms Log Group for the Lambda
+  AlertHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AlertHandlerFunction}'
+      RetentionInDays: !If [IsProduction, 30, 7]
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: cloud-optimizer
+
+  # Dead Letter Queue for failed messages
+  AlertDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'cloud-optimizer-${Environment}-alert-dlq'
+      MessageRetentionPeriod: 1209600  # 14 days
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: cloud-optimizer
+
+  # Alarm for DLQ messages (alerts about alerting failures)
+  DLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'cloud-optimizer-${Environment}-alert-dlq-messages'
+      AlarmDescription: 'Alert messages failed processing'
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt AlertDLQ.QueueName
+      TreatMissingData: notBreaching
+
+Outputs:
+  CloudWatchAlarmsTopicArn:
+    Description: ARN of the CloudWatch Alarms SNS topic
+    Value: !Ref CloudWatchAlarmsTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudWatchAlarmsTopic'
+
+  CriticalAlertsTopicArn:
+    Description: ARN of the Critical Alerts SNS topic
+    Value: !Ref CriticalAlertsTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-CriticalAlertsTopic'
+
+  HighAlertsTopicArn:
+    Description: ARN of the High Alerts SNS topic
+    Value: !Ref HighAlertsTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-HighAlertsTopic'
+
+  MediumAlertsTopicArn:
+    Description: ARN of the Medium Alerts SNS topic
+    Value: !Ref MediumAlertsTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-MediumAlertsTopic'
+
+  LowAlertsTopicArn:
+    Description: ARN of the Low Alerts SNS topic
+    Value: !Ref LowAlertsTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-LowAlertsTopic'
+
+  AlertHandlerFunctionArn:
+    Description: ARN of the alert handler Lambda function
+    Value: !GetAtt AlertHandlerFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AlertHandlerFunction'
+
+  AlertDLQArn:
+    Description: ARN of the Dead Letter Queue for failed alerts
+    Value: !GetAtt AlertDLQ.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AlertDLQ'

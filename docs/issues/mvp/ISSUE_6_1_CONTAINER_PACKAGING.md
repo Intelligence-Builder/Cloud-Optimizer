@@ -117,7 +117,7 @@ docker/
 ├── docker-compose.yml           # Local development stack
 ├── docker-compose.test.yml      # Integration test stack
 ├── .dockerignore
-└── entrypoint.sh                # Shell wrapper for entrypoint
+└── README.md                    # Container documentation
 
 helm/cloud-optimizer/
 ├── Chart.yaml

@@ -231,7 +231,7 @@ aws cloudformation delete-stack --stack-name cloud-optimizer-test
 
 ---
 
-**Validation Date**: 2025-12-02  
-**Validated By**: CloudFormation Template Validator  
-**Region Tested**: us-east-1  
+**Validation Date**: 2025-12-02
+**Validated By**: CloudFormation Template Validator
+**Region Tested**: us-east-1
 **Status**: ALL CHECKS PASSED ✓

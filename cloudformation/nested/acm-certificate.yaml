@@ -1,0 +1,334 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  ACM Certificate for Cloud Optimizer
+  Issue #160: SSL/TLS certificate setup (ACM)
+  Provisions and manages SSL/TLS certificates with DNS validation
+
+Parameters:
+  DomainName:
+    Description: Primary domain name for the certificate (e.g., api.cloudoptimizer.example.com)
+    Type: String
+    AllowedPattern: ^[a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]$
+    ConstraintDescription: Must be a valid domain name
+
+  AdditionalDomainNames:
+    Description: Comma-separated list of additional domain names (SANs)
+    Type: CommaDelimitedList
+    Default: ''
+
+  HostedZoneId:
+    Description: Route 53 Hosted Zone ID for DNS validation (leave empty for manual validation)
+    Type: String
+    Default: ''
+
+  EnvironmentName:
+    Description: Environment name to prefix resources
+    Type: String
+    Default: cloud-optimizer
+
+  EnableAutoRenewal:
+    Description: Enable automatic renewal monitoring
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  CertificateExpirationWarningDays:
+    Description: Days before expiration to trigger warning alarm
+    Type: Number
+    Default: 30
+    MinValue: 7
+    MaxValue: 90
+
+  AlertTopicArn:
+    Description: SNS Topic ARN for certificate expiration alerts (optional)
+    Type: String
+    Default: ''
+
+Conditions:
+  HasHostedZone: !Not [!Equals [!Ref HostedZoneId, '']]
+  HasAdditionalDomains: !Not [!Equals [!Select [0, !Ref AdditionalDomainNames], '']]
+  HasAlertTopic: !Not [!Equals [!Ref AlertTopicArn, '']]
+  EnableAutoRenewalMonitoring: !Equals [!Ref EnableAutoRenewal, 'true']
+
+Resources:
+  # SSL/TLS Certificate
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      SubjectAlternativeNames: !If
+        - HasAdditionalDomains
+        - !Ref AdditionalDomainNames
+        - !Ref 'AWS::NoValue'
+      ValidationMethod: !If [HasHostedZone, 'DNS', 'EMAIL']
+      DomainValidationOptions: !If
+        - HasHostedZone
+        - - DomainName: !Ref DomainName
+            HostedZoneId: !Ref HostedZoneId
+        - !Ref 'AWS::NoValue'
+      KeyAlgorithm: RSA_2048
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-certificate
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: cloud-optimizer
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # CloudWatch Alarm for Certificate Expiration (days remaining)
+  CertificateExpirationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: EnableAutoRenewalMonitoring
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-certificate-expiration-warning
+      AlarmDescription: !Sub 'SSL/TLS certificate for ${DomainName} will expire within ${CertificateExpirationWarningDays} days'
+      Namespace: AWS/CertificateManager
+      MetricName: DaysToExpiry
+      Dimensions:
+        - Name: CertificateArn
+          Value: !Ref Certificate
+      Statistic: Minimum
+      Period: 86400  # 1 day
+      EvaluationPeriods: 1
+      Threshold: !Ref CertificateExpirationWarningDays
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - HasAlertTopic
+        - - !Ref AlertTopicArn
+        - !Ref 'AWS::NoValue'
+      OKActions: !If
+        - HasAlertTopic
+        - - !Ref AlertTopicArn
+        - !Ref 'AWS::NoValue'
+
+  # Critical expiration alarm (7 days)
+  CertificateExpirationCriticalAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: EnableAutoRenewalMonitoring
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-certificate-expiration-critical
+      AlarmDescription: !Sub 'CRITICAL: SSL/TLS certificate for ${DomainName} will expire within 7 days!'
+      Namespace: AWS/CertificateManager
+      MetricName: DaysToExpiry
+      Dimensions:
+        - Name: CertificateArn
+          Value: !Ref Certificate
+      Statistic: Minimum
+      Period: 86400  # 1 day
+      EvaluationPeriods: 1
+      Threshold: 7
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - HasAlertTopic
+        - - !Ref AlertTopicArn
+        - !Ref 'AWS::NoValue'
+
+  # Lambda for certificate status checks (optional enhancement)
+  CertificateMonitorRole:
+    Type: AWS::IAM::Role
+    Condition: EnableAutoRenewalMonitoring
+    Properties:
+      RoleName: !Sub ${EnvironmentName}-cert-monitor-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: CertificateMonitorPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'acm:DescribeCertificate'
+                  - 'acm:GetCertificate'
+                Resource: !Ref Certificate
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:PutMetricData'
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'cloudwatch:namespace': 'CloudOptimizer/SSL'
+
+  CertificateMonitorFunction:
+    Type: AWS::Lambda::Function
+    Condition: EnableAutoRenewalMonitoring
+    Properties:
+      FunctionName: !Sub ${EnvironmentName}-certificate-monitor
+      Description: Monitors SSL/TLS certificate status and renewal
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt CertificateMonitorRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          CERTIFICATE_ARN: !Ref Certificate
+          DOMAIN_NAME: !Ref DomainName
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import json
+          from datetime import datetime, timezone
+
+          def handler(event, context):
+              """Check certificate status and publish custom metrics."""
+              acm = boto3.client('acm')
+              cloudwatch = boto3.client('cloudwatch')
+
+              cert_arn = os.environ['CERTIFICATE_ARN']
+              domain = os.environ['DOMAIN_NAME']
+
+              try:
+                  response = acm.describe_certificate(CertificateArn=cert_arn)
+                  cert = response['Certificate']
+
+                  status = cert['Status']
+                  renewal_status = cert.get('RenewalSummary', {}).get('RenewalStatus', 'N/A')
+                  not_after = cert.get('NotAfter')
+
+                  # Calculate days to expiry
+                  days_to_expiry = -1
+                  if not_after:
+                      now = datetime.now(timezone.utc)
+                      delta = not_after - now
+                      days_to_expiry = delta.days
+
+                  # Publish custom metrics
+                  metrics = [
+                      {
+                          'MetricName': 'CertificateStatus',
+                          'Dimensions': [
+                              {'Name': 'Domain', 'Value': domain},
+                              {'Name': 'CertificateArn', 'Value': cert_arn[-8:]},
+                          ],
+                          'Value': 1 if status == 'ISSUED' else 0,
+                          'Unit': 'Count'
+                      },
+                      {
+                          'MetricName': 'DaysToExpiry',
+                          'Dimensions': [
+                              {'Name': 'Domain', 'Value': domain},
+                          ],
+                          'Value': days_to_expiry,
+                          'Unit': 'Count'
+                      },
+                      {
+                          'MetricName': 'RenewalPending',
+                          'Dimensions': [
+                              {'Name': 'Domain', 'Value': domain},
+                          ],
+                          'Value': 1 if renewal_status == 'PENDING_AUTO_RENEWAL' else 0,
+                          'Unit': 'Count'
+                      }
+                  ]
+
+                  cloudwatch.put_metric_data(
+                      Namespace='CloudOptimizer/SSL',
+                      MetricData=metrics
+                  )
+
+                  print(f"Certificate {domain}: status={status}, "
+                        f"renewal={renewal_status}, days_to_expiry={days_to_expiry}")
+
+                  return {
+                      'statusCode': 200,
+                      'body': json.dumps({
+                          'domain': domain,
+                          'status': status,
+                          'renewal_status': renewal_status,
+                          'days_to_expiry': days_to_expiry
+                      })
+                  }
+
+              except Exception as e:
+                  print(f"Error checking certificate: {e}")
+                  return {
+                      'statusCode': 500,
+                      'body': json.dumps({'error': str(e)})
+                  }
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: cloud-optimizer
+
+  # EventBridge rule to trigger certificate monitoring daily
+  CertificateMonitorSchedule:
+    Type: AWS::Events::Rule
+    Condition: EnableAutoRenewalMonitoring
+    Properties:
+      Name: !Sub ${EnvironmentName}-cert-monitor-schedule
+      Description: Daily certificate status check
+      ScheduleExpression: 'rate(1 day)'
+      State: ENABLED
+      Targets:
+        - Id: CertificateMonitorTarget
+          Arn: !GetAtt CertificateMonitorFunction.Arn
+
+  CertificateMonitorPermission:
+    Type: AWS::Lambda::Permission
+    Condition: EnableAutoRenewalMonitoring
+    Properties:
+      FunctionName: !Ref CertificateMonitorFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt CertificateMonitorSchedule.Arn
+
+  # Log group for monitoring Lambda
+  CertificateMonitorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: EnableAutoRenewalMonitoring
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${CertificateMonitorFunction}'
+      RetentionInDays: 30
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: cloud-optimizer
+
+Outputs:
+  CertificateArn:
+    Description: ARN of the SSL/TLS certificate
+    Value: !Ref Certificate
+    Export:
+      Name: !Sub ${EnvironmentName}-certificate-arn
+
+  CertificateDomainName:
+    Description: Primary domain name on the certificate
+    Value: !Ref DomainName
+    Export:
+      Name: !Sub ${EnvironmentName}-certificate-domain
+
+  CertificateStatus:
+    Description: Use this ARN with the ALB HTTPS listener
+    Value: !Sub 'Certificate ${Certificate} created for ${DomainName}'
+
+  ValidationMethod:
+    Description: Certificate validation method used
+    Value: !If [HasHostedZone, 'DNS (automatic)', 'EMAIL (manual validation required)']
+
+  MonitoringEnabled:
+    Description: Whether certificate monitoring is enabled
+    Value: !Ref EnableAutoRenewal
+
+  ExpirationAlarmArn:
+    Description: CloudWatch Alarm ARN for expiration warning
+    Condition: EnableAutoRenewalMonitoring
+    Value: !GetAtt CertificateExpirationAlarm.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-certificate-expiration-alarm

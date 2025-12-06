@@ -23,7 +23,7 @@ services:
       POSTGRES_DB: test_intelligence
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     ports:
-      - "5434:5432"  # Use 5434 to avoid conflict with local postgres
+      - "5546:5432"  # Use dedicated port to avoid conflicts with dev/test stacks
     volumes:
       - postgres_e2e_data:/var/lib/postgresql/data
       - ../docker/init-test-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -41,19 +41,19 @@ services:
     image: localstack/localstack:latest
     container_name: co-e2e-localstack
     ports:
-      - "4566:4566"  # LocalStack edge port
-      - "4571:4571"  # Legacy ports (if needed)
+      - "5566:4566"  # Dedicated edge port for E2E to avoid conflicts
+      - "5571:4571"  # Legacy ports (if needed)
     environment:
       SERVICES: ec2,iam,s3,cloudwatch,rds,sts,kms,cloudtrail
       DEBUG: 0
-      DATA_DIR: /tmp/localstack/data
+      DATA_DIR: /var/lib/localstack/data
       LAMBDA_EXECUTOR: local
       DOCKER_HOST: unix:///var/run/docker.sock
       AWS_DEFAULT_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
     volumes:
-      - localstack_e2e_data:/tmp/localstack
+      - localstack_e2e_data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
@@ -99,9 +99,9 @@ services:
       ENCRYPTION_KEY: "test-encryption-key-for-e2e-only-not-production"
 
       # Intelligence-Builder Platform (optional)
-      IB_PLATFORM_URL: "http://localhost:8000"
-      IB_API_KEY: ""
-      IB_TENANT_ID: "e2e-test"
+      IB_PLATFORM_URL: "${E2E_IB_PLATFORM_URL:-http://host.docker.internal:8100}"
+      IB_API_KEY: "${IB_API_KEY:-}"
+      IB_TENANT_ID: "${IB_TENANT_ID:-e2e-test}"
 
       # AWS Configuration (LocalStack)
       AWS_ACCESS_KEY_ID: test

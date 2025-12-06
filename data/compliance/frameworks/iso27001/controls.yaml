@@ -1,0 +1,1427 @@
+framework: ISO27001
+version: "2022"
+description: ISO/IEC 27001:2022 Information Security Management System - Annex A Controls
+total_controls: 93
+
+domains:
+  - id: A.5
+    name: Organizational Controls
+    control_count: 37
+  - id: A.6
+    name: People Controls
+    control_count: 8
+  - id: A.7
+    name: Physical Controls
+    control_count: 14
+  - id: A.8
+    name: Technological Controls
+    control_count: 34
+
+controls:
+  # ============================================
+  # A.5 - ORGANIZATIONAL CONTROLS (37 controls)
+  # ============================================
+
+  - control_id: A.5.1
+    name: Policies for information security
+    domain: Organizational
+    description: |
+      Information security policy and topic-specific policies shall be defined,
+      approved by management, published, communicated to and acknowledged by
+      relevant personnel and relevant interested parties, and reviewed at
+      planned intervals and if significant changes occur.
+    aws_services:
+      - AWS Organizations
+      - AWS Config
+      - Systems Manager
+    implementation_guidance: |
+      1. Create security policy documents and store in AWS Systems Manager documents
+      2. Use AWS Config rules to enforce policy compliance
+      3. Implement AWS Organizations SCPs to enforce policies across accounts
+
+  - control_id: A.5.2
+    name: Information security roles and responsibilities
+    domain: Organizational
+    description: |
+      Information security roles and responsibilities shall be defined and
+      allocated according to the organization needs.
+    aws_services:
+      - IAM
+      - AWS Organizations
+      - AWS SSO
+    implementation_guidance: |
+      1. Define IAM roles with clear security responsibilities
+      2. Use AWS SSO for centralized role management
+      3. Implement least privilege through IAM policies
+
+  - control_id: A.5.3
+    name: Segregation of duties
+    domain: Organizational
+    description: |
+      Conflicting duties and conflicting areas of responsibility shall be
+      segregated.
+    aws_services:
+      - IAM
+      - AWS Organizations
+      - Control Tower
+    implementation_guidance: |
+      1. Separate production and development environments
+      2. Use different IAM roles for different functions
+      3. Implement approval workflows for sensitive operations
+
+  - control_id: A.5.4
+    name: Management responsibilities
+    domain: Organizational
+    description: |
+      Management shall require all personnel to apply information security
+      in accordance with the established information security policy and
+      topic-specific policies and procedures of the organization.
+    aws_services:
+      - IAM
+      - CloudTrail
+      - AWS Config
+    implementation_guidance: |
+      1. Document management security responsibilities
+      2. Enable CloudTrail for accountability
+      3. Create Config rules for policy compliance monitoring
+
+  - control_id: A.5.5
+    name: Contact with authorities
+    domain: Organizational
+    description: |
+      The organization shall establish and maintain contact with relevant
+      authorities.
+    aws_services:
+      - AWS Artifact
+      - AWS Support
+    implementation_guidance: |
+      1. Document regulatory contacts and communication procedures
+      2. Use AWS Artifact for compliance reports
+      3. Establish AWS Support escalation paths
+
+  - control_id: A.5.6
+    name: Contact with special interest groups
+    domain: Organizational
+    description: |
+      The organization shall establish and maintain contact with special
+      interest groups or other specialist security forums and professional
+      associations.
+    aws_services:
+      - AWS Security Hub
+      - AWS re:Post
+    implementation_guidance: |
+      1. Subscribe to AWS security bulletins
+      2. Participate in AWS security communities
+      3. Monitor Security Hub for threat intelligence
+
+  - control_id: A.5.7
+    name: Threat intelligence
+    domain: Organizational
+    description: |
+      Information relating to information security threats shall be collected
+      and analyzed to produce threat intelligence.
+    aws_services:
+      - GuardDuty
+      - Security Hub
+      - Detective
+      - Macie
+    implementation_guidance: |
+      1. Enable GuardDuty for threat detection
+      2. Use Security Hub for aggregated findings
+      3. Implement Amazon Detective for investigation
+
+  - control_id: A.5.8
+    name: Information security in project management
+    domain: Organizational
+    description: |
+      Information security shall be integrated into project management.
+    aws_services:
+      - AWS Well-Architected Tool
+      - Security Hub
+    implementation_guidance: |
+      1. Include security reviews in project milestones
+      2. Use Well-Architected Framework reviews
+      3. Implement security gates in CI/CD pipelines
+
+  - control_id: A.5.9
+    name: Inventory of information and other associated assets
+    domain: Organizational
+    description: |
+      An inventory of information and other associated assets, including
+      owners, shall be developed and maintained.
+    aws_services:
+      - AWS Config
+      - Resource Groups
+      - Systems Manager
+      - Service Catalog
+    implementation_guidance: |
+      1. Use AWS Config for resource inventory
+      2. Tag all resources with owner and classification
+      3. Implement Resource Groups for asset organization
+
+  - control_id: A.5.10
+    name: Acceptable use of information and other associated assets
+    domain: Organizational
+    description: |
+      Rules for the acceptable use of information and other associated
+      assets shall be identified, documented and implemented.
+    aws_services:
+      - IAM
+      - AWS Config
+      - Service Control Policies
+    implementation_guidance: |
+      1. Document acceptable use policies
+      2. Enforce policies via IAM and SCPs
+      3. Monitor compliance with AWS Config
+
+  - control_id: A.5.11
+    name: Return of assets
+    domain: Organizational
+    description: |
+      Personnel and other interested parties as appropriate shall return
+      all the organization's assets in their possession upon change or
+      termination of their employment, contract or agreement.
+    aws_services:
+      - IAM
+      - AWS SSO
+      - Secrets Manager
+    implementation_guidance: |
+      1. Implement offboarding automation via Lambda
+      2. Revoke access keys and credentials
+      3. Rotate secrets after personnel changes
+
+  - control_id: A.5.12
+    name: Classification of information
+    domain: Organizational
+    description: |
+      Information shall be classified according to the information security
+      needs of the organization based on confidentiality, integrity,
+      availability and relevant interested party requirements.
+    aws_services:
+      - Macie
+      - S3
+      - KMS
+    implementation_guidance: |
+      1. Use Amazon Macie for data classification
+      2. Tag resources with classification levels
+      3. Apply appropriate encryption based on classification
+
+  - control_id: A.5.13
+    name: Labelling of information
+    domain: Organizational
+    description: |
+      An appropriate set of procedures for information labelling shall be
+      developed and implemented in accordance with the information
+      classification scheme adopted by the organization.
+    aws_services:
+      - S3
+      - Resource Tags
+      - Macie
+    implementation_guidance: |
+      1. Implement mandatory tagging policies
+      2. Use S3 object tags for data labelling
+      3. Automate labelling with Macie findings
+
+  - control_id: A.5.14
+    name: Information transfer
+    domain: Organizational
+    description: |
+      Information transfer rules, procedures, or agreements shall be in
+      place for all types of transfer facilities within the organization
+      and between the organization and other parties.
+    aws_services:
+      - AWS Transfer Family
+      - S3
+      - KMS
+      - PrivateLink
+    implementation_guidance: |
+      1. Use encrypted channels for data transfer
+      2. Implement AWS Transfer Family for SFTP
+      3. Use PrivateLink for secure AWS service access
+
+  - control_id: A.5.15
+    name: Access control
+    domain: Organizational
+    description: |
+      Rules to control physical and logical access to information and
+      other associated assets shall be established and implemented based
+      on business and information security requirements.
+    aws_services:
+      - IAM
+      - AWS SSO
+      - Organizations
+      - VPC
+    implementation_guidance: |
+      1. Implement least privilege IAM policies
+      2. Use VPC for network access control
+      3. Enable MFA for privileged access
+
+  - control_id: A.5.16
+    name: Identity management
+    domain: Organizational
+    description: |
+      The full life cycle of identities shall be managed.
+    aws_services:
+      - IAM
+      - AWS SSO
+      - Directory Service
+      - Cognito
+    implementation_guidance: |
+      1. Implement identity lifecycle management
+      2. Use AWS SSO for centralized identity
+      3. Enable Cognito for application identities
+
+  - control_id: A.5.17
+    name: Authentication information
+    domain: Organizational
+    description: |
+      Allocation and management of authentication information shall be
+      controlled by a management process, including advising personnel
+      on the appropriate handling of authentication information.
+    aws_services:
+      - IAM
+      - Secrets Manager
+      - AWS SSO
+      - Cognito
+    implementation_guidance: |
+      1. Enforce strong password policies
+      2. Use Secrets Manager for credential storage
+      3. Implement MFA for all users
+
+  - control_id: A.5.18
+    name: Access rights
+    domain: Organizational
+    description: |
+      Access rights to information and other associated assets shall be
+      provisioned, reviewed, modified and removed in accordance with the
+      organization's topic-specific policy on and rules for access control.
+    aws_services:
+      - IAM
+      - IAM Access Analyzer
+      - AWS SSO
+    implementation_guidance: |
+      1. Implement access request workflows
+      2. Use IAM Access Analyzer for access reviews
+      3. Automate access removal on termination
+
+  - control_id: A.5.19
+    name: Information security in supplier relationships
+    domain: Organizational
+    description: |
+      Processes and procedures shall be defined and implemented to manage
+      the information security risks associated with the use of supplier's
+      products or services.
+    aws_services:
+      - AWS Artifact
+      - AWS Marketplace
+    implementation_guidance: |
+      1. Review supplier security certifications
+      2. Use AWS Artifact for AWS compliance reports
+      3. Assess Marketplace vendors before use
+
+  - control_id: A.5.20
+    name: Addressing information security within supplier agreements
+    domain: Organizational
+    description: |
+      Relevant information security requirements shall be established and
+      agreed with each supplier based on the type of supplier relationship.
+    aws_services:
+      - AWS Artifact
+      - Service Control Policies
+    implementation_guidance: |
+      1. Include security requirements in contracts
+      2. Define SLAs for security incidents
+      3. Require security certifications from suppliers
+
+  - control_id: A.5.21
+    name: Managing information security in the ICT supply chain
+    domain: Organizational
+    description: |
+      Processes and procedures shall be defined and implemented to manage
+      the information security risks associated with the ICT products and
+      services supply chain.
+    aws_services:
+      - AWS Marketplace
+      - ECR
+      - Inspector
+    implementation_guidance: |
+      1. Scan container images for vulnerabilities
+      2. Use trusted base images from ECR
+      3. Monitor supply chain with Inspector
+
+  - control_id: A.5.22
+    name: Monitoring, review and change management of supplier services
+    domain: Organizational
+    description: |
+      The organization shall regularly monitor, review, evaluate and manage
+      change in supplier information security practices and service delivery.
+    aws_services:
+      - CloudWatch
+      - AWS Config
+      - Trusted Advisor
+    implementation_guidance: |
+      1. Monitor supplier service health
+      2. Review AWS service changes
+      3. Use Trusted Advisor for recommendations
+
+  - control_id: A.5.23
+    name: Information security for use of cloud services
+    domain: Organizational
+    description: |
+      Processes for acquisition, use, management and exit from cloud services
+      shall be established in accordance with the organization's information
+      security requirements.
+    aws_services:
+      - AWS Organizations
+      - Control Tower
+      - Security Hub
+    implementation_guidance: |
+      1. Implement cloud security governance
+      2. Use Control Tower for guardrails
+      3. Monitor with Security Hub
+
+  - control_id: A.5.24
+    name: Information security incident management planning and preparation
+    domain: Organizational
+    description: |
+      The organization shall plan and prepare for managing information
+      security incidents by defining, establishing and communicating
+      information security incident management processes, roles and
+      responsibilities.
+    aws_services:
+      - Systems Manager
+      - EventBridge
+      - SNS
+    implementation_guidance: |
+      1. Create incident response runbooks
+      2. Define escalation procedures
+      3. Configure automated alerting
+
+  - control_id: A.5.25
+    name: Assessment and decision on information security events
+    domain: Organizational
+    description: |
+      The organization shall assess information security events and decide
+      if they are to be categorized as information security incidents.
+    aws_services:
+      - Security Hub
+      - GuardDuty
+      - Detective
+    implementation_guidance: |
+      1. Triage security events in Security Hub
+      2. Use GuardDuty severity for prioritization
+      3. Investigate with Detective
+
+  - control_id: A.5.26
+    name: Response to information security incidents
+    domain: Organizational
+    description: |
+      Information security incidents shall be responded to in accordance
+      with the documented procedures.
+    aws_services:
+      - Systems Manager
+      - Lambda
+      - Step Functions
+    implementation_guidance: |
+      1. Execute incident response runbooks
+      2. Automate response with Lambda
+      3. Orchestrate with Step Functions
+
+  - control_id: A.5.27
+    name: Learning from information security incidents
+    domain: Organizational
+    description: |
+      Knowledge gained from information security incidents shall be used
+      to strengthen and improve the information security controls.
+    aws_services:
+      - CloudWatch Logs
+      - Athena
+      - QuickSight
+    implementation_guidance: |
+      1. Document lessons learned
+      2. Analyze incident patterns
+      3. Update controls based on findings
+
+  - control_id: A.5.28
+    name: Collection of evidence
+    domain: Organizational
+    description: |
+      The organization shall establish and implement procedures for the
+      identification, collection, acquisition and preservation of evidence
+      related to information security events.
+    aws_services:
+      - CloudTrail
+      - S3
+      - Glacier
+    implementation_guidance: |
+      1. Enable CloudTrail with log file integrity
+      2. Store evidence in immutable S3
+      3. Archive to Glacier for long-term retention
+
+  - control_id: A.5.29
+    name: Information security during disruption
+    domain: Organizational
+    description: |
+      The organization shall plan how to maintain information security at
+      an appropriate level during disruption.
+    aws_services:
+      - AWS Backup
+      - Route 53
+      - Multi-AZ deployments
+    implementation_guidance: |
+      1. Implement multi-region disaster recovery
+      2. Use Route 53 for failover
+      3. Maintain security controls in DR site
+
+  - control_id: A.5.30
+    name: ICT readiness for business continuity
+    domain: Organizational
+    description: |
+      ICT readiness shall be planned, implemented, maintained and tested
+      based on business continuity objectives and ICT continuity requirements.
+    aws_services:
+      - AWS Backup
+      - Elastic Disaster Recovery
+      - Route 53
+    implementation_guidance: |
+      1. Define RTO/RPO objectives
+      2. Test disaster recovery regularly
+      3. Use Elastic Disaster Recovery for automation
+
+  - control_id: A.5.31
+    name: Legal, statutory, regulatory and contractual requirements
+    domain: Organizational
+    description: |
+      Legal, statutory, regulatory and contractual requirements relevant
+      to information security and the organization's approach to meet
+      these requirements shall be identified, documented and kept up to date.
+    aws_services:
+      - AWS Artifact
+      - AWS Config
+      - Security Hub
+    implementation_guidance: |
+      1. Use AWS Artifact for compliance documentation
+      2. Map controls to regulatory requirements
+      3. Monitor compliance with Config rules
+
+  - control_id: A.5.32
+    name: Intellectual property rights
+    domain: Organizational
+    description: |
+      The organization shall implement appropriate procedures to protect
+      intellectual property rights.
+    aws_services:
+      - KMS
+      - S3
+      - CloudTrail
+    implementation_guidance: |
+      1. Encrypt intellectual property at rest
+      2. Control access with IAM
+      3. Audit access with CloudTrail
+
+  - control_id: A.5.33
+    name: Protection of records
+    domain: Organizational
+    description: |
+      Records shall be protected from loss, destruction, falsification,
+      unauthorized access and unauthorized release in accordance with
+      legal, statutory, regulatory and contractual requirements.
+    aws_services:
+      - S3
+      - S3 Object Lock
+      - CloudTrail
+    implementation_guidance: |
+      1. Use S3 Object Lock for immutability
+      2. Enable versioning for records
+      3. Implement access controls
+
+  - control_id: A.5.34
+    name: Privacy and protection of PII
+    domain: Organizational
+    description: |
+      The organization shall identify and meet the requirements regarding
+      the preservation of privacy and protection of PII according to
+      applicable laws and regulations and contractual requirements.
+    aws_services:
+      - Macie
+      - KMS
+      - CloudTrail
+    implementation_guidance: |
+      1. Use Macie to discover PII
+      2. Encrypt PII with KMS
+      3. Audit PII access with CloudTrail
+
+  - control_id: A.5.35
+    name: Independent review of information security
+    domain: Organizational
+    description: |
+      The organization's approach to managing information security and
+      its implementation including people, processes and technologies
+      shall be reviewed independently at planned intervals, or when
+      significant changes occur.
+    aws_services:
+      - AWS Audit Manager
+      - Security Hub
+    implementation_guidance: |
+      1. Use Audit Manager for assessments
+      2. Conduct regular security reviews
+      3. Engage third-party auditors
+
+  - control_id: A.5.36
+    name: Compliance with policies, rules and standards for information security
+    domain: Organizational
+    description: |
+      Compliance with the organization's information security policy,
+      topic-specific policies, rules and standards shall be regularly reviewed.
+    aws_services:
+      - AWS Config
+      - Security Hub
+      - Audit Manager
+    implementation_guidance: |
+      1. Implement Config conformance packs
+      2. Monitor Security Hub findings
+      3. Track compliance trends
+
+  - control_id: A.5.37
+    name: Documented operating procedures
+    domain: Organizational
+    description: |
+      Operating procedures for information processing facilities shall
+      be documented and made available to personnel who need them.
+    aws_services:
+      - Systems Manager
+      - S3
+    implementation_guidance: |
+      1. Store procedures in Systems Manager documents
+      2. Version control documentation
+      3. Automate procedure execution
+
+  # ============================================
+  # A.6 - PEOPLE CONTROLS (8 controls)
+  # ============================================
+
+  - control_id: A.6.1
+    name: Screening
+    domain: People
+    description: |
+      Background verification checks on all candidates to become personnel
+      shall be carried out prior to joining the organization and on an
+      ongoing basis taking into consideration applicable laws, regulations
+      and ethics and be proportional to the business requirements, the
+      classification of the information to be accessed and the perceived risks.
+    aws_services:
+      - IAM
+    implementation_guidance: |
+      1. Implement pre-employment screening processes
+      2. Document screening requirements by role
+      3. Verify credentials before granting access
+
+  - control_id: A.6.2
+    name: Terms and conditions of employment
+    domain: People
+    description: |
+      The employment contractual agreements shall state the personnel's
+      and the organization's responsibilities for information security.
+    aws_services:
+      - IAM
+    implementation_guidance: |
+      1. Include security responsibilities in contracts
+      2. Require confidentiality agreements
+      3. Define acceptable use terms
+
+  - control_id: A.6.3
+    name: Information security awareness, education and training
+    domain: People
+    description: |
+      Personnel of the organization and relevant interested parties shall
+      receive appropriate information security awareness, education and
+      training and regular updates of the organization's information
+      security policy, topic-specific policies and procedures, as
+      relevant for their job function.
+    aws_services:
+      - AWS Skill Builder
+      - Security Hub
+    implementation_guidance: |
+      1. Implement security awareness training
+      2. Track training completion
+      3. Provide role-based training
+
+  - control_id: A.6.4
+    name: Disciplinary process
+    domain: People
+    description: |
+      A disciplinary process shall be formalized and communicated to take
+      actions against personnel and other relevant interested parties who
+      have committed an information security policy violation.
+    aws_services:
+      - CloudTrail
+    implementation_guidance: |
+      1. Document disciplinary procedures
+      2. Use audit logs as evidence
+      3. Communicate consequences clearly
+
+  - control_id: A.6.5
+    name: Responsibilities after termination or change of employment
+    domain: People
+    description: |
+      Information security responsibilities and duties that remain valid
+      after termination or change of employment shall be defined, enforced
+      and communicated to relevant personnel and other interested parties.
+    aws_services:
+      - IAM
+      - Secrets Manager
+    implementation_guidance: |
+      1. Document post-employment obligations
+      2. Revoke access immediately on termination
+      3. Rotate credentials after departures
+
+  - control_id: A.6.6
+    name: Confidentiality or non-disclosure agreements
+    domain: People
+    description: |
+      Confidentiality or non-disclosure agreements reflecting the
+      organization's needs for the protection of information shall be
+      identified, documented, regularly reviewed and signed by personnel
+      and other relevant interested parties.
+    aws_services:
+      - S3
+    implementation_guidance: |
+      1. Require NDAs for all personnel
+      2. Store signed agreements securely
+      3. Review and update agreements regularly
+
+  - control_id: A.6.7
+    name: Remote working
+    domain: People
+    description: |
+      Security measures shall be implemented when personnel are working
+      remotely to protect information accessed, processed or stored
+      outside the organization's premises.
+    aws_services:
+      - Client VPN
+      - Workspaces
+      - Systems Manager
+    implementation_guidance: |
+      1. Implement VPN for remote access
+      2. Use Workspaces for secure desktops
+      3. Enforce endpoint security
+
+  - control_id: A.6.8
+    name: Information security event reporting
+    domain: People
+    description: |
+      The organization shall provide a mechanism for personnel to report
+      observed or suspected information security events through appropriate
+      channels in a timely manner.
+    aws_services:
+      - SNS
+      - EventBridge
+      - Security Hub
+    implementation_guidance: |
+      1. Create security reporting channels
+      2. Train personnel on reporting procedures
+      3. Acknowledge and track reports
+
+  # ============================================
+  # A.7 - PHYSICAL CONTROLS (14 controls)
+  # ============================================
+
+  - control_id: A.7.1
+    name: Physical security perimeters
+    domain: Physical
+    description: |
+      Security perimeters shall be defined and used to protect areas that
+      contain information and other associated assets.
+    aws_services:
+      - VPC
+    implementation_guidance: |
+      1. AWS data centers have physical perimeters (AWS responsibility)
+      2. Define logical perimeters with VPC
+      3. Implement network segmentation
+
+  - control_id: A.7.2
+    name: Physical entry
+    domain: Physical
+    description: |
+      Secure areas shall be protected by appropriate entry controls to
+      ensure that only authorized personnel are allowed access.
+    aws_services:
+      - VPC
+      - Security Groups
+    implementation_guidance: |
+      1. AWS manages physical entry (shared responsibility)
+      2. Control logical entry with security groups
+      3. Implement network ACLs
+
+  - control_id: A.7.3
+    name: Securing offices, rooms and facilities
+    domain: Physical
+    description: |
+      Physical security for offices, rooms and facilities shall be designed
+      and implemented.
+    aws_services: []
+    implementation_guidance: |
+      1. AWS manages data center security
+      2. Secure on-premises facilities
+      3. Control access to network equipment
+
+  - control_id: A.7.4
+    name: Physical security monitoring
+    domain: Physical
+    description: |
+      Premises shall be continuously monitored for unauthorized physical access.
+    aws_services:
+      - CloudTrail
+      - GuardDuty
+    implementation_guidance: |
+      1. AWS monitors physical access to data centers
+      2. Monitor logical access with CloudTrail
+      3. Detect anomalies with GuardDuty
+
+  - control_id: A.7.5
+    name: Protecting against physical and environmental threats
+    domain: Physical
+    description: |
+      Protection against physical and environmental threats, such as
+      natural disasters and other intentional or unintentional physical
+      threats to infrastructure shall be designed and implemented.
+    aws_services:
+      - Multi-AZ
+      - Multi-Region
+    implementation_guidance: |
+      1. Use Multi-AZ for resilience
+      2. Implement multi-region DR
+      3. AWS handles environmental controls
+
+  - control_id: A.7.6
+    name: Working in secure areas
+    domain: Physical
+    description: |
+      Security measures for working in secure areas shall be designed
+      and implemented.
+    aws_services: []
+    implementation_guidance: |
+      1. Define secure area procedures
+      2. Restrict access to sensitive areas
+      3. Monitor activities in secure areas
+
+  - control_id: A.7.7
+    name: Clear desk and clear screen
+    domain: Physical
+    description: |
+      Clear desk rules for papers and removable storage media and clear
+      screen rules for information processing facilities shall be defined
+      and appropriately enforced.
+    aws_services:
+      - Workspaces
+    implementation_guidance: |
+      1. Implement clear desk policies
+      2. Configure automatic screen locks
+      3. Use Workspaces for controlled access
+
+  - control_id: A.7.8
+    name: Equipment siting and protection
+    domain: Physical
+    description: |
+      Equipment shall be sited securely and protected.
+    aws_services: []
+    implementation_guidance: |
+      1. AWS manages equipment siting in data centers
+      2. Secure on-premises equipment
+      3. Protect edge devices
+
+  - control_id: A.7.9
+    name: Security of assets off-premises
+    domain: Physical
+    description: |
+      Off-site assets shall be protected.
+    aws_services:
+      - KMS
+      - Client VPN
+    implementation_guidance: |
+      1. Encrypt data on portable devices
+      2. Use VPN for remote access
+      3. Implement device management
+
+  - control_id: A.7.10
+    name: Storage media
+    domain: Physical
+    description: |
+      Storage media shall be managed through their life cycle of
+      acquisition, use, transportation and disposal in accordance
+      with the organization's classification scheme and handling requirements.
+    aws_services:
+      - S3
+      - EBS
+      - KMS
+    implementation_guidance: |
+      1. Encrypt all storage media
+      2. Implement secure disposal procedures
+      3. AWS handles physical media destruction
+
+  - control_id: A.7.11
+    name: Supporting utilities
+    domain: Physical
+    description: |
+      Information processing facilities shall be protected from power
+      failures and other disruptions caused by failures in supporting utilities.
+    aws_services:
+      - Multi-AZ
+    implementation_guidance: |
+      1. AWS provides redundant utilities
+      2. Use Multi-AZ for availability
+      3. Implement backup power for on-premises
+
+  - control_id: A.7.12
+    name: Cabling security
+    domain: Physical
+    description: |
+      Cables carrying power and data or supporting information services
+      shall be protected from interception, interference or damage.
+    aws_services:
+      - PrivateLink
+      - Direct Connect
+    implementation_guidance: |
+      1. AWS secures data center cabling
+      2. Use PrivateLink for secure connectivity
+      3. Consider Direct Connect for dedicated links
+
+  - control_id: A.7.13
+    name: Equipment maintenance
+    domain: Physical
+    description: |
+      Equipment shall be maintained correctly to ensure availability,
+      integrity and continued fulfilment of security requirements.
+    aws_services: []
+    implementation_guidance: |
+      1. AWS maintains data center equipment
+      2. Patch and update managed services
+      3. Maintain on-premises equipment
+
+  - control_id: A.7.14
+    name: Secure disposal or re-use of equipment
+    domain: Physical
+    description: |
+      Items of equipment containing storage media shall be verified to
+      ensure that any sensitive data and licensed software has been
+      removed or securely overwritten prior to disposal or re-use.
+    aws_services:
+      - EBS
+      - S3
+    implementation_guidance: |
+      1. AWS securely disposes of physical media
+      2. Use cryptographic erasure
+      3. Verify data deletion
+
+  # ============================================
+  # A.8 - TECHNOLOGICAL CONTROLS (34 controls)
+  # ============================================
+
+  - control_id: A.8.1
+    name: User endpoint devices
+    domain: Technological
+    description: |
+      Information stored on, processed by or accessible via user endpoint
+      devices shall be protected.
+    aws_services:
+      - Workspaces
+      - Systems Manager
+      - Client VPN
+    implementation_guidance: |
+      1. Use Workspaces for secure desktops
+      2. Manage endpoints with Systems Manager
+      3. Enforce endpoint security policies
+
+  - control_id: A.8.2
+    name: Privileged access rights
+    domain: Technological
+    description: |
+      The allocation and use of privileged access rights shall be
+      restricted and managed.
+    aws_services:
+      - IAM
+      - AWS SSO
+      - Organizations
+    implementation_guidance: |
+      1. Implement least privilege
+      2. Use temporary credentials
+      3. Monitor privileged access
+
+  - control_id: A.8.3
+    name: Information access restriction
+    domain: Technological
+    description: |
+      Access to information and other associated assets shall be restricted
+      in accordance with the established topic-specific policy on access control.
+    aws_services:
+      - IAM
+      - S3
+      - KMS
+    implementation_guidance: |
+      1. Implement resource-based policies
+      2. Use S3 bucket policies
+      3. Encrypt sensitive data
+
+  - control_id: A.8.4
+    name: Access to source code
+    domain: Technological
+    description: |
+      Read and write access to source code, development tools and software
+      libraries shall be appropriately managed.
+    aws_services:
+      - CodeCommit
+      - IAM
+    implementation_guidance: |
+      1. Use CodeCommit with IAM policies
+      2. Implement branch protection
+      3. Review access regularly
+
+  - control_id: A.8.5
+    name: Secure authentication
+    domain: Technological
+    description: |
+      Secure authentication technologies and procedures shall be implemented
+      based on information access restrictions and the topic-specific policy
+      on access control.
+    aws_services:
+      - IAM
+      - Cognito
+      - AWS SSO
+    implementation_guidance: |
+      1. Enforce MFA for all users
+      2. Use strong password policies
+      3. Implement SSO where possible
+
+  - control_id: A.8.6
+    name: Capacity management
+    domain: Technological
+    description: |
+      The use of resources shall be monitored and adjusted in line with
+      current and expected capacity requirements.
+    aws_services:
+      - CloudWatch
+      - Auto Scaling
+      - Trusted Advisor
+    implementation_guidance: |
+      1. Monitor resource utilization
+      2. Implement auto scaling
+      3. Review capacity regularly
+
+  - control_id: A.8.7
+    name: Protection against malware
+    domain: Technological
+    description: |
+      Protection against malware shall be implemented and supported by
+      appropriate user awareness.
+    aws_services:
+      - GuardDuty
+      - Inspector
+      - ECR
+    implementation_guidance: |
+      1. Enable GuardDuty for malware detection
+      2. Scan containers with Inspector
+      3. Use ECR image scanning
+
+  - control_id: A.8.8
+    name: Management of technical vulnerabilities
+    domain: Technological
+    description: |
+      Information about technical vulnerabilities of information systems
+      in use shall be obtained, the organization's exposure to such
+      vulnerabilities shall be evaluated and appropriate measures shall be taken.
+    aws_services:
+      - Inspector
+      - Security Hub
+      - Systems Manager
+    implementation_guidance: |
+      1. Use Inspector for vulnerability scanning
+      2. Aggregate findings in Security Hub
+      3. Patch with Systems Manager
+
+  - control_id: A.8.9
+    name: Configuration management
+    domain: Technological
+    description: |
+      Configurations, including security configurations, of hardware,
+      software, services and networks shall be established, documented,
+      implemented, monitored and reviewed.
+    aws_services:
+      - AWS Config
+      - Systems Manager
+      - CloudFormation
+    implementation_guidance: |
+      1. Use Config for configuration monitoring
+      2. Implement infrastructure as code
+      3. Enforce configuration baselines
+
+  - control_id: A.8.10
+    name: Information deletion
+    domain: Technological
+    description: |
+      Information stored in information systems, devices or in any other
+      storage media shall be deleted when no longer required.
+    aws_services:
+      - S3 Lifecycle
+      - EBS
+      - RDS
+    implementation_guidance: |
+      1. Implement data lifecycle policies
+      2. Use S3 lifecycle rules
+      3. Automate data deletion
+
+  - control_id: A.8.11
+    name: Data masking
+    domain: Technological
+    description: |
+      Data masking shall be used in accordance with the organization's
+      topic-specific policy on access control and other related
+      topic-specific policies, and business requirements, taking
+      applicable legislation into consideration.
+    aws_services:
+      - Macie
+      - Glue
+      - Lambda
+    implementation_guidance: |
+      1. Identify sensitive data with Macie
+      2. Implement masking in ETL processes
+      3. Mask data in non-production environments
+
+  - control_id: A.8.12
+    name: Data leakage prevention
+    domain: Technological
+    description: |
+      Data leakage prevention measures shall be applied to systems,
+      networks and any other devices that process, store or transmit
+      sensitive information.
+    aws_services:
+      - Macie
+      - VPC Flow Logs
+      - GuardDuty
+    implementation_guidance: |
+      1. Monitor data flows with VPC Flow Logs
+      2. Detect anomalies with GuardDuty
+      3. Use Macie for PII detection
+
+  - control_id: A.8.13
+    name: Information backup
+    domain: Technological
+    description: |
+      Backup copies of information, software and systems shall be
+      maintained and regularly tested in accordance with the agreed
+      topic-specific policy on backup.
+    aws_services:
+      - AWS Backup
+      - S3
+      - RDS
+    implementation_guidance: |
+      1. Implement AWS Backup policies
+      2. Test backup restoration
+      3. Store backups in separate region
+
+  - control_id: A.8.14
+    name: Redundancy of information processing facilities
+    domain: Technological
+    description: |
+      Information processing facilities shall be implemented with
+      redundancy sufficient to meet availability requirements.
+    aws_services:
+      - Multi-AZ
+      - Auto Scaling
+      - ELB
+    implementation_guidance: |
+      1. Deploy across multiple AZs
+      2. Use load balancers
+      3. Implement auto scaling
+
+  - control_id: A.8.15
+    name: Logging
+    domain: Technological
+    description: |
+      Logs that record activities, exceptions, faults and other relevant
+      events shall be produced, stored, protected and analyzed.
+    aws_services:
+      - CloudWatch Logs
+      - CloudTrail
+      - S3
+    implementation_guidance: |
+      1. Enable CloudWatch Logs
+      2. Configure CloudTrail
+      3. Protect log integrity
+
+  - control_id: A.8.16
+    name: Monitoring activities
+    domain: Technological
+    description: |
+      Networks, systems and applications shall be monitored for anomalous
+      behaviour and appropriate actions taken to evaluate potential
+      information security incidents.
+    aws_services:
+      - CloudWatch
+      - GuardDuty
+      - Security Hub
+    implementation_guidance: |
+      1. Set up CloudWatch alarms
+      2. Enable GuardDuty
+      3. Review Security Hub findings
+
+  - control_id: A.8.17
+    name: Clock synchronization
+    domain: Technological
+    description: |
+      The clocks of information processing systems used by the organization
+      shall be synchronized to approved time sources.
+    aws_services:
+      - Amazon Time Sync Service
+    implementation_guidance: |
+      1. Use Amazon Time Sync Service
+      2. Configure NTP on instances
+      3. Verify clock synchronization
+
+  - control_id: A.8.18
+    name: Use of privileged utility programs
+    domain: Technological
+    description: |
+      The use of utility programs that might be capable of overriding
+      system and application controls shall be restricted and tightly controlled.
+    aws_services:
+      - IAM
+      - Systems Manager
+    implementation_guidance: |
+      1. Restrict access to privileged utilities
+      2. Audit utility usage
+      3. Use Systems Manager for controlled access
+
+  - control_id: A.8.19
+    name: Installation of software on operational systems
+    domain: Technological
+    description: |
+      Procedures and measures shall be implemented to securely manage
+      software installation on operational systems.
+    aws_services:
+      - Systems Manager
+      - CodePipeline
+      - ECR
+    implementation_guidance: |
+      1. Use CI/CD for deployments
+      2. Sign and verify software
+      3. Scan before installation
+
+  - control_id: A.8.20
+    name: Networks security
+    domain: Technological
+    description: |
+      Networks and network devices shall be secured, managed and controlled
+      to protect information in systems and applications.
+    aws_services:
+      - VPC
+      - Security Groups
+      - Network ACLs
+      - WAF
+    implementation_guidance: |
+      1. Implement network segmentation
+      2. Use security groups
+      3. Deploy WAF for web applications
+
+  - control_id: A.8.21
+    name: Security of network services
+    domain: Technological
+    description: |
+      Security mechanisms, service levels and service requirements of
+      network services shall be identified, implemented and monitored.
+    aws_services:
+      - VPC
+      - PrivateLink
+      - Transit Gateway
+    implementation_guidance: |
+      1. Use PrivateLink for AWS services
+      2. Implement Transit Gateway
+      3. Monitor network services
+
+  - control_id: A.8.22
+    name: Segregation of networks
+    domain: Technological
+    description: |
+      Groups of information services, users and information systems shall
+      be segregated in the organization's networks.
+    aws_services:
+      - VPC
+      - Subnets
+      - Security Groups
+    implementation_guidance: |
+      1. Create separate VPCs for environments
+      2. Use private subnets
+      3. Implement micro-segmentation
+
+  - control_id: A.8.23
+    name: Web filtering
+    domain: Technological
+    description: |
+      Access to external websites shall be managed to reduce exposure
+      to malicious content.
+    aws_services:
+      - Network Firewall
+      - WAF
+    implementation_guidance: |
+      1. Implement web content filtering
+      2. Block malicious domains
+      3. Monitor outbound traffic
+
+  - control_id: A.8.24
+    name: Use of cryptography
+    domain: Technological
+    description: |
+      Rules for the effective use of cryptography, including cryptographic
+      key management, shall be defined and implemented.
+    aws_services:
+      - KMS
+      - ACM
+      - CloudHSM
+    implementation_guidance: |
+      1. Use KMS for key management
+      2. Implement encryption at rest
+      3. Use ACM for certificates
+
+  - control_id: A.8.25
+    name: Secure development life cycle
+    domain: Technological
+    description: |
+      Rules for the secure development of software and systems shall be
+      established and applied.
+    aws_services:
+      - CodeBuild
+      - CodePipeline
+      - CodeGuru
+    implementation_guidance: |
+      1. Implement secure SDLC
+      2. Use CodeGuru for security reviews
+      3. Automate security testing
+
+  - control_id: A.8.26
+    name: Application security requirements
+    domain: Technological
+    description: |
+      Information security requirements shall be identified, specified
+      and approved when developing or acquiring applications.
+    aws_services:
+      - Security Hub
+      - Inspector
+    implementation_guidance: |
+      1. Define security requirements
+      2. Review applications before deployment
+      3. Scan for vulnerabilities
+
+  - control_id: A.8.27
+    name: Secure system architecture and engineering principles
+    domain: Technological
+    description: |
+      Principles for engineering secure systems shall be established,
+      documented, maintained and applied to any information system
+      development activities.
+    aws_services:
+      - Well-Architected Tool
+      - CloudFormation
+    implementation_guidance: |
+      1. Apply Well-Architected principles
+      2. Use infrastructure as code
+      3. Review architecture regularly
+
+  - control_id: A.8.28
+    name: Secure coding
+    domain: Technological
+    description: |
+      Secure coding principles shall be applied to software development.
+    aws_services:
+      - CodeGuru
+      - CodeBuild
+    implementation_guidance: |
+      1. Use CodeGuru for code reviews
+      2. Implement SAST/DAST scanning
+      3. Train developers on secure coding
+
+  - control_id: A.8.29
+    name: Security testing in development and acceptance
+    domain: Technological
+    description: |
+      Security testing processes shall be defined and implemented in
+      the development life cycle.
+    aws_services:
+      - CodeBuild
+      - Inspector
+      - CodePipeline
+    implementation_guidance: |
+      1. Automate security testing
+      2. Include penetration testing
+      3. Test before acceptance
+
+  - control_id: A.8.30
+    name: Outsourced development
+    domain: Technological
+    description: |
+      The organization shall direct, monitor and review the activities
+      related to outsourced system development.
+    aws_services:
+      - CodeCommit
+      - CloudTrail
+    implementation_guidance: |
+      1. Define security requirements for vendors
+      2. Review vendor code
+      3. Audit vendor activities
+
+  - control_id: A.8.31
+    name: Separation of development, test and production environments
+    domain: Technological
+    description: |
+      Development, testing and production environments shall be separated
+      and secured.
+    aws_services:
+      - AWS Organizations
+      - Control Tower
+      - VPC
+    implementation_guidance: |
+      1. Use separate AWS accounts
+      2. Implement Control Tower
+      3. Restrict cross-environment access
+
+  - control_id: A.8.32
+    name: Change management
+    domain: Technological
+    description: |
+      Changes to information processing facilities and information systems
+      shall be subject to change management procedures.
+    aws_services:
+      - CloudFormation
+      - CodePipeline
+      - AWS Config
+    implementation_guidance: |
+      1. Use infrastructure as code
+      2. Implement approval workflows
+      3. Track changes with Config
+
+  - control_id: A.8.33
+    name: Test information
+    domain: Technological
+    description: |
+      Test information shall be appropriately selected, protected and managed.
+    aws_services:
+      - S3
+      - KMS
+      - Glue
+    implementation_guidance: |
+      1. Anonymize production data
+      2. Protect test data
+      3. Use synthetic data where possible
+
+  - control_id: A.8.34
+    name: Protection of information systems during audit testing
+    domain: Technological
+    description: |
+      Audit tests and other assurance activities involving assessment
+      of operational systems shall be planned and agreed between the
+      tester and appropriate management.
+    aws_services:
+      - CloudTrail
+      - AWS Config
+    implementation_guidance: |
+      1. Plan audit activities
+      2. Minimize production impact
+      3. Document audit activities

@@ -79,7 +79,9 @@ class QAConfig:
             dry_run=data.get("dry_run", False),
             verbose=data.get("verbose", False),
             project_id=data.get("project_id", "PVT_kwDODc2V1s4BJVrg"),
-            status_field_id=data.get("status_field_id", "PVTSSF_lADODc2V1s4BJVrgzg5iEqc"),
+            status_field_id=data.get(
+                "status_field_id", "PVTSSF_lADODc2V1s4BJVrgzg5iEqc"
+            ),
             status_options=data.get(
                 "status_options",
                 {
@@ -168,12 +170,18 @@ class EvidenceValidator:
         static_analysis_dir = qa_dir / "static_analysis"
         if static_analysis_dir.exists():
             if (static_analysis_dir / "bandit.log").exists():
-                results["metadata"]["artifacts_found"].append("static_analysis/bandit.log")
+                results["metadata"]["artifacts_found"].append(
+                    "static_analysis/bandit.log"
+                )
             else:
-                results["warnings"].append("Missing artifact: static_analysis/bandit.log")
+                results["warnings"].append(
+                    "Missing artifact: static_analysis/bandit.log"
+                )
 
             if (static_analysis_dir / "ruff.log").exists():
-                results["metadata"]["artifacts_found"].append("static_analysis/ruff.log")
+                results["metadata"]["artifacts_found"].append(
+                    "static_analysis/ruff.log"
+                )
             else:
                 results["warnings"].append("Missing artifact: static_analysis/ruff.log")
         else:
@@ -181,7 +189,9 @@ class EvidenceValidator:
 
         # 4. Check for Skipped Steps justification if artifacts are missing
         if not results["valid"] and (qa_dir / "skipped_steps.md").exists():
-            results["warnings"].append("Some artifacts missing, but skipped_steps.md found.")
+            results["warnings"].append(
+                "Some artifacts missing, but skipped_steps.md found."
+            )
             # We don't automatically validate the content of skipped_steps.md, but we note it.
 
         return results
@@ -218,7 +228,9 @@ class GitHubHandOff:
             status_msg = "✅ **QA Verification PASSED**"
             body = f"{status_msg}\n\nAll required evidence artifacts were found and validated.\n\n"
             body += "**Artifacts Found:**\n"
-            for artifact in validation_result.get("metadata", {}).get("artifacts_found", []):
+            for artifact in validation_result.get("metadata", {}).get(
+                "artifacts_found", []
+            ):
                 body += f"- {artifact}\n"
         else:
             status_msg = "❌ **QA Verification FAILED**"
@@ -232,17 +244,36 @@ class GitHubHandOff:
             click.echo(f"Generated comment body:\n{body}")
 
         # Post Comment
-        self._run_gh_command(["issue", "comment", str(issue_num), "--body", body], description="Post QA comment")
+        self._run_gh_command(
+            ["issue", "comment", str(issue_num), "--body", body],
+            description="Post QA comment",
+        )
 
         # 2. Update Labels
         if is_valid:
             self._run_gh_command(
-                ["issue", "edit", str(issue_num), "--add-label", "qa-verified", "--remove-label", "qa-failed"],
+                [
+                    "issue",
+                    "edit",
+                    str(issue_num),
+                    "--add-label",
+                    "qa-verified",
+                    "--remove-label",
+                    "qa-failed",
+                ],
                 description="Update labels (Verified)",
             )
         else:
             self._run_gh_command(
-                ["issue", "edit", str(issue_num), "--add-label", "qa-failed", "--remove-label", "qa-verified"],
+                [
+                    "issue",
+                    "edit",
+                    str(issue_num),
+                    "--add-label",
+                    "qa-failed",
+                    "--remove-label",
+                    "qa-verified",
+                ],
                 description="Update labels (Failed)",
             )
 
@@ -259,7 +290,9 @@ class GitHubHandOff:
             # unless we implement the lookup.
             # STUB: Project status update
             if self.config.verbose:
-                click.echo("ℹ️ Project status update skipped (requires item ID lookup implementation)")
+                click.echo(
+                    "ℹ️ Project status update skipped (requires item ID lookup implementation)"
+                )
 
             # self._update_project_status(context, "Review")
 
@@ -367,7 +400,12 @@ def run(
     # Execute validation + handoff inline so we can control flow precisely.
     evidence_dir = qa_config.evidence_base_path / f"issue_{issue}"
     context = IssueContext(
-        issue_number=issue, title=f"Issue {issue}", body="", labels=[], evidence_dir=evidence_dir, config=qa_config
+        issue_number=issue,
+        title=f"Issue {issue}",
+        body="",
+        labels=[],
+        evidence_dir=evidence_dir,
+        config=qa_config,
     )
 
     # Validate
@@ -516,7 +554,12 @@ def handoff(
         validation_result = json.load(f)
 
     context = IssueContext(
-        issue_number=issue, title=f"Issue {issue}", body="", labels=[], evidence_dir=evidence_dir, config=qa_config
+        issue_number=issue,
+        title=f"Issue {issue}",
+        body="",
+        labels=[],
+        evidence_dir=evidence_dir,
+        config=qa_config,
     )
 
     if qa_config.verbose:

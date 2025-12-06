@@ -1,0 +1,542 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Blue/Green Deployment Infrastructure for Cloud Optimizer - Issue #159'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name (production, staging)
+    Type: String
+    Default: production
+    AllowedValues:
+      - production
+      - staging
+
+  VpcId:
+    Description: VPC ID for deployment
+    Type: AWS::EC2::VPC::Id
+
+  SubnetIds:
+    Description: Comma-separated list of subnet IDs for ALB and ECS
+    Type: List<AWS::EC2::Subnet::Id>
+
+  ContainerImage:
+    Description: Docker image for Cloud Optimizer
+    Type: String
+    Default: cloud-optimizer:latest
+
+  ContainerPort:
+    Description: Container port
+    Type: Number
+    Default: 8080
+
+  DesiredCount:
+    Description: Desired number of tasks
+    Type: Number
+    Default: 2
+
+  HealthCheckPath:
+    Description: Health check path for target groups
+    Type: String
+    Default: /health
+
+  HealthCheckIntervalSeconds:
+    Description: Health check interval in seconds
+    Type: Number
+    Default: 30
+
+  HealthyThresholdCount:
+    Description: Healthy threshold count
+    Type: Number
+    Default: 2
+
+  UnhealthyThresholdCount:
+    Description: Unhealthy threshold count
+    Type: Number
+    Default: 3
+
+  DeploymentRollbackEnabled:
+    Description: Enable automatic rollback on deployment failure
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  TrafficShiftInterval:
+    Description: Interval between traffic shift steps (seconds)
+    Type: Number
+    Default: 300
+
+  AlertTopicArn:
+    Description: SNS topic ARN for deployment alerts
+    Type: String
+    Default: ''
+
+Conditions:
+  HasAlertTopic: !Not [!Equals [!Ref AlertTopicArn, '']]
+  EnableRollback: !Equals [!Ref DeploymentRollbackEnabled, 'true']
+
+Resources:
+  # Security Group for ALB
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Blue/Green ALB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-bluegreen-alb-sg
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Security Group for ECS Tasks
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Blue/Green ECS tasks
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref ContainerPort
+          ToPort: !Ref ContainerPort
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-bluegreen-ecs-sg
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvironmentName}-bluegreen-alb
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets: !Ref SubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-bluegreen-alb
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Blue Target Group (Production)
+  BlueTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${EnvironmentName}-blue-tg
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: !Ref HealthCheckIntervalSeconds
+      HealthyThresholdCount: !Ref HealthyThresholdCount
+      UnhealthyThresholdCount: !Ref UnhealthyThresholdCount
+      HealthCheckTimeoutSeconds: 10
+      Matcher:
+        HttpCode: '200'
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-blue-tg
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: DeploymentColor
+          Value: blue
+
+  # Green Target Group (Deployment)
+  GreenTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${EnvironmentName}-green-tg
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: !Ref HealthCheckIntervalSeconds
+      HealthyThresholdCount: !Ref HealthyThresholdCount
+      UnhealthyThresholdCount: !Ref UnhealthyThresholdCount
+      HealthCheckTimeoutSeconds: 10
+      Matcher:
+        HttpCode: '200'
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-green-tg
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: DeploymentColor
+          Value: green
+
+  # Production Listener (Port 80)
+  ProductionListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn: !Ref BlueTargetGroup
+                Weight: 100
+              - TargetGroupArn: !Ref GreenTargetGroup
+                Weight: 0
+
+  # Test Listener (Port 8080) - For testing new deployment before traffic shift
+  TestListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 8080
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref GreenTargetGroup
+
+  # ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${EnvironmentName}-bluegreen-cluster
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-bluegreen-cluster
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Task Execution Role
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${EnvironmentName}-bluegreen-execution-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  # Task Role
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${EnvironmentName}-bluegreen-task-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: XRayTracing
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: '*'
+        - PolicyName: CloudWatchMetrics
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+
+  # CloudWatch Log Group
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${EnvironmentName}-bluegreen
+      RetentionInDays: 30
+
+  # Task Definition
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${EnvironmentName}-bluegreen-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '512'
+      Memory: '1024'
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: cloud-optimizer
+          Image: !Ref ContainerImage
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              Protocol: tcp
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - !Sub 'curl -f http://localhost:${ContainerPort}${HealthCheckPath} || exit 1'
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          Environment:
+            - Name: ENVIRONMENT
+              Value: !Ref EnvironmentName
+            - Name: DEPLOYMENT_TYPE
+              Value: blue-green
+
+  # Blue ECS Service (Production)
+  BlueService:
+    Type: AWS::ECS::Service
+    DependsOn: ProductionListener
+    Properties:
+      ServiceName: !Sub ${EnvironmentName}-blue-service
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: !If [EnableRollback, true, false]
+          Rollback: !If [EnableRollback, true, false]
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+          Subnets: !Ref SubnetIds
+      LoadBalancers:
+        - ContainerName: cloud-optimizer
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref BlueTargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-blue-service
+        - Key: DeploymentColor
+          Value: blue
+
+  # Green ECS Service (Deployment target)
+  GreenService:
+    Type: AWS::ECS::Service
+    DependsOn: TestListener
+    Properties:
+      ServiceName: !Sub ${EnvironmentName}-green-service
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 0  # Initially 0, scaled up during deployment
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: !If [EnableRollback, true, false]
+          Rollback: !If [EnableRollback, true, false]
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+          Subnets: !Ref SubnetIds
+      LoadBalancers:
+        - ContainerName: cloud-optimizer
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref GreenTargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-green-service
+        - Key: DeploymentColor
+          Value: green
+
+  # CloudWatch Alarms for Deployment Monitoring
+  BlueTargetGroupHealthyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-blue-tg-unhealthy
+      AlarmDescription: Alert when Blue target group has unhealthy hosts
+      MetricName: UnHealthyHostCount
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: TargetGroup
+          Value: !GetAtt BlueTargetGroup.TargetGroupFullName
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+      AlarmActions:
+        - !If [HasAlertTopic, !Ref AlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: notBreaching
+
+  GreenTargetGroupHealthyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-green-tg-unhealthy
+      AlarmDescription: Alert when Green target group has unhealthy hosts
+      MetricName: UnHealthyHostCount
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: TargetGroup
+          Value: !GetAtt GreenTargetGroup.TargetGroupFullName
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+      AlarmActions:
+        - !If [HasAlertTopic, !Ref AlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: notBreaching
+
+  DeploymentErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-deployment-error-rate
+      AlarmDescription: Alert when deployment error rate exceeds threshold
+      MetricName: HTTPCode_Target_5XX_Count
+      Namespace: AWS/ApplicationELB
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+      AlarmActions:
+        - !If [HasAlertTopic, !Ref AlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: notBreaching
+
+  DeploymentLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-deployment-latency
+      AlarmDescription: Alert when deployment latency exceeds threshold
+      MetricName: TargetResponseTime
+      Namespace: AWS/ApplicationELB
+      ExtendedStatistic: p99
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+      AlarmActions:
+        - !If [HasAlertTopic, !Ref AlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: notBreaching
+
+Outputs:
+  ClusterName:
+    Description: ECS Cluster Name
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-ClusterName
+
+  ClusterArn:
+    Description: ECS Cluster ARN
+    Value: !GetAtt ECSCluster.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-ClusterArn
+
+  LoadBalancerDNS:
+    Description: Load Balancer DNS Name
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-ALB-DNS
+
+  LoadBalancerArn:
+    Description: Load Balancer ARN
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-ALB-Arn
+
+  BlueTargetGroupArn:
+    Description: Blue Target Group ARN
+    Value: !Ref BlueTargetGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-Blue-TG-Arn
+
+  GreenTargetGroupArn:
+    Description: Green Target Group ARN
+    Value: !Ref GreenTargetGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-Green-TG-Arn
+
+  ProductionListenerArn:
+    Description: Production Listener ARN
+    Value: !Ref ProductionListener
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-ProdListener-Arn
+
+  TestListenerArn:
+    Description: Test Listener ARN
+    Value: !Ref TestListener
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-TestListener-Arn
+
+  BlueServiceArn:
+    Description: Blue ECS Service ARN
+    Value: !Ref BlueService
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-Blue-Service-Arn
+
+  GreenServiceArn:
+    Description: Green ECS Service ARN
+    Value: !Ref GreenService
+    Export:
+      Name: !Sub ${EnvironmentName}-BlueGreen-Green-Service-Arn
+
+  DeploymentInfo:
+    Description: Blue/Green deployment configuration summary
+    Value: !Sub |
+      Cluster: ${ECSCluster}
+      Blue TG: ${BlueTargetGroup}
+      Green TG: ${GreenTargetGroup}
+      Prod Listener: ${ProductionListener} (Port 80)
+      Test Listener: ${TestListener} (Port 8080)

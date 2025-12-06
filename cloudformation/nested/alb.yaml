@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Application Load Balancer for Cloud Optimizer'
+Description: 'Application Load Balancer for Cloud Optimizer with HTTPS/TLS support'
 
 Parameters:
   EnvironmentName:
@@ -22,6 +22,25 @@ Parameters:
   ALBSecurityGroup:
     Description: Security Group for ALB
     Type: String
+
+  ACMCertificateArn:
+    Description: ACM Certificate ARN for HTTPS (leave empty to disable HTTPS)
+    Type: String
+    Default: ''
+
+  SSLSecurityPolicy:
+    Description: SSL/TLS security policy for HTTPS listener
+    Type: String
+    Default: ELBSecurityPolicy-TLS-1-2-2017-01
+    AllowedValues:
+      - ELBSecurityPolicy-TLS-1-2-2017-01
+      - ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+      - ELBSecurityPolicy-FS-1-2-2019-08
+      - ELBSecurityPolicy-FS-1-2-Res-2020-10
+    ConstraintDescription: Must be a valid ELB security policy supporting TLS 1.2+
+
+Conditions:
+  HasCertificate: !Not [!Equals [!Ref ACMCertificateArn, '']]
 
 Resources:
   # Application Load Balancer
@@ -63,13 +82,35 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-tg
 
-  # HTTP Listener
+  # HTTP Listener - Redirect to HTTPS when certificate is configured
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 80
       Protocol: HTTP
+      DefaultActions:
+        - !If
+          - HasCertificate
+          - Type: redirect
+            RedirectConfig:
+              Protocol: HTTPS
+              Port: '443'
+              StatusCode: HTTP_301
+          - Type: forward
+            TargetGroupArn: !Ref TargetGroup
+
+  # HTTPS Listener - Only created when certificate is provided
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasCertificate
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: !Ref SSLSecurityPolicy
+      Certificates:
+        - CertificateArn: !Ref ACMCertificateArn
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
@@ -94,7 +135,23 @@ Outputs:
       Name: !Sub ${EnvironmentName}-target-group-arn
 
   LoadBalancerURL:
-    Description: URL of the application
-    Value: !Sub http://${ApplicationLoadBalancer.DNSName}
+    Description: URL of the application (HTTPS if certificate configured, HTTP otherwise)
+    Value: !If
+      - HasCertificate
+      - !Sub https://${ApplicationLoadBalancer.DNSName}
+      - !Sub http://${ApplicationLoadBalancer.DNSName}
     Export:
       Name: !Sub ${EnvironmentName}-app-url
+
+  HTTPSEnabled:
+    Description: Whether HTTPS is enabled
+    Value: !If [HasCertificate, 'true', 'false']
+    Export:
+      Name: !Sub ${EnvironmentName}-https-enabled
+
+  SSLPolicy:
+    Description: SSL/TLS security policy in use
+    Condition: HasCertificate
+    Value: !Ref SSLSecurityPolicy
+    Export:
+      Name: !Sub ${EnvironmentName}-ssl-policy

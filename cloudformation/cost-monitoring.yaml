@@ -1,0 +1,346 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloud Optimizer - Cost Monitoring and Budgets
+  Issue #169: AWS Cost Explorer, Budgets, and Cost Anomaly Detection
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Deployment environment
+
+  ProjectName:
+    Type: String
+    Default: cloud-optimizer
+    Description: Project name for tagging and identification
+
+  MonthlyBudgetAmount:
+    Type: Number
+    Default: 1000
+    Description: Monthly budget amount in USD
+
+  AlertEmail:
+    Type: String
+    Description: Email address for budget alerts
+    AllowedPattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+
+  CostAnomalyThreshold:
+    Type: Number
+    Default: 100
+    Description: Cost anomaly alert threshold in USD
+
+Resources:
+  # SNS Topic for Budget Alerts
+  BudgetAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${ProjectName}-${Environment}-budget-alerts
+      DisplayName: Cloud Optimizer Budget Alerts
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: cost-monitoring
+
+  # Email subscription for budget alerts
+  BudgetAlertEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref BudgetAlertTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  # Monthly Budget with multiple alert thresholds
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub ${ProjectName}-${Environment}-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref MonthlyBudgetAmount
+          Unit: USD
+        CostFilters:
+          TagKeyValue:
+            - !Sub user:Project$${ProjectName}
+        CostTypes:
+          IncludeTax: true
+          IncludeSubscription: true
+          UseBlended: false
+          IncludeRefund: false
+          IncludeCredit: false
+          IncludeUpfront: true
+          IncludeRecurring: true
+          IncludeOtherSubscription: true
+          IncludeSupport: true
+          IncludeDiscount: true
+          UseAmortized: false
+      NotificationsWithSubscribers:
+        # 50% threshold - informational
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 50
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BudgetAlertTopic
+        # 80% threshold - warning
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BudgetAlertTopic
+        # 100% threshold - critical
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BudgetAlertTopic
+        # 120% threshold - over budget
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 120
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BudgetAlertTopic
+        # Forecasted to exceed budget
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BudgetAlertTopic
+
+  # Daily Budget for spike detection (auto-adjusting based on historical data)
+  DailyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub ${ProjectName}-${Environment}-daily
+        BudgetType: COST
+        TimeUnit: DAILY
+        AutoAdjustData:
+          AutoAdjustType: HISTORICAL
+          HistoricalOptions:
+            BudgetAdjustmentPeriod: 5
+        CostFilters:
+          TagKeyValue:
+            - !Sub user:Project$${ProjectName}
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 150
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BudgetAlertTopic
+
+  # Cost Anomaly Detection Monitor
+  CostAnomalyMonitor:
+    Type: AWS::CE::AnomalyMonitor
+    Properties:
+      MonitorName: !Sub ${ProjectName}-${Environment}-anomaly-monitor
+      MonitorType: DIMENSIONAL
+      MonitorDimension: SERVICE
+      ResourceTags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Cost Anomaly Subscription
+  CostAnomalySubscription:
+    Type: AWS::CE::AnomalySubscription
+    Properties:
+      SubscriptionName: !Sub ${ProjectName}-${Environment}-anomaly-alerts
+      MonitorArnList:
+        - !GetAtt CostAnomalyMonitor.MonitorArn
+      Subscribers:
+        - Address: !Ref AlertEmail
+          Type: EMAIL
+      Threshold: !Ref CostAnomalyThreshold
+      Frequency: DAILY
+      ResourceTags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # IAM Role for Cost Explorer Access
+  CostExplorerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-${Environment}-cost-explorer
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CostExplorerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ce:GetCostAndUsage
+                  - ce:GetCostForecast
+                  - ce:GetDimensionValues
+                  - ce:GetReservationUtilization
+                  - ce:GetSavingsPlansUtilization
+                  - ce:GetAnomalies
+                  - ce:GetAnomalyMonitors
+                  - ce:GetTags
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - budgets:ViewBudget
+                  - budgets:DescribeBudgets
+                  - budgets:DescribeBudgetPerformanceHistory
+                Resource: '*'
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Lambda function for cost reporting
+  CostReportFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-${Environment}-cost-report
+      Runtime: python3.11
+      Handler: index.handler
+      Role: !GetAtt CostExplorerRole.Arn
+      Timeout: 300
+      MemorySize: 256
+      Environment:
+        Variables:
+          PROJECT_NAME: !Ref ProjectName
+          ENVIRONMENT: !Ref Environment
+          SNS_TOPIC_ARN: !Ref BudgetAlertTopic
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          from datetime import datetime, timedelta
+
+          def handler(event, context):
+              ce = boto3.client('ce')
+              sns = boto3.client('sns')
+
+              # Get cost and usage for last 7 days
+              end = datetime.now().strftime('%Y-%m-%d')
+              start = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+
+              response = ce.get_cost_and_usage(
+                  TimePeriod={'Start': start, 'End': end},
+                  Granularity='DAILY',
+                  Metrics=['UnblendedCost'],
+                  GroupBy=[{'Type': 'DIMENSION', 'Key': 'SERVICE'}]
+              )
+
+              # Calculate total cost
+              total_cost = sum(
+                  float(group['Metrics']['UnblendedCost']['Amount'])
+                  for result in response['ResultsByTime']
+                  for group in result.get('Groups', [])
+              )
+
+              # Build cost breakdown by service
+              service_costs = {}
+              for result in response['ResultsByTime']:
+                  for group in result.get('Groups', []):
+                      service = group['Keys'][0]
+                      cost = float(group['Metrics']['UnblendedCost']['Amount'])
+                      service_costs[service] = service_costs.get(service, 0) + cost
+
+              # Sort by cost descending
+              sorted_services = sorted(service_costs.items(), key=lambda x: x[1], reverse=True)[:10]
+
+              report = {
+                  'period': f'{start} to {end}',
+                  'total_cost': round(total_cost, 2),
+                  'top_services': [{'service': s, 'cost': round(c, 2)} for s, c in sorted_services]
+              }
+
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps(report)
+              }
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # EventBridge rule for weekly cost reports
+  WeeklyCostReportRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ${ProjectName}-${Environment}-weekly-cost-report
+      Description: Trigger weekly cost report generation
+      ScheduleExpression: cron(0 9 ? * MON *)
+      State: ENABLED
+      Targets:
+        - Id: CostReportTarget
+          Arn: !GetAtt CostReportFunction.Arn
+
+  # Permission for EventBridge to invoke Lambda
+  CostReportLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CostReportFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt WeeklyCostReportRule.Arn
+
+Outputs:
+  BudgetAlertTopicArn:
+    Description: ARN of the budget alert SNS topic
+    Value: !Ref BudgetAlertTopic
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-budget-alert-topic
+
+  CostExplorerRoleArn:
+    Description: ARN of the Cost Explorer IAM role
+    Value: !GetAtt CostExplorerRole.Arn
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-cost-explorer-role
+
+  CostAnomalyMonitorArn:
+    Description: ARN of the Cost Anomaly Monitor
+    Value: !GetAtt CostAnomalyMonitor.MonitorArn
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-anomaly-monitor
+
+  MonthlyBudgetName:
+    Description: Name of the monthly budget
+    Value: !Sub ${ProjectName}-${Environment}-monthly
+
+  CostReportFunctionArn:
+    Description: ARN of the cost report Lambda function
+    Value: !GetAtt CostReportFunction.Arn

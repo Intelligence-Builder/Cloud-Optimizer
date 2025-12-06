@@ -1,0 +1,567 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Cloud Optimizer ElastiCache Redis Cluster
+  High-availability Redis cluster with encryption, auto-failover, and CloudWatch monitoring
+  for caching and session management in the Cloud Optimizer security scanning platform.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Environment Configuration
+        Parameters:
+          - Environment
+          - ApplicationName
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - VpcId
+          - PrivateSubnetIds
+          - ECSSecurityGroupId
+      - Label:
+          default: Redis Cluster Configuration
+        Parameters:
+          - NodeType
+          - NumCacheNodes
+          - EngineVersion
+          - Port
+      - Label:
+          default: Security and Compliance
+        Parameters:
+          - EnableEncryptionAtRest
+          - EnableEncryptionInTransit
+          - EnableAutoFailover
+      - Label:
+          default: Monitoring and Alerting
+        Parameters:
+          - EnableCloudWatchAlarms
+          - CPUThresholdPercent
+          - MemoryThresholdPercent
+          - AlarmTopicArn
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Deployment environment
+
+  ApplicationName:
+    Type: String
+    Default: cloud-optimizer
+    Description: Application name for resource naming and tagging
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where ElastiCache cluster will be deployed
+
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of private subnet IDs for the cache subnet group (minimum 2 for high availability)
+
+  ECSSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID of ECS tasks that need access to Redis
+
+  NodeType:
+    Type: String
+    Default: cache.t3.micro
+    AllowedValues:
+      - cache.t3.micro
+      - cache.t3.small
+      - cache.t3.medium
+      - cache.t4g.micro
+      - cache.t4g.small
+      - cache.t4g.medium
+      - cache.m6g.large
+      - cache.m6g.xlarge
+      - cache.r6g.large
+      - cache.r6g.xlarge
+    Description: ElastiCache node instance type
+
+  NumCacheNodes:
+    Type: Number
+    Default: 2
+    MinValue: 2
+    MaxValue: 6
+    Description: Number of cache nodes in the replication group (minimum 2 for high availability)
+
+  EngineVersion:
+    Type: String
+    Default: '7.0'
+    AllowedValues:
+      - '6.2'
+      - '7.0'
+      - '7.1'
+    Description: Redis engine version
+
+  Port:
+    Type: Number
+    Default: 6379
+    MinValue: 1024
+    MaxValue: 65535
+    Description: Port number for Redis connections
+
+  EnableEncryptionAtRest:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable encryption at rest for data persistence
+
+  EnableEncryptionInTransit:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable encryption in transit (TLS) for client connections
+
+  EnableAutoFailover:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable automatic failover for high availability
+
+  EnableCloudWatchAlarms:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Create CloudWatch alarms for monitoring
+
+  CPUThresholdPercent:
+    Type: Number
+    Default: 75
+    MinValue: 1
+    MaxValue: 100
+    Description: CPU utilization threshold for CloudWatch alarm (percentage)
+
+  MemoryThresholdPercent:
+    Type: Number
+    Default: 80
+    MinValue: 1
+    MaxValue: 100
+    Description: Memory utilization threshold for CloudWatch alarm (percentage)
+
+  AlarmTopicArn:
+    Type: String
+    Default: ''
+    Description: SNS topic ARN for CloudWatch alarm notifications (optional)
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, 'production']
+  EnableEncryptionAtRestCondition: !Equals [!Ref EnableEncryptionAtRest, 'true']
+  EnableEncryptionInTransitCondition: !Equals [!Ref EnableEncryptionInTransit, 'true']
+  EnableAutoFailoverCondition: !Equals [!Ref EnableAutoFailover, 'true']
+  EnableCloudWatchAlarmsCondition: !Equals [!Ref EnableCloudWatchAlarms, 'true']
+  HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, '']]
+  CreateAlarmActions: !And
+    - !Condition EnableCloudWatchAlarmsCondition
+    - !Condition HasAlarmTopic
+
+Resources:
+  # ==================== SECURITY GROUP ====================
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ApplicationName}-${Environment}-redis-sg'
+      GroupDescription: Security group for ElastiCache Redis cluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref Port
+          ToPort: !Ref Port
+          SourceSecurityGroupId: !Ref ECSSecurityGroupId
+          Description: Allow Redis access from ECS tasks
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 127.0.0.1/32
+          Description: Deny all outbound traffic (cache nodes don't need outbound)
+      Tags:
+        - Key: Name
+          Value: !Sub '${ApplicationName}-${Environment}-redis-sg'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # ==================== SUBNET GROUP ====================
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: !Sub '${ApplicationName}-${Environment}-redis-subnet-group'
+      Description: !Sub 'Subnet group for ${ApplicationName} Redis cluster in ${Environment}'
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub '${ApplicationName}-${Environment}-redis-subnet-group'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+
+  # ==================== PARAMETER GROUP ====================
+  CacheParameterGroup:
+    Type: AWS::ElastiCache::ParameterGroup
+    Properties:
+      CacheParameterGroupFamily: !Sub 'redis${EngineVersion}'
+      Description: !Sub 'Custom parameter group for ${ApplicationName} Redis ${EngineVersion}'
+      Properties:
+        # Memory management - optimize for performance
+        maxmemory-policy: allkeys-lru
+        # Connection settings
+        timeout: '300'
+        tcp-keepalive: '300'
+        # Performance tuning
+        activedefrag: 'yes'
+        # Logging and notifications
+        notify-keyspace-events: 'Ex'
+        # Slow log configuration
+        slowlog-log-slower-than: '10000'
+        slowlog-max-len: '128'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ApplicationName}-${Environment}-redis-params'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+
+  # ==================== REPLICATION GROUP ====================
+  RedisReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupId: !Sub '${ApplicationName}-${Environment}-redis'
+      ReplicationGroupDescription: !Sub '${ApplicationName} Redis cluster for ${Environment} environment'
+      Engine: redis
+      EngineVersion: !Ref EngineVersion
+      CacheNodeType: !Ref NodeType
+      NumCacheClusters: !Ref NumCacheNodes
+      AutomaticFailoverEnabled: !If [EnableAutoFailoverCondition, true, false]
+      MultiAZEnabled: !If [EnableAutoFailoverCondition, true, false]
+      Port: !Ref Port
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      CacheParameterGroupName: !Ref CacheParameterGroup
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroup
+      # Encryption settings
+      AtRestEncryptionEnabled: !If [EnableEncryptionAtRestCondition, true, false]
+      TransitEncryptionEnabled: !If [EnableEncryptionInTransitCondition, true, false]
+      # Backup configuration
+      SnapshotRetentionLimit: !If [IsProduction, 7, 1]
+      SnapshotWindow: '03:00-05:00'
+      PreferredMaintenanceWindow: 'sun:05:00-sun:07:00'
+      AutoMinorVersionUpgrade: true
+      # Logging
+      LogDeliveryConfigurations:
+        - DestinationType: cloudwatch-logs
+          DestinationDetails:
+            CloudWatchLogsDetails:
+              LogGroup: !Ref RedisSlowLogGroup
+          LogFormat: json
+          LogType: slow-log
+        - DestinationType: cloudwatch-logs
+          DestinationDetails:
+            CloudWatchLogsDetails:
+              LogGroup: !Ref RedisEngineLogGroup
+          LogFormat: json
+          LogType: engine-log
+      # Notifications
+      NotificationTopicArn: !If [HasAlarmTopic, !Ref AlarmTopicArn, !Ref AWS::NoValue]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ApplicationName}-${Environment}-redis'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: BackupEnabled
+          Value: 'true'
+        - Key: EncryptionAtRest
+          Value: !Ref EnableEncryptionAtRest
+        - Key: EncryptionInTransit
+          Value: !Ref EnableEncryptionInTransit
+
+  # ==================== CLOUDWATCH LOG GROUPS ====================
+  RedisSlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/elasticache/${ApplicationName}/${Environment}/redis/slow-log'
+      RetentionInDays: !If [IsProduction, 30, 7]
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: LogType
+          Value: redis-slow-log
+
+  RedisEngineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/elasticache/${ApplicationName}/${Environment}/redis/engine-log'
+      RetentionInDays: !If [IsProduction, 30, 7]
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: LogType
+          Value: redis-engine-log
+
+  # ==================== CLOUDWATCH ALARMS ====================
+  CPUUtilizationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: EnableCloudWatchAlarmsCondition
+    Properties:
+      AlarmName: !Sub '${ApplicationName}-${Environment}-redis-high-cpu'
+      AlarmDescription: !Sub 'Redis cluster CPU utilization is above ${CPUThresholdPercent}%'
+      MetricName: CPUUtilization
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref CPUThresholdPercent
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ReplicationGroupId
+          Value: !Ref RedisReplicationGroup
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - CreateAlarmActions
+        - [!Ref AlarmTopicArn]
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+
+  DatabaseMemoryUsageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: EnableCloudWatchAlarmsCondition
+    Properties:
+      AlarmName: !Sub '${ApplicationName}-${Environment}-redis-high-memory'
+      AlarmDescription: !Sub 'Redis cluster memory usage is above ${MemoryThresholdPercent}%'
+      MetricName: DatabaseMemoryUsagePercentage
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: !Ref MemoryThresholdPercent
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ReplicationGroupId
+          Value: !Ref RedisReplicationGroup
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - CreateAlarmActions
+        - [!Ref AlarmTopicArn]
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+
+  EvictionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: EnableCloudWatchAlarmsCondition
+    Properties:
+      AlarmName: !Sub '${ApplicationName}-${Environment}-redis-evictions'
+      AlarmDescription: Redis cluster is experiencing cache evictions (memory pressure)
+      MetricName: Evictions
+      Namespace: AWS/ElastiCache
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1000
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ReplicationGroupId
+          Value: !Ref RedisReplicationGroup
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - CreateAlarmActions
+        - [!Ref AlarmTopicArn]
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+
+  ReplicationLagAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: EnableCloudWatchAlarmsCondition
+    Properties:
+      AlarmName: !Sub '${ApplicationName}-${Environment}-redis-replication-lag'
+      AlarmDescription: Redis replica is experiencing replication lag
+      MetricName: ReplicationLag
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 30
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ReplicationGroupId
+          Value: !Ref RedisReplicationGroup
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - CreateAlarmActions
+        - [!Ref AlarmTopicArn]
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+
+  EngineCPUUtilizationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: EnableCloudWatchAlarmsCondition
+    Properties:
+      AlarmName: !Sub '${ApplicationName}-${Environment}-redis-engine-cpu'
+      AlarmDescription: Redis engine CPU utilization is high (single-threaded bottleneck)
+      MetricName: EngineCPUUtilization
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 90
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ReplicationGroupId
+          Value: !Ref RedisReplicationGroup
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - CreateAlarmActions
+        - [!Ref AlarmTopicArn]
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+
+  NetworkBytesInAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: EnableCloudWatchAlarmsCondition
+    Properties:
+      AlarmName: !Sub '${ApplicationName}-${Environment}-redis-network-in'
+      AlarmDescription: Redis cluster network input is abnormally high
+      MetricName: NetworkBytesIn
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 5000000
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ReplicationGroupId
+          Value: !Ref RedisReplicationGroup
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - CreateAlarmActions
+        - [!Ref AlarmTopicArn]
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: !Ref ApplicationName
+
+Outputs:
+  ReplicationGroupId:
+    Description: ElastiCache Redis replication group ID
+    Value: !Ref RedisReplicationGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ReplicationGroupId'
+
+  PrimaryEndpoint:
+    Description: Primary endpoint for Redis cluster (use for writes)
+    Value: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-PrimaryEndpoint'
+
+  PrimaryEndpointPort:
+    Description: Port for Redis connections
+    Value: !GetAtt RedisReplicationGroup.PrimaryEndPoint.Port
+    Export:
+      Name: !Sub '${AWS::StackName}-PrimaryEndpointPort'
+
+  ReaderEndpoint:
+    Description: Reader endpoint for Redis cluster (use for reads)
+    Value: !GetAtt RedisReplicationGroup.ReaderEndPoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-ReaderEndpoint'
+
+  ReaderEndpointPort:
+    Description: Port for Redis reader endpoint
+    Value: !GetAtt RedisReplicationGroup.ReaderEndPoint.Port
+    Export:
+      Name: !Sub '${AWS::StackName}-ReaderEndpointPort'
+
+  RedisSecurityGroupId:
+    Description: Security group ID for Redis cluster
+    Value: !Ref RedisSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityGroupId'
+
+  ConnectionString:
+    Description: Redis connection string for application configuration
+    Value: !Sub 'redis://${RedisReplicationGroup.PrimaryEndPoint.Address}:${RedisReplicationGroup.PrimaryEndPoint.Port}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ConnectionString'
+
+  SecureConnectionString:
+    Description: Secure Redis connection string (TLS) for application configuration
+    Value: !If
+      - EnableEncryptionInTransitCondition
+      - !Sub 'rediss://${RedisReplicationGroup.PrimaryEndPoint.Address}:${RedisReplicationGroup.PrimaryEndPoint.Port}'
+      - !Sub 'redis://${RedisReplicationGroup.PrimaryEndPoint.Address}:${RedisReplicationGroup.PrimaryEndPoint.Port}'
+    Export:
+      Name: !Sub '${AWS::StackName}-SecureConnectionString'
+
+  SlowLogGroupName:
+    Description: CloudWatch log group for Redis slow logs
+    Value: !Ref RedisSlowLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SlowLogGroup'
+
+  EngineLogGroupName:
+    Description: CloudWatch log group for Redis engine logs
+    Value: !Ref RedisEngineLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-EngineLogGroup'
+
+  ConfigurationEndpoint:
+    Description: Configuration endpoint for cluster mode (if applicable)
+    Value: !GetAtt RedisReplicationGroup.ConfigurationEndPoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-ConfigurationEndpoint'
+
+  HighAvailabilityEnabled:
+    Description: Whether auto-failover and Multi-AZ are enabled
+    Value: !Ref EnableAutoFailover
+    Export:
+      Name: !Sub '${AWS::StackName}-HighAvailability'
+
+  EncryptionStatus:
+    Description: Encryption configuration summary
+    Value: !Sub 'AtRest:${EnableEncryptionAtRest}, InTransit:${EnableEncryptionInTransit}'
+    Export:
+      Name: !Sub '${AWS::StackName}-EncryptionStatus'

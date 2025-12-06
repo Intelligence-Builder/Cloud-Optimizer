@@ -10,7 +10,7 @@ templates:
     terraform: |
       resource "aws_s3_bucket_public_access_block" "remediation" {
         bucket = var.bucket_name
-        
+
         block_public_acls       = true
         block_public_policy     = true
         ignore_public_acls      = true
@@ -22,7 +22,7 @@ templates:
         --bucket BUCKET_NAME \
         --public-access-block-configuration \
         "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
-      
+
       # Remove public ACLs
       aws s3api put-bucket-acl \
         --bucket BUCKET_NAME \
@@ -43,7 +43,7 @@ templates:
     terraform: |
       resource "aws_s3_bucket_server_side_encryption_configuration" "remediation" {
         bucket = var.bucket_name
-        
+
         rule {
           apply_server_side_encryption_by_default {
             sse_algorithm     = "aws:kms"
@@ -63,7 +63,7 @@ templates:
             }
           }]
         }'
-      
+
       # Or with KMS
       aws s3api put-bucket-encryption \
         --bucket BUCKET_NAME \
@@ -97,11 +97,11 @@ templates:
         include_global_service_events = true
         is_multi_region_trail        = true
         enable_log_file_validation   = true
-        
+
         event_selector {
           read_write_type           = "All"
           include_management_events = true
-          
+
           data_resource {
             type   = "AWS::S3::Object"
             values = ["arn:aws:s3:::*/"]
@@ -113,14 +113,14 @@ templates:
       aws s3api create-bucket \
         --bucket cloudtrail-logs-ACCOUNT_ID \
         --region us-east-1
-      
+
       # Create CloudTrail
       aws cloudtrail create-trail \
         --name remediation-trail \
         --s3-bucket-name cloudtrail-logs-ACCOUNT_ID \
         --is-multi-region-trail \
         --enable-log-file-validation
-      
+
       # Start logging
       aws cloudtrail start-logging \
         --name remediation-trail

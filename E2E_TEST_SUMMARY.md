@@ -66,8 +66,9 @@ Comprehensive pytest fixtures and helpers:
 **4.2KB | 150+ lines**
 
 Complete test environment with:
-- **PostgreSQL 15**: Test database (port 5434)
-- **LocalStack**: AWS services emulation (port 4566)
+- **PostgreSQL 15**: Test database (port 5546)
+- **LocalStack**: AWS services emulation (port 5566)
+- **Intelligence-Builder API**: External dependency on host (port 8100)
 - **Cloud Optimizer API**: Application under test (port 18080)
 
 Features:
@@ -129,7 +130,7 @@ Tests handle missing optional services:
 ### 3. Test Isolation
 - Clean database before/after each test
 - Separate test database (test_intelligence)
-- Non-conflicting ports (18080, 5434, 4566)
+- Non-conflicting ports (18080, 5546, 5566) with host access to 8100 for IB
 - Separate Docker network (co-e2e-network)
 
 ### 4. Automatic Management
@@ -191,8 +192,9 @@ When services are running:
 - **API**: http://localhost:18080
 - **API Docs**: http://localhost:18080/docs
 - **Health Check**: http://localhost:18080/health
-- **PostgreSQL**: localhost:5434 (user: test, password: test, db: test_intelligence)
-- **LocalStack**: http://localhost:4566
+- **PostgreSQL**: localhost:5546 (user: test, password: test, db: test_intelligence)
+- **LocalStack**: http://localhost:5566
+- **Intelligence-Builder**: http://localhost:8100 (must be running separately with `IB_API_KEY` configured)
 
 ## Test Coverage
 
@@ -267,7 +269,7 @@ systemctl start docker
 ```
 
 **Port conflicts:**
-- E2E uses ports 18080, 5434, 4566
+- E2E uses ports 18080, 5546, 5566
 - Modify `docker-compose.e2e.yml` if needed
 
 **Services not healthy:**

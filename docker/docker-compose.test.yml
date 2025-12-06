@@ -27,7 +27,7 @@ services:
     image: memgraph/memgraph:latest
     container_name: co-test-memgraph
     ports:
-      - "7688:7687"  # Use 7688 to avoid conflict with local memgraph
+      - "7687:7687"
     entrypoint: ["/usr/lib/memgraph/memgraph", "--log-level=WARNING"]
     healthcheck:
       test: ["CMD", "echo", "ok"]
@@ -42,7 +42,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      SERVICES: ec2,iam,s3,cloudwatch,rds
+      SERVICES: ec2,iam,s3,cloudwatch,rds,sts
       DEBUG: 0
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]

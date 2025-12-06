@@ -15,6 +15,12 @@ The NLU pipeline is the entry point for all user questions. It must:
 - Build context from conversation history
 - Handle multi-turn conversations
 
+### Implementation Status (Issue #101)
+
+- `src/ib_platform/nlu/intents.py` now defines the full Enum plus per-intent descriptions and ≥4 canonical utterances (S3→Glue→Redshift, SOC2/HIPAA, etc.).
+- Package exports (`ib_platform.nlu`) include the helpers `get_intent_examples`, `get_all_intent_examples`, and `get_intent_description` for downstream components.
+- Unit proof: `pytest tests/ib_platform/nlu/test_intents.py` verifies all 9 intents, descriptions, and example coverage.
+
 ## Requirements
 
 | ID | Requirement | Acceptance Criteria |

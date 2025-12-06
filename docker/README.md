@@ -29,7 +29,7 @@ docker-compose -f docker/docker-compose.prod.yml --env-file docker/.env.producti
 - **docker-compose.prod.yml**: Full production stack (postgres, redis, app)
 - **.env.production.example**: Environment variable template
 - **init-db.sql**: PostgreSQL initialization script
-- **entrypoint.sh**: Shell wrapper that bootstraps the Python entrypoint
+- **src/cloud_optimizer/entrypoint.py**: Python entrypoint invoked by the container
 
 ## Container Features
 
@@ -37,7 +37,7 @@ docker-compose -f docker/docker-compose.prod.yml --env-file docker/.env.producti
 - Multi-stage build for minimal image size (<500MB)
 - Non-root user (appuser, uid 1000)
 - Health check endpoint integration
-- Automatic database migrations on startup
+- Automatic database migrations on startup via `python -m cloud_optimizer.entrypoint`
 - Python 3.11 slim base
 
 ### Security

@@ -1,0 +1,151 @@
+# Cloud Optimizer Escalation Policy Configuration
+# This file defines escalation policies and on-call schedules for incident response.
+
+# Default settings
+default_policy: medium
+notification_timeout_minutes: 5
+ack_timeout_minutes: 30
+
+# Escalation Policies
+policies:
+  critical:
+    description: "Critical production issues requiring immediate response (P1)"
+    levels:
+      - level: 1
+        targets:
+          - primary-oncall
+        delay_minutes: 5
+        notify_type: schedule
+      - level: 2
+        targets:
+          - secondary-oncall
+          - engineering-lead
+        delay_minutes: 15
+        notify_type: schedule
+      - level: 3
+        targets:
+          - engineering-manager
+          - vp-engineering
+        delay_minutes: 30
+        notify_type: user
+    repeat_enabled: true
+    repeat_count: 5
+
+  high:
+    description: "High severity issues affecting production (P2)"
+    levels:
+      - level: 1
+        targets:
+          - primary-oncall
+        delay_minutes: 15
+        notify_type: schedule
+      - level: 2
+        targets:
+          - secondary-oncall
+        delay_minutes: 30
+        notify_type: schedule
+      - level: 3
+        targets:
+          - engineering-lead
+        delay_minutes: 60
+        notify_type: user
+    repeat_enabled: true
+    repeat_count: 3
+
+  medium:
+    description: "Medium severity issues requiring attention (P3)"
+    levels:
+      - level: 1
+        targets:
+          - primary-oncall
+        delay_minutes: 30
+        notify_type: schedule
+      - level: 2
+        targets:
+          - engineering-team
+        delay_minutes: 120
+        notify_type: team
+    repeat_enabled: true
+    repeat_count: 2
+
+  low:
+    description: "Low priority issues for next business day (P4)"
+    levels:
+      - level: 1
+        targets:
+          - engineering-team
+        delay_minutes: 60
+        notify_type: team
+    repeat_enabled: false
+    repeat_count: 0
+
+  security:
+    description: "Security-related incidents"
+    levels:
+      - level: 1
+        targets:
+          - security-oncall
+          - primary-oncall
+        delay_minutes: 5
+        notify_type: schedule
+      - level: 2
+        targets:
+          - security-lead
+          - engineering-lead
+        delay_minutes: 15
+        notify_type: user
+      - level: 3
+        targets:
+          - ciso
+          - vp-engineering
+        delay_minutes: 30
+        notify_type: user
+    repeat_enabled: true
+    repeat_count: 5
+
+# On-Call Schedules
+schedules:
+  primary-oncall:
+    users:
+      - user-1@company.com
+      - user-2@company.com
+      - user-3@company.com
+      - user-4@company.com
+    rotation_type: weekly
+    start_time: "09:00"
+    timezone: America/New_York
+    restrictions: []
+
+  secondary-oncall:
+    users:
+      - user-5@company.com
+      - user-6@company.com
+      - user-7@company.com
+    rotation_type: weekly
+    start_time: "09:00"
+    timezone: America/New_York
+    restrictions: []
+
+  security-oncall:
+    users:
+      - security-1@company.com
+      - security-2@company.com
+    rotation_type: weekly
+    start_time: "09:00"
+    timezone: America/New_York
+    restrictions: []
+
+  weekend-oncall:
+    users:
+      - user-1@company.com
+      - user-2@company.com
+    rotation_type: weekly
+    start_time: "09:00"
+    timezone: America/New_York
+    restrictions:
+      - type: time_of_day
+        start_time: "00:00"
+        end_time: "23:59"
+        days:
+          - saturday
+          - sunday

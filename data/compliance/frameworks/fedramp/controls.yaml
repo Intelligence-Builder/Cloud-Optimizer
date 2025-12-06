@@ -1,0 +1,601 @@
+framework: FedRAMP
+version: "Rev5"
+description: |
+  Federal Risk and Authorization Management Program (FedRAMP)
+  Based on NIST SP 800-53 Rev 5 Security Controls
+  Provides standardized approach to security assessment for cloud services
+total_controls: 421
+baselines:
+  low: 125
+  moderate: 325
+  high: 421
+
+control_families:
+  - id: AC
+    name: Access Control
+    control_count: 29
+  - id: AU
+    name: Audit and Accountability
+    control_count: 16
+  - id: AT
+    name: Awareness and Training
+    control_count: 5
+  - id: CM
+    name: Configuration Management
+    control_count: 11
+  - id: CP
+    name: Contingency Planning
+    control_count: 13
+  - id: IA
+    name: Identification and Authentication
+    control_count: 11
+  - id: IR
+    name: Incident Response
+    control_count: 10
+  - id: MA
+    name: Maintenance
+    control_count: 6
+  - id: MP
+    name: Media Protection
+    control_count: 8
+  - id: PS
+    name: Personnel Security
+    control_count: 8
+  - id: PE
+    name: Physical and Environmental Protection
+    control_count: 20
+  - id: PL
+    name: Planning
+    control_count: 9
+  - id: RA
+    name: Risk Assessment
+    control_count: 10
+  - id: CA
+    name: Security Assessment and Authorization
+    control_count: 9
+  - id: SC
+    name: System and Communications Protection
+    control_count: 44
+  - id: SI
+    name: System and Information Integrity
+    control_count: 17
+  - id: SA
+    name: System and Services Acquisition
+    control_count: 22
+  - id: PM
+    name: Program Management
+    control_count: 16
+
+controls:
+  # Access Control (AC) Family
+  - control_id: AC-1
+    name: Policy and Procedures
+    family: AC
+    baseline: [low, moderate, high]
+    description: |
+      Develop, document, and disseminate access control policy and procedures
+      that address purpose, scope, roles, responsibilities, and compliance.
+    aws_services:
+      - IAM
+      - AWS Organizations
+      - Service Control Policies
+    implementation_guidance: |
+      1. Document access control policies in AWS Organizations SCPs
+      2. Use IAM policies to enforce access control requirements
+      3. Implement AWS Control Tower for governance guardrails
+      4. Review and update policies annually
+
+  - control_id: AC-2
+    name: Account Management
+    family: AC
+    baseline: [low, moderate, high]
+    description: |
+      Manage system accounts including establishing, activating, modifying,
+      reviewing, disabling, and removing accounts.
+    aws_services:
+      - IAM
+      - IAM Identity Center
+      - AWS Organizations
+      - CloudTrail
+    implementation_guidance: |
+      1. Use IAM Identity Center for centralized account management
+      2. Implement automated account provisioning/deprovisioning
+      3. Configure CloudTrail to log all IAM activities
+      4. Review account access quarterly
+      5. Implement least privilege for all accounts
+      6. Use IAM Access Analyzer to identify unused permissions
+
+  - control_id: AC-3
+    name: Access Enforcement
+    family: AC
+    baseline: [low, moderate, high]
+    description: |
+      Enforce approved authorizations for logical access to information
+      and system resources in accordance with applicable access control policies.
+    aws_services:
+      - IAM
+      - Resource-based Policies
+      - VPC Security Groups
+      - Network ACLs
+    implementation_guidance: |
+      1. Implement IAM policies with explicit deny rules
+      2. Use resource-based policies for cross-account access
+      3. Configure VPC Security Groups with least privilege
+      4. Apply Network ACLs for subnet-level access control
+      5. Use AWS RAM for controlled resource sharing
+
+  - control_id: AC-4
+    name: Information Flow Enforcement
+    family: AC
+    baseline: [moderate, high]
+    description: |
+      Enforce approved authorizations for controlling the flow of information
+      within the system and between connected systems.
+    aws_services:
+      - VPC
+      - Security Groups
+      - Network ACLs
+      - Transit Gateway
+      - PrivateLink
+    implementation_guidance: |
+      1. Use VPC flow logs for traffic monitoring
+      2. Implement Transit Gateway for controlled routing
+      3. Configure PrivateLink for private service access
+      4. Use Network Firewall for stateful traffic inspection
+      5. Implement data classification with tags
+
+  - control_id: AC-6
+    name: Least Privilege
+    family: AC
+    baseline: [low, moderate, high]
+    description: |
+      Employ the principle of least privilege, allowing only authorized
+      accesses for users that are necessary to accomplish assigned tasks.
+    aws_services:
+      - IAM
+      - IAM Access Analyzer
+      - AWS Organizations
+      - Service Control Policies
+    implementation_guidance: |
+      1. Use IAM Access Analyzer to identify overly permissive policies
+      2. Implement just-in-time access with temporary credentials
+      3. Use permission boundaries to limit maximum permissions
+      4. Review and refine permissions based on usage patterns
+      5. Implement service control policies for organizational guardrails
+
+  - control_id: AC-7
+    name: Unsuccessful Logon Attempts
+    family: AC
+    baseline: [low, moderate, high]
+    description: |
+      Enforce a limit of consecutive invalid logon attempts within a time period
+      and automatically lock accounts when maximum is exceeded.
+    aws_services:
+      - IAM
+      - Cognito
+      - GuardDuty
+      - CloudWatch
+    implementation_guidance: |
+      1. Configure Cognito user pool advanced security features
+      2. Enable GuardDuty for brute force attack detection
+      3. Create CloudWatch alarms for failed login attempts
+      4. Implement account lockout after failed attempts
+      5. Use EventBridge to automate responses to attacks
+
+  # Audit and Accountability (AU) Family
+  - control_id: AU-1
+    name: Policy and Procedures
+    family: AU
+    baseline: [low, moderate, high]
+    description: |
+      Develop, document, and disseminate audit and accountability policy
+      that addresses purpose, scope, roles, responsibilities, and compliance.
+    aws_services:
+      - CloudTrail
+      - CloudWatch Logs
+      - AWS Config
+    implementation_guidance: |
+      1. Document audit requirements and retention policies
+      2. Enable CloudTrail in all regions with management events
+      3. Configure log retention policies in CloudWatch
+      4. Implement AWS Config for compliance tracking
+
+  - control_id: AU-2
+    name: Event Logging
+    family: AU
+    baseline: [low, moderate, high]
+    description: |
+      Identify the types of events that the system is capable of logging
+      and coordinate event logging function with other entities.
+    aws_services:
+      - CloudTrail
+      - CloudWatch Logs
+      - VPC Flow Logs
+      - S3 Access Logs
+    implementation_guidance: |
+      1. Enable CloudTrail management and data events
+      2. Enable VPC Flow Logs for network traffic logging
+      3. Configure S3 access logging for data access audit
+      4. Use CloudWatch Logs for application logging
+      5. Implement centralized log aggregation
+
+  - control_id: AU-3
+    name: Content of Audit Records
+    family: AU
+    baseline: [low, moderate, high]
+    description: |
+      Ensure that audit records contain information that establishes
+      what type of event occurred, when, where, source, outcome, and identity.
+    aws_services:
+      - CloudTrail
+      - CloudWatch Logs
+      - Athena
+    implementation_guidance: |
+      1. CloudTrail provides comprehensive event details automatically
+      2. Configure application logs to include required fields
+      3. Use Athena to query and analyze audit records
+      4. Implement structured logging formats (JSON)
+
+  - control_id: AU-6
+    name: Audit Record Review, Analysis, and Reporting
+    family: AU
+    baseline: [low, moderate, high]
+    description: |
+      Review and analyze system audit records for indications of inappropriate
+      or unusual activity, and report findings.
+    aws_services:
+      - CloudWatch Logs Insights
+      - Athena
+      - Security Hub
+      - GuardDuty
+      - Detective
+    implementation_guidance: |
+      1. Use CloudWatch Logs Insights for log analysis
+      2. Configure Security Hub for centralized findings
+      3. Enable GuardDuty for threat detection
+      4. Use Amazon Detective for security investigations
+      5. Create automated alerting for anomalies
+
+  - control_id: AU-9
+    name: Protection of Audit Information
+    family: AU
+    baseline: [low, moderate, high]
+    description: |
+      Protect audit information and audit logging tools from unauthorized
+      access, modification, and deletion.
+    aws_services:
+      - S3
+      - KMS
+      - CloudTrail
+      - S3 Object Lock
+    implementation_guidance: |
+      1. Enable CloudTrail log file validation
+      2. Store logs in S3 with versioning and MFA delete
+      3. Encrypt logs with KMS customer managed keys
+      4. Use S3 Object Lock for immutable log storage
+      5. Implement SCPs to prevent log tampering
+
+  # Configuration Management (CM) Family
+  - control_id: CM-1
+    name: Policy and Procedures
+    family: CM
+    baseline: [low, moderate, high]
+    description: |
+      Develop, document, and disseminate configuration management policy
+      and procedures addressing purpose, scope, and responsibilities.
+    aws_services:
+      - AWS Config
+      - Systems Manager
+      - CloudFormation
+    implementation_guidance: |
+      1. Document configuration management policies
+      2. Use AWS Config for configuration tracking
+      3. Implement infrastructure as code with CloudFormation
+      4. Define configuration baselines and track changes
+
+  - control_id: CM-2
+    name: Baseline Configuration
+    family: CM
+    baseline: [low, moderate, high]
+    description: |
+      Develop, document, and maintain baseline configurations for
+      information systems under organizational control.
+    aws_services:
+      - AWS Config
+      - EC2 Image Builder
+      - Systems Manager
+      - CloudFormation
+    implementation_guidance: |
+      1. Create hardened AMIs with EC2 Image Builder
+      2. Use CloudFormation for infrastructure baselines
+      3. Configure AWS Config rules for drift detection
+      4. Implement Systems Manager State Manager for compliance
+
+  - control_id: CM-6
+    name: Configuration Settings
+    family: CM
+    baseline: [low, moderate, high]
+    description: |
+      Establish and document configuration settings for information
+      technology products employed within the system.
+    aws_services:
+      - AWS Config
+      - Systems Manager
+      - Security Hub
+      - Inspector
+    implementation_guidance: |
+      1. Use AWS Config conformance packs for CIS benchmarks
+      2. Implement Systems Manager compliance scanning
+      3. Enable Security Hub security standards
+      4. Use Inspector for vulnerability assessment
+      5. Document all configuration deviations
+
+  - control_id: CM-7
+    name: Least Functionality
+    family: CM
+    baseline: [low, moderate, high]
+    description: |
+      Configure the system to provide only essential capabilities and
+      prohibit or restrict the use of unauthorized functions.
+    aws_services:
+      - EC2
+      - Systems Manager
+      - AWS Config
+      - Service Control Policies
+    implementation_guidance: |
+      1. Use minimal base AMIs
+      2. Disable unnecessary services and ports
+      3. Implement SCPs to restrict unauthorized services
+      4. Use AWS Config to detect unused resources
+      5. Regularly review and remove unused capabilities
+
+  # Incident Response (IR) Family
+  - control_id: IR-1
+    name: Policy and Procedures
+    family: IR
+    baseline: [low, moderate, high]
+    description: |
+      Develop, document, and disseminate incident response policy and
+      procedures addressing purpose, scope, and responsibilities.
+    aws_services:
+      - Security Hub
+      - GuardDuty
+      - EventBridge
+      - SNS
+    implementation_guidance: |
+      1. Document incident response procedures
+      2. Configure Security Hub for centralized findings
+      3. Enable GuardDuty for automated threat detection
+      4. Use EventBridge for automated response workflows
+
+  - control_id: IR-4
+    name: Incident Handling
+    family: IR
+    baseline: [low, moderate, high]
+    description: |
+      Implement an incident handling capability that includes preparation,
+      detection, analysis, containment, eradication, and recovery.
+    aws_services:
+      - Security Hub
+      - GuardDuty
+      - Detective
+      - Systems Manager
+      - Lambda
+    implementation_guidance: |
+      1. Use Security Hub for incident correlation
+      2. Enable GuardDuty for automated detection
+      3. Use Detective for investigation and analysis
+      4. Implement automated containment with Lambda
+      5. Document and test incident response procedures
+
+  - control_id: IR-6
+    name: Incident Reporting
+    family: IR
+    baseline: [low, moderate, high]
+    description: |
+      Require personnel to report suspected incidents to the organizational
+      incident response capability within defined time period.
+    aws_services:
+      - Security Hub
+      - SNS
+      - EventBridge
+      - CloudWatch
+    implementation_guidance: |
+      1. Configure Security Hub for finding aggregation
+      2. Set up SNS notifications for critical findings
+      3. Use EventBridge for automated reporting workflows
+      4. Create CloudWatch dashboards for incident visibility
+
+  # System and Communications Protection (SC) Family
+  - control_id: SC-1
+    name: Policy and Procedures
+    family: SC
+    baseline: [low, moderate, high]
+    description: |
+      Develop, document, and disseminate system and communications protection
+      policy and procedures.
+    aws_services:
+      - VPC
+      - KMS
+      - Certificate Manager
+    implementation_guidance: |
+      1. Document network security and encryption policies
+      2. Implement VPC security controls
+      3. Use KMS for encryption key management
+      4. Manage certificates with ACM
+
+  - control_id: SC-7
+    name: Boundary Protection
+    family: SC
+    baseline: [low, moderate, high]
+    description: |
+      Monitor and control communications at external managed interfaces
+      to the system and at key internal managed interfaces.
+    aws_services:
+      - VPC
+      - Security Groups
+      - Network ACLs
+      - WAF
+      - Network Firewall
+      - Shield
+    implementation_guidance: |
+      1. Implement VPC with public/private subnet isolation
+      2. Configure Security Groups for instance-level protection
+      3. Use Network ACLs for subnet-level filtering
+      4. Deploy WAF for web application protection
+      5. Use Network Firewall for stateful inspection
+      6. Enable Shield for DDoS protection
+
+  - control_id: SC-8
+    name: Transmission Confidentiality and Integrity
+    family: SC
+    baseline: [moderate, high]
+    description: |
+      Protect the confidentiality and integrity of transmitted information
+      using cryptographic mechanisms.
+    aws_services:
+      - KMS
+      - Certificate Manager
+      - CloudFront
+      - API Gateway
+    implementation_guidance: |
+      1. Enforce TLS 1.2+ for all connections
+      2. Use ACM for certificate management
+      3. Configure CloudFront with HTTPS-only
+      4. Implement API Gateway with TLS
+      5. Use VPN for sensitive network traffic
+
+  - control_id: SC-12
+    name: Cryptographic Key Establishment and Management
+    family: SC
+    baseline: [low, moderate, high]
+    description: |
+      Establish and manage cryptographic keys when cryptography is employed
+      within the system.
+    aws_services:
+      - KMS
+      - CloudHSM
+      - Secrets Manager
+      - Parameter Store
+    implementation_guidance: |
+      1. Use KMS for key management with automatic rotation
+      2. Implement CloudHSM for FIPS 140-2 Level 3 compliance
+      3. Store secrets in Secrets Manager with rotation
+      4. Use Parameter Store for configuration secrets
+      5. Document key management procedures
+
+  - control_id: SC-13
+    name: Cryptographic Protection
+    family: SC
+    baseline: [low, moderate, high]
+    description: |
+      Implement FIPS-validated cryptography to protect the confidentiality
+      and integrity of information.
+    aws_services:
+      - KMS
+      - CloudHSM
+      - S3
+      - RDS
+      - EBS
+    implementation_guidance: |
+      1. Use KMS with FIPS 140-2 validated modules
+      2. Enable S3 server-side encryption with KMS
+      3. Configure RDS encryption at rest
+      4. Use EBS encryption for volumes
+      5. Implement TLS 1.2+ for data in transit
+
+  - control_id: SC-28
+    name: Protection of Information at Rest
+    family: SC
+    baseline: [moderate, high]
+    description: |
+      Protect the confidentiality and integrity of information at rest
+      using cryptographic mechanisms.
+    aws_services:
+      - KMS
+      - S3
+      - RDS
+      - EBS
+      - DynamoDB
+    implementation_guidance: |
+      1. Enable default encryption for S3 buckets
+      2. Configure RDS encryption at rest
+      3. Use encrypted EBS volumes
+      4. Enable DynamoDB encryption
+      5. Use customer managed KMS keys for sensitive data
+
+  # System and Information Integrity (SI) Family
+  - control_id: SI-1
+    name: Policy and Procedures
+    family: SI
+    baseline: [low, moderate, high]
+    description: |
+      Develop, document, and disseminate system and information integrity
+      policy and procedures.
+    aws_services:
+      - Systems Manager
+      - Inspector
+      - GuardDuty
+    implementation_guidance: |
+      1. Document system integrity monitoring policies
+      2. Implement vulnerability management procedures
+      3. Define patch management timelines
+      4. Configure automated integrity checking
+
+  - control_id: SI-2
+    name: Flaw Remediation
+    family: SI
+    baseline: [low, moderate, high]
+    description: |
+      Identify, report, and correct information system flaws and
+      install security-relevant software updates.
+    aws_services:
+      - Systems Manager Patch Manager
+      - Inspector
+      - ECR Image Scanning
+      - Security Hub
+    implementation_guidance: |
+      1. Use Systems Manager Patch Manager for automated patching
+      2. Enable Inspector for vulnerability assessment
+      3. Configure ECR image scanning for containers
+      4. Track vulnerabilities in Security Hub
+      5. Define and meet remediation SLAs
+
+  - control_id: SI-3
+    name: Malicious Code Protection
+    family: SI
+    baseline: [low, moderate, high]
+    description: |
+      Implement malicious code protection mechanisms at entry and exit
+      points to detect and eradicate malicious code.
+    aws_services:
+      - GuardDuty
+      - Inspector
+      - Macie
+      - CloudWatch
+    implementation_guidance: |
+      1. Enable GuardDuty for malware detection
+      2. Use Inspector for instance vulnerability scanning
+      3. Configure Macie for data protection
+      4. Implement CloudWatch alerts for suspicious activity
+      5. Use endpoint protection on EC2 instances
+
+  - control_id: SI-4
+    name: System Monitoring
+    family: SI
+    baseline: [low, moderate, high]
+    description: |
+      Monitor the system to detect attacks and indicators of potential
+      attacks, and unauthorized connections.
+    aws_services:
+      - GuardDuty
+      - CloudWatch
+      - VPC Flow Logs
+      - CloudTrail
+      - Security Hub
+    implementation_guidance: |
+      1. Enable GuardDuty for threat detection
+      2. Configure CloudWatch alarms for anomalies
+      3. Enable VPC Flow Logs for network monitoring
+      4. Use CloudTrail for API activity monitoring
+      5. Centralize findings in Security Hub

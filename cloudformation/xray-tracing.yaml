@@ -1,0 +1,422 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  AWS X-Ray Distributed Tracing Infrastructure for Cloud Optimizer
+  Issue #167: Distributed tracing with X-Ray
+  Configures sampling rules, groups, and monitoring alarms
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Deployment environment
+
+  ServiceName:
+    Type: String
+    Default: cloud-optimizer
+    Description: Service name for X-Ray tracing
+
+  AlertTopicArn:
+    Type: String
+    Default: ''
+    Description: SNS Topic ARN for X-Ray latency alerts (optional)
+
+  DefaultSamplingRate:
+    Type: Number
+    Default: 0.05
+    MinValue: 0.01
+    MaxValue: 1.0
+    Description: Default sampling rate (5% default)
+
+  APISamplingRate:
+    Type: Number
+    Default: 0.10
+    MinValue: 0.01
+    MaxValue: 1.0
+    Description: Sampling rate for API endpoints (10% default)
+
+  ErrorSamplingRate:
+    Type: Number
+    Default: 1.0
+    MinValue: 0.5
+    MaxValue: 1.0
+    Description: Sampling rate for error traces (100% default)
+
+  HighLatencyThresholdMs:
+    Type: Number
+    Default: 5000
+    Description: Threshold in ms for high latency alarm
+
+Conditions:
+  HasAlertTopic: !Not [!Equals [!Ref AlertTopicArn, '']]
+  IsProduction: !Equals [!Ref Environment, 'production']
+
+Resources:
+  # X-Ray Group for organizing traces
+  XRayGroup:
+    Type: AWS::XRay::Group
+    Properties:
+      GroupName: !Sub '${ServiceName}-${Environment}'
+      FilterExpression: !Sub 'service(id(name: "${ServiceName}"))'
+      InsightsConfiguration:
+        InsightsEnabled: !If [IsProduction, true, false]
+        NotificationsEnabled: !If [IsProduction, true, false]
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref ServiceName
+
+  # Default Sampling Rule - General traffic
+  DefaultSamplingRule:
+    Type: AWS::XRay::SamplingRule
+    Properties:
+      SamplingRule:
+        RuleName: !Sub '${ServiceName}-${Environment}-default'
+        Priority: 10000
+        FixedRate: !Ref DefaultSamplingRate
+        ReservoirSize: 1
+        ServiceName: !Ref ServiceName
+        ServiceType: '*'
+        Host: '*'
+        HTTPMethod: '*'
+        URLPath: '*'
+        ResourceARN: '*'
+        Version: 1
+        Attributes: {}
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref ServiceName
+
+  # API Endpoints Sampling Rule
+  APISamplingRule:
+    Type: AWS::XRay::SamplingRule
+    Properties:
+      SamplingRule:
+        RuleName: !Sub '${ServiceName}-${Environment}-api'
+        Priority: 100
+        FixedRate: !Ref APISamplingRate
+        ReservoirSize: 5
+        ServiceName: !Ref ServiceName
+        ServiceType: '*'
+        Host: '*'
+        HTTPMethod: '*'
+        URLPath: '/api/*'
+        ResourceARN: '*'
+        Version: 1
+        Attributes: {}
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref ServiceName
+
+  # Error Traces Sampling Rule - Always capture errors
+  ErrorSamplingRule:
+    Type: AWS::XRay::SamplingRule
+    Properties:
+      SamplingRule:
+        RuleName: !Sub '${ServiceName}-${Environment}-errors'
+        Priority: 1
+        FixedRate: !Ref ErrorSamplingRate
+        ReservoirSize: 10
+        ServiceName: !Ref ServiceName
+        ServiceType: '*'
+        Host: '*'
+        HTTPMethod: '*'
+        URLPath: '*'
+        ResourceARN: '*'
+        Version: 1
+        Attributes:
+          error: 'true'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref ServiceName
+
+  # Health Check Sampling Rule - Minimal sampling
+  HealthCheckSamplingRule:
+    Type: AWS::XRay::SamplingRule
+    Properties:
+      SamplingRule:
+        RuleName: !Sub '${ServiceName}-${Environment}-health'
+        Priority: 1000
+        FixedRate: 0.01
+        ReservoirSize: 1
+        ServiceName: !Ref ServiceName
+        ServiceType: '*'
+        Host: '*'
+        HTTPMethod: 'GET'
+        URLPath: '/health*'
+        ResourceARN: '*'
+        Version: 1
+        Attributes: {}
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref ServiceName
+
+  # Scanner Operations Sampling Rule
+  ScannerSamplingRule:
+    Type: AWS::XRay::SamplingRule
+    Properties:
+      SamplingRule:
+        RuleName: !Sub '${ServiceName}-${Environment}-scanners'
+        Priority: 50
+        FixedRate: 0.25
+        ReservoirSize: 5
+        ServiceName: !Ref ServiceName
+        ServiceType: '*'
+        Host: '*'
+        HTTPMethod: 'POST'
+        URLPath: '/api/*/scan*'
+        ResourceARN: '*'
+        Version: 1
+        Attributes: {}
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref ServiceName
+
+  # CloudWatch Alarm for High Latency (P95)
+  HighLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertTopic
+    Properties:
+      AlarmName: !Sub '${ServiceName}-${Environment}-xray-high-latency'
+      AlarmDescription: !Sub 'X-Ray traces showing high P95 latency (> ${HighLatencyThresholdMs}ms)'
+      Namespace: AWS/XRay
+      MetricName: ResponseTime
+      Dimensions:
+        - Name: GroupName
+          Value: !Ref XRayGroup
+      ExtendedStatistic: p95
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: !Ref HighLatencyThresholdMs
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopicArn
+      OKActions:
+        - !Ref AlertTopicArn
+
+  # CloudWatch Alarm for High Error Rate
+  ErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertTopic
+    Properties:
+      AlarmName: !Sub '${ServiceName}-${Environment}-xray-error-rate'
+      AlarmDescription: 'X-Ray showing elevated error rate'
+      Namespace: AWS/XRay
+      MetricName: ErrorRate
+      Dimensions:
+        - Name: GroupName
+          Value: !Ref XRayGroup
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 0.05
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopicArn
+
+  # CloudWatch Alarm for Fault Rate (5xx errors)
+  FaultRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertTopic
+    Properties:
+      AlarmName: !Sub '${ServiceName}-${Environment}-xray-fault-rate'
+      AlarmDescription: 'X-Ray showing elevated fault rate (5xx errors)'
+      Namespace: AWS/XRay
+      MetricName: FaultRate
+      Dimensions:
+        - Name: GroupName
+          Value: !Ref XRayGroup
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 0.02
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopicArn
+
+  # CloudWatch Alarm for Throttle Rate
+  ThrottleRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertTopic
+    Properties:
+      AlarmName: !Sub '${ServiceName}-${Environment}-xray-throttle-rate'
+      AlarmDescription: 'X-Ray showing elevated throttle rate (429 errors)'
+      Namespace: AWS/XRay
+      MetricName: ThrottleRate
+      Dimensions:
+        - Name: GroupName
+          Value: !Ref XRayGroup
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 0.10
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopicArn
+
+  # CloudWatch Dashboard for X-Ray Metrics
+  XRayDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Condition: IsProduction
+    Properties:
+      DashboardName: !Sub '${ServiceName}-${Environment}-xray'
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Response Time (P50, P95, P99)",
+                "metrics": [
+                  ["AWS/XRay", "ResponseTime", "GroupName", "${XRayGroup}", {"stat": "p50", "label": "P50"}],
+                  ["...", {"stat": "p95", "label": "P95"}],
+                  ["...", {"stat": "p99", "label": "P99"}]
+                ],
+                "period": 60,
+                "region": "${AWS::Region}",
+                "view": "timeSeries",
+                "stacked": false
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Request Count",
+                "metrics": [
+                  ["AWS/XRay", "RequestCount", "GroupName", "${XRayGroup}"]
+                ],
+                "period": 60,
+                "region": "${AWS::Region}",
+                "view": "timeSeries",
+                "stat": "Sum"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Error Rate",
+                "metrics": [
+                  ["AWS/XRay", "ErrorRate", "GroupName", "${XRayGroup}"]
+                ],
+                "period": 60,
+                "region": "${AWS::Region}",
+                "view": "timeSeries",
+                "stat": "Average",
+                "annotations": {
+                  "horizontal": [{"value": 0.05, "label": "Threshold"}]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8,
+              "y": 6,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Fault Rate (5xx)",
+                "metrics": [
+                  ["AWS/XRay", "FaultRate", "GroupName", "${XRayGroup}"]
+                ],
+                "period": 60,
+                "region": "${AWS::Region}",
+                "view": "timeSeries",
+                "stat": "Average",
+                "annotations": {
+                  "horizontal": [{"value": 0.02, "label": "Threshold"}]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16,
+              "y": 6,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Throttle Rate (429)",
+                "metrics": [
+                  ["AWS/XRay", "ThrottleRate", "GroupName", "${XRayGroup}"]
+                ],
+                "period": 60,
+                "region": "${AWS::Region}",
+                "view": "timeSeries",
+                "stat": "Average"
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 12,
+              "width": 24,
+              "height": 2,
+              "properties": {
+                "markdown": "## X-Ray Console Links\n[Service Map](https://console.aws.amazon.com/xray/home?region=${AWS::Region}#/service-map) | [Traces](https://console.aws.amazon.com/xray/home?region=${AWS::Region}#/traces) | [Analytics](https://console.aws.amazon.com/xray/home?region=${AWS::Region}#/analytics) | [Insights](https://console.aws.amazon.com/xray/home?region=${AWS::Region}#/insights)"
+              }
+            }
+          ]
+        }
+
+Outputs:
+  XRayGroupName:
+    Description: Name of the X-Ray group
+    Value: !Ref XRayGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-XRayGroup'
+
+  XRayGroupARN:
+    Description: ARN of the X-Ray group
+    Value: !GetAtt XRayGroup.GroupARN
+    Export:
+      Name: !Sub '${AWS::StackName}-XRayGroupARN'
+
+  DefaultSamplingRuleARN:
+    Description: ARN of the default sampling rule
+    Value: !GetAtt DefaultSamplingRule.RuleARN
+    Export:
+      Name: !Sub '${AWS::StackName}-DefaultSamplingRule'
+
+  APISamplingRuleARN:
+    Description: ARN of the API sampling rule
+    Value: !GetAtt APISamplingRule.RuleARN
+    Export:
+      Name: !Sub '${AWS::StackName}-APISamplingRule'
+
+  SamplingRates:
+    Description: Configured sampling rates
+    Value: !Sub 'Default: ${DefaultSamplingRate}, API: ${APISamplingRate}, Errors: ${ErrorSamplingRate}'
+
+  DashboardURL:
+    Description: CloudWatch Dashboard URL
+    Condition: IsProduction
+    Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${ServiceName}-${Environment}-xray'

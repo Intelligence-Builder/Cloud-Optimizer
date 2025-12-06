@@ -103,3 +103,57 @@ CREATE INDEX idx_patterns_category ON intelligence.patterns(category) WHERE is_a
 GRANT ALL PRIVILEGES ON SCHEMA intelligence TO test;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA intelligence TO test;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA intelligence TO test;
+
+-- ---------------------------------------------------------------------------
+-- Legacy Smart-Scaffold tables (empty stubs so Alembic DROP TABLE succeeds)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS organizations (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS cg_entity_types (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS cg_entities (
+    id SERIAL PRIMARY KEY,
+    type_id INTEGER REFERENCES cg_entity_types(id),
+    data JSONB DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS cg_relationship_types (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS cg_relationships (
+    id SERIAL PRIMARY KEY,
+    source_id INTEGER REFERENCES cg_entities(id),
+    target_id INTEGER REFERENCES cg_entities(id),
+    type_id INTEGER REFERENCES cg_relationship_types(id)
+);
+
+CREATE TABLE IF NOT EXISTS cg_chunks (
+    id SERIAL PRIMARY KEY,
+    content TEXT
+);
+
+CREATE TABLE IF NOT EXISTS cg_entity_chunks (
+    id SERIAL PRIMARY KEY,
+    entity_id INTEGER REFERENCES cg_entities(id),
+    chunk_id INTEGER REFERENCES cg_chunks(id)
+);
+
+CREATE TABLE IF NOT EXISTS cg_documents (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS cg_document_sources (
+    id SERIAL PRIMARY KEY,
+    organization_id INTEGER REFERENCES organizations(id),
+    url TEXT
+);

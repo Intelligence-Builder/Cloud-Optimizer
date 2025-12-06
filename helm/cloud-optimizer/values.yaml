@@ -114,6 +114,15 @@ tolerations: []
 
 affinity: {}
 
+# Pod Disruption Budget configuration
+podDisruptionBudget:
+  enabled: false
+  # Minimum number of pods that must be available
+  minAvailable: 1
+  # Maximum number of pods that can be unavailable
+  # Use either minAvailable OR maxUnavailable, not both
+  # maxUnavailable: 1
+
 # Database configuration
 database:
   host: "postgres-service"

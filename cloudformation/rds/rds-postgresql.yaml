@@ -1,0 +1,821 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  Cloud Optimizer - Production RDS PostgreSQL with Multi-AZ, Encryption, and High Availability
+  Issue #141: 13.2.2 RDS PostgreSQL production setup with encryption
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - production
+      - staging
+      - development
+    Description: Environment name
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where RDS will be deployed
+
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of private subnet IDs for RDS (at least 2 for Multi-AZ)
+
+  ApplicationSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID of the application tier that needs database access
+
+  DBInstanceClass:
+    Type: String
+    Default: db.r6g.xlarge
+    AllowedValues:
+      - db.r6g.large
+      - db.r6g.xlarge
+      - db.r6g.2xlarge
+      - db.r6g.4xlarge
+      - db.t3.medium
+      - db.t3.large
+    Description: RDS instance class
+
+  DBAllocatedStorage:
+    Type: Number
+    Default: 500
+    MinValue: 100
+    MaxValue: 65536
+    Description: Allocated storage in GB
+
+  DBMaxAllocatedStorage:
+    Type: Number
+    Default: 1000
+    MinValue: 100
+    MaxValue: 65536
+    Description: Maximum storage for autoscaling in GB
+
+  DBName:
+    Type: String
+    Default: cloudoptimizer
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_]*'
+    MinLength: 1
+    MaxLength: 64
+    Description: Database name
+
+  DBMasterUsername:
+    Type: String
+    Default: dbadmin
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_]*'
+    MinLength: 1
+    MaxLength: 16
+    Description: Master username for the database
+
+  EnableReadReplica:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable read replica for reporting workloads
+
+  EnableRDSProxy:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable RDS Proxy for connection pooling
+
+  BackupRetentionPeriod:
+    Type: Number
+    Default: 30
+    MinValue: 7
+    MaxValue: 35
+    Description: Backup retention period in days
+
+  SNSAlertTopicArn:
+    Type: String
+    Default: ''
+    Description: SNS topic ARN for CloudWatch alarm notifications (optional)
+
+Conditions:
+  CreateReadReplica: !Equals [!Ref EnableReadReplica, 'true']
+  CreateRDSProxy: !Equals [!Ref EnableRDSProxy, 'true']
+  HasSNSTopic: !Not [!Equals [!Ref SNSAlertTopicArn, '']]
+  IsProduction: !Equals [!Ref Environment, 'production']
+
+Resources:
+  # =============================================================================
+  # KMS Key for RDS Encryption
+  # =============================================================================
+  RDSEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub 'KMS key for RDS encryption - ${Environment}'
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: rds-key-policy
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: Allow RDS to use the key
+            Effect: Allow
+            Principal:
+              Service: rds.amazonaws.com
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:DescribeKey'
+            Resource: '*'
+          - Sid: Allow CloudWatch Logs
+            Effect: Allow
+            Principal:
+              Service: !Sub 'logs.${AWS::Region}.amazonaws.com'
+            Action:
+              - 'kms:Encrypt*'
+              - 'kms:Decrypt*'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:Describe*'
+            Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-key-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  RDSEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub 'alias/cloud-optimizer-rds-${Environment}'
+      TargetKeyId: !Ref RDSEncryptionKey
+
+  # =============================================================================
+  # Secrets Manager for Database Credentials
+  # =============================================================================
+  DBMasterSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'cloud-optimizer/rds/${Environment}/master-credentials'
+      Description: Master credentials for Cloud Optimizer RDS PostgreSQL
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "${DBMasterUsername}"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\\'
+      KmsKeyId: !Ref RDSEncryptionKey
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-secret-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # =============================================================================
+  # Security Group for RDS
+  # =============================================================================
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'cloud-optimizer-rds-sg-${Environment}'
+      GroupDescription: Security group for Cloud Optimizer RDS PostgreSQL
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ApplicationSecurityGroupId
+          Description: PostgreSQL access from application tier
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-sg-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Self-referencing rule for RDS Proxy
+  RDSSecurityGroupSelfIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateRDSProxy
+    Properties:
+      GroupId: !Ref RDSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref RDSSecurityGroup
+      Description: Allow RDS Proxy to connect to RDS
+
+  # =============================================================================
+  # DB Subnet Group
+  # =============================================================================
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub 'cloud-optimizer-rds-subnet-group-${Environment}'
+      DBSubnetGroupDescription: Subnet group for Cloud Optimizer RDS PostgreSQL
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-subnet-group-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # =============================================================================
+  # DB Parameter Group with Optimized Settings
+  # =============================================================================
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      DBParameterGroupName: !Sub 'cloud-optimizer-pg15-${Environment}'
+      Description: Optimized parameters for Cloud Optimizer PostgreSQL 15
+      Family: postgres15
+      Parameters:
+        # Connection Settings
+        max_connections: '200'
+
+        # Memory Settings (adjusted for db.r6g.xlarge - 32GB RAM)
+        shared_buffers: '8388608'  # 8GB in 8KB pages = 8GB
+        effective_cache_size: '24576MB'  # 75% of RAM
+        work_mem: '256MB'
+        maintenance_work_mem: '2GB'
+
+        # WAL Settings
+        wal_buffers: '64MB'
+        checkpoint_completion_target: '0.9'
+        max_wal_size: '4GB'
+        min_wal_size: '1GB'
+
+        # Query Planning
+        random_page_cost: '1.1'  # SSD storage
+        effective_io_concurrency: '200'
+
+        # Logging
+        log_statement: 'ddl'
+        log_min_duration_statement: '1000'  # Log queries > 1 second
+        log_connections: '1'
+        log_disconnections: '1'
+        log_lock_waits: '1'
+        log_temp_files: '0'
+
+        # Autovacuum
+        autovacuum_vacuum_scale_factor: '0.05'
+        autovacuum_analyze_scale_factor: '0.025'
+        autovacuum_vacuum_cost_limit: '1000'
+
+        # SSL/TLS - Enforce encrypted connections
+        rds.force_ssl: '1'
+
+        # Performance Insights
+        pg_stat_statements.track: 'all'
+
+        # Timezone
+        timezone: 'UTC'
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-pg15-params-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # =============================================================================
+  # Enhanced Monitoring IAM Role
+  # =============================================================================
+  RDSMonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'cloud-optimizer-rds-monitoring-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: monitoring.rds.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole'
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-monitoring-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # =============================================================================
+  # Primary RDS PostgreSQL Instance
+  # =============================================================================
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub 'cloud-optimizer-${Environment}'
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: postgres
+      EngineVersion: '15.4'
+      DBName: !Ref DBName
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DBMasterSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBMasterSecret}:SecretString:password}}'
+
+      # Storage Configuration
+      AllocatedStorage: !Ref DBAllocatedStorage
+      MaxAllocatedStorage: !Ref DBMaxAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      KmsKeyId: !GetAtt RDSEncryptionKey.Arn
+      Iops: 12000  # gp3 baseline + provisioned
+      StorageThroughput: 500  # MB/s for gp3
+
+      # Network Configuration
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      PubliclyAccessible: false
+
+      # High Availability
+      MultiAZ: !If [IsProduction, true, false]
+
+      # Parameter Group
+      DBParameterGroupName: !Ref DBParameterGroup
+
+      # Backup Configuration
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
+      PreferredBackupWindow: '03:00-04:00'
+      CopyTagsToSnapshot: true
+      DeletionProtection: !If [IsProduction, true, false]
+
+      # Maintenance Configuration
+      PreferredMaintenanceWindow: 'Sun:04:00-Sun:05:00'
+      AutoMinorVersionUpgrade: true
+      AllowMajorVersionUpgrade: false
+
+      # Monitoring Configuration
+      MonitoringInterval: 60  # Enhanced Monitoring every 60 seconds
+      MonitoringRoleArn: !GetAtt RDSMonitoringRole.Arn
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: !If [IsProduction, 731, 7]  # 2 years for prod
+      PerformanceInsightsKMSKeyId: !Ref RDSEncryptionKey
+
+      # CloudWatch Logs
+      EnableCloudwatchLogsExports:
+        - postgresql
+        - upgrade
+
+      # IAM Authentication
+      EnableIAMDatabaseAuthentication: true
+
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: BackupPolicy
+          Value: daily-30-day-retention
+
+  # =============================================================================
+  # Read Replica for Reporting Workloads
+  # =============================================================================
+  RDSReadReplica:
+    Type: AWS::RDS::DBInstance
+    Condition: CreateReadReplica
+    Properties:
+      DBInstanceIdentifier: !Sub 'cloud-optimizer-${Environment}-replica'
+      DBInstanceClass: !Ref DBInstanceClass
+      SourceDBInstanceIdentifier: !Ref RDSInstance
+
+      # Storage (inherited from source, but can specify type)
+      StorageType: gp3
+      Iops: 12000
+      StorageThroughput: 500
+
+      # Network Configuration
+      PubliclyAccessible: false
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+
+      # Monitoring Configuration
+      MonitoringInterval: 60
+      MonitoringRoleArn: !GetAtt RDSMonitoringRole.Arn
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: !If [IsProduction, 731, 7]
+      PerformanceInsightsKMSKeyId: !Ref RDSEncryptionKey
+
+      # Maintenance
+      AutoMinorVersionUpgrade: true
+
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-replica-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: read-replica-reporting
+
+  # =============================================================================
+  # Attach Secret to RDS Instance
+  # =============================================================================
+  SecretRDSAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref DBMasterSecret
+      TargetId: !Ref RDSInstance
+      TargetType: AWS::RDS::DBInstance
+
+  # =============================================================================
+  # RDS Proxy for Connection Pooling
+  # =============================================================================
+  RDSProxyRole:
+    Type: AWS::IAM::Role
+    Condition: CreateRDSProxy
+    Properties:
+      RoleName: !Sub 'cloud-optimizer-rds-proxy-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: rds.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: RDSProxySecretsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource: !Ref DBMasterSecret
+              - Effect: Allow
+                Action:
+                  - 'kms:Decrypt'
+                Resource: !GetAtt RDSEncryptionKey.Arn
+                Condition:
+                  StringEquals:
+                    'kms:ViaService': !Sub 'secretsmanager.${AWS::Region}.amazonaws.com'
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-proxy-role-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  RDSProxy:
+    Type: AWS::RDS::DBProxy
+    Condition: CreateRDSProxy
+    Properties:
+      DBProxyName: !Sub 'cloud-optimizer-proxy-${Environment}'
+      EngineFamily: POSTGRESQL
+      Auth:
+        - AuthScheme: SECRETS
+          SecretArn: !Ref DBMasterSecret
+          IAMAuth: DISABLED
+      RoleArn: !GetAtt RDSProxyRole.Arn
+      VpcSubnetIds: !Ref PrivateSubnetIds
+      VpcSecurityGroupIds:
+        - !Ref RDSSecurityGroup
+      RequireTLS: true
+      IdleClientTimeout: 1800  # 30 minutes
+      DebugLogging: false
+      Tags:
+        - Key: Name
+          Value: !Sub 'cloud-optimizer-rds-proxy-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  RDSProxyTargetGroup:
+    Type: AWS::RDS::DBProxyTargetGroup
+    Condition: CreateRDSProxy
+    Properties:
+      DBProxyName: !Ref RDSProxy
+      TargetGroupName: default
+      DBInstanceIdentifiers:
+        - !Ref RDSInstance
+      ConnectionPoolConfig:
+        MaxConnectionsPercent: 100
+        MaxIdleConnectionsPercent: 50
+        ConnectionBorrowTimeout: 120
+
+  # =============================================================================
+  # CloudWatch Alarms
+  # =============================================================================
+  CPUUtilizationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'cloud-optimizer-rds-cpu-high-${Environment}'
+      AlarmDescription: RDS CPU utilization is too high
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstance
+      AlarmActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      OKActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: breaching
+
+  FreeStorageSpaceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'cloud-optimizer-rds-storage-low-${Environment}'
+      AlarmDescription: RDS free storage space is low
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 21474836480  # 20 GB in bytes
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstance
+      AlarmActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      OKActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: breaching
+
+  DatabaseConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'cloud-optimizer-rds-connections-high-${Environment}'
+      AlarmDescription: RDS database connections approaching limit
+      MetricName: DatabaseConnections
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 180  # 90% of max_connections (200)
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstance
+      AlarmActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      OKActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: notBreaching
+
+  ReadLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'cloud-optimizer-rds-read-latency-high-${Environment}'
+      AlarmDescription: RDS read latency is high
+      MetricName: ReadLatency
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 0.1  # 100ms
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstance
+      AlarmActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      OKActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: notBreaching
+
+  WriteLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'cloud-optimizer-rds-write-latency-high-${Environment}'
+      AlarmDescription: RDS write latency is high
+      MetricName: WriteLatency
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 0.1  # 100ms
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstance
+      AlarmActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      OKActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: notBreaching
+
+  FreeableMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'cloud-optimizer-rds-memory-low-${Environment}'
+      AlarmDescription: RDS freeable memory is low
+      MetricName: FreeableMemory
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 1073741824  # 1 GB in bytes
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSInstance
+      AlarmActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      OKActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: breaching
+
+  # Read Replica Lag Alarm
+  ReplicaLagAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CreateReadReplica
+    Properties:
+      AlarmName: !Sub 'cloud-optimizer-rds-replica-lag-high-${Environment}'
+      AlarmDescription: RDS read replica lag is too high
+      MetricName: ReplicaLag
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 30  # 30 seconds
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref RDSReadReplica
+      AlarmActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      OKActions:
+        - !If [HasSNSTopic, !Ref SNSAlertTopicArn, !Ref 'AWS::NoValue']
+      TreatMissingData: notBreaching
+
+  # =============================================================================
+  # CloudWatch Dashboard
+  # =============================================================================
+  RDSDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub 'CloudOptimizer-RDS-${Environment}'
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "CPU Utilization",
+                "metrics": [
+                  ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${RDSInstance}"]
+                ],
+                "region": "${AWS::Region}",
+                "period": 300,
+                "stat": "Average"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Database Connections",
+                "metrics": [
+                  ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "${RDSInstance}"]
+                ],
+                "region": "${AWS::Region}",
+                "period": 300,
+                "stat": "Average"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Read/Write Latency",
+                "metrics": [
+                  ["AWS/RDS", "ReadLatency", "DBInstanceIdentifier", "${RDSInstance}"],
+                  [".", "WriteLatency", ".", "."]
+                ],
+                "region": "${AWS::Region}",
+                "period": 300,
+                "stat": "Average"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Free Storage Space",
+                "metrics": [
+                  ["AWS/RDS", "FreeStorageSpace", "DBInstanceIdentifier", "${RDSInstance}"]
+                ],
+                "region": "${AWS::Region}",
+                "period": 300,
+                "stat": "Average"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "IOPS",
+                "metrics": [
+                  ["AWS/RDS", "ReadIOPS", "DBInstanceIdentifier", "${RDSInstance}"],
+                  [".", "WriteIOPS", ".", "."]
+                ],
+                "region": "${AWS::Region}",
+                "period": 300,
+                "stat": "Average"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Freeable Memory",
+                "metrics": [
+                  ["AWS/RDS", "FreeableMemory", "DBInstanceIdentifier", "${RDSInstance}"]
+                ],
+                "region": "${AWS::Region}",
+                "period": 300,
+                "stat": "Average"
+              }
+            }
+          ]
+        }
+
+Outputs:
+  RDSInstanceId:
+    Description: RDS Instance Identifier
+    Value: !Ref RDSInstance
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSInstanceId'
+
+  RDSInstanceEndpoint:
+    Description: RDS Instance Endpoint
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSEndpoint'
+
+  RDSInstancePort:
+    Description: RDS Instance Port
+    Value: !GetAtt RDSInstance.Endpoint.Port
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSPort'
+
+  RDSReadReplicaEndpoint:
+    Condition: CreateReadReplica
+    Description: RDS Read Replica Endpoint
+    Value: !GetAtt RDSReadReplica.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSReadReplicaEndpoint'
+
+  RDSProxyEndpoint:
+    Condition: CreateRDSProxy
+    Description: RDS Proxy Endpoint (use this for application connections)
+    Value: !GetAtt RDSProxy.Endpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSProxyEndpoint'
+
+  DBSecretArn:
+    Description: Secrets Manager Secret ARN for database credentials
+    Value: !Ref DBMasterSecret
+    Export:
+      Name: !Sub '${AWS::StackName}-DBSecretArn'
+
+  KMSKeyArn:
+    Description: KMS Key ARN used for RDS encryption
+    Value: !GetAtt RDSEncryptionKey.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-KMSKeyArn'
+
+  RDSSecurityGroupId:
+    Description: RDS Security Group ID
+    Value: !Ref RDSSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSSecurityGroupId'
+
+  ConnectionString:
+    Description: PostgreSQL connection string template (replace with actual secret values)
+    Value: !Sub 'postgresql://${DBMasterUsername}:<password>@${RDSInstance.Endpoint.Address}:${RDSInstance.Endpoint.Port}/${DBName}?sslmode=require'
+
+  ConnectionStringWithProxy:
+    Condition: CreateRDSProxy
+    Description: PostgreSQL connection string via RDS Proxy
+    Value: !Sub 'postgresql://${DBMasterUsername}:<password>@${RDSProxy.Endpoint}:5432/${DBName}?sslmode=require'
+
+  DashboardUrl:
+    Description: CloudWatch Dashboard URL
+    Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=CloudOptimizer-RDS-${Environment}'

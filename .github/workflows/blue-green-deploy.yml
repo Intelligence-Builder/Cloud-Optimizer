@@ -1,0 +1,444 @@
+# Blue/Green Deployment Workflow - Issue #159
+# Zero-downtime deployments with instant rollback capability
+name: Blue/Green Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+        default: staging
+      canary_weight:
+        description: 'Traffic shift strategy (percentage steps)'
+        required: true
+        type: choice
+        options:
+          - '10,50,100'
+          - '25,50,100'
+          - '100'
+        default: '10,50,100'
+      skip_tests:
+        description: 'Skip pre-deployment tests'
+        required: false
+        type: boolean
+        default: false
+      rollback_on_error:
+        description: 'Auto-rollback on error rate increase'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: cloud-optimizer
+  ECS_CLUSTER_SUFFIX: bluegreen-cluster
+  MONITORING_NAMESPACE: CloudOptimizer
+  ERROR_RATE_THRESHOLD: 5
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  pre-deployment-tests:
+    name: Pre-Deployment Tests
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run tests
+        run: |
+          PYTHONPATH=src python -m pytest tests/ -v --tb=short
+
+      - name: Validate CloudFormation template
+        run: |
+          pip install cfn-lint
+          cfn-lint cloudformation/blue-green-deployment.yaml
+
+  build-and-push:
+    name: Build and Push Image
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-tests]
+    if: ${{ always() && (needs.pre-deployment-tests.result == 'success' || inputs.skip_tests) }}
+    outputs:
+      image_tag: ${{ steps.build.outputs.image_tag }}
+      image_uri: ${{ steps.build.outputs.image_uri }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        id: build
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f docker/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Scan image for vulnerabilities
+        run: |
+          aws ecr start-image-scan \
+            --repository-name $ECR_REPOSITORY \
+            --image-id imageTag=${{ steps.build.outputs.image_tag }}
+          echo "Image scan initiated - check ECR for results"
+
+  deploy-to-green:
+    name: Deploy to Green Environment
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    outputs:
+      green_service_arn: ${{ steps.deploy.outputs.green_service_arn }}
+      current_blue_weight: ${{ steps.get-weights.outputs.blue_weight }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get current listener weights
+        id: get-weights
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+          LISTENER_ARN=$(aws cloudformation describe-stacks \
+            --stack-name ${ENVIRONMENT}-bluegreen \
+            --query "Stacks[0].Outputs[?OutputKey=='ProductionListenerArn'].OutputValue" \
+            --output text)
+
+          WEIGHTS=$(aws elbv2 describe-rules \
+            --listener-arn $LISTENER_ARN \
+            --query "Rules[?IsDefault=='true'].Actions[0].ForwardConfig.TargetGroups[*].{Arn:TargetGroupArn,Weight:Weight}" \
+            --output json)
+
+          echo "Current weights: $WEIGHTS"
+          BLUE_WEIGHT=$(echo $WEIGHTS | jq '.[0].Weight // 100')
+          echo "blue_weight=$BLUE_WEIGHT" >> $GITHUB_OUTPUT
+
+      - name: Update task definition with new image
+        id: task-def
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+          CLUSTER_NAME="${ENVIRONMENT}-${ECS_CLUSTER_SUFFIX}"
+
+          # Get current task definition
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition ${ENVIRONMENT}-bluegreen-task \
+            --query 'taskDefinition')
+
+          # Update image in task definition
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg IMAGE "${{ needs.build-and-push.outputs.image_uri }}" \
+            '.containerDefinitions[0].image = $IMAGE |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          # Register new task definition
+          NEW_TASK_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "new_task_arn=$NEW_TASK_ARN" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Green service
+        id: deploy
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+          CLUSTER_NAME="${ENVIRONMENT}-${ECS_CLUSTER_SUFFIX}"
+          GREEN_SERVICE="${ENVIRONMENT}-green-service"
+
+          # Scale up Green service with new task definition
+          aws ecs update-service \
+            --cluster $CLUSTER_NAME \
+            --service $GREEN_SERVICE \
+            --task-definition ${{ steps.task-def.outputs.new_task_arn }} \
+            --desired-count 2 \
+            --force-new-deployment
+
+          echo "green_service_arn=${CLUSTER_NAME}/${GREEN_SERVICE}" >> $GITHUB_OUTPUT
+
+      - name: Wait for Green service stability
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+          CLUSTER_NAME="${ENVIRONMENT}-${ECS_CLUSTER_SUFFIX}"
+
+          echo "Waiting for Green service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster $CLUSTER_NAME \
+            --services ${ENVIRONMENT}-green-service
+          echo "Green service is stable"
+
+      - name: Test Green deployment via test listener
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+
+          # Get ALB DNS from CloudFormation outputs
+          ALB_DNS=$(aws cloudformation describe-stacks \
+            --stack-name ${ENVIRONMENT}-bluegreen \
+            --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerDNS'].OutputValue" \
+            --output text)
+
+          echo "Testing Green deployment at $ALB_DNS:8080"
+
+          # Test health endpoint via test listener
+          for i in {1..5}; do
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://$ALB_DNS:8080/health || echo "000")
+            if [ "$RESPONSE" = "200" ]; then
+              echo "Green deployment health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Health check attempt $i returned $RESPONSE, retrying..."
+            sleep 10
+          done
+
+          echo "Green deployment health check failed"
+          exit 1
+
+  traffic-shift:
+    name: Traffic Shift (${{ matrix.weight }}%)
+    runs-on: ubuntu-latest
+    needs: [deploy-to-green]
+    strategy:
+      max-parallel: 1
+      matrix:
+        weight: ${{ fromJson(format('[{0}]', inputs.canary_weight)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Shift traffic to Green (${{ matrix.weight }}%)
+        id: shift
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+          GREEN_WEIGHT=${{ matrix.weight }}
+          BLUE_WEIGHT=$((100 - GREEN_WEIGHT))
+
+          # Get ARNs from CloudFormation
+          STACK_OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name ${ENVIRONMENT}-bluegreen \
+            --query "Stacks[0].Outputs")
+
+          LISTENER_ARN=$(echo $STACK_OUTPUTS | jq -r '.[] | select(.OutputKey=="ProductionListenerArn") | .OutputValue')
+          BLUE_TG_ARN=$(echo $STACK_OUTPUTS | jq -r '.[] | select(.OutputKey=="BlueTargetGroupArn") | .OutputValue')
+          GREEN_TG_ARN=$(echo $STACK_OUTPUTS | jq -r '.[] | select(.OutputKey=="GreenTargetGroupArn") | .OutputValue')
+
+          echo "Shifting traffic: Blue=$BLUE_WEIGHT%, Green=$GREEN_WEIGHT%"
+
+          # Update listener rule with new weights
+          aws elbv2 modify-listener \
+            --listener-arn $LISTENER_ARN \
+            --default-actions '[{
+              "Type": "forward",
+              "ForwardConfig": {
+                "TargetGroups": [
+                  {"TargetGroupArn": "'"$BLUE_TG_ARN"'", "Weight": '$BLUE_WEIGHT'},
+                  {"TargetGroupArn": "'"$GREEN_TG_ARN"'", "Weight": '$GREEN_WEIGHT'}
+                ]
+              }
+            }]'
+
+          echo "Traffic shifted successfully"
+          echo "shift_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
+      - name: Record deployment metric
+        run: |
+          aws cloudwatch put-metric-data \
+            --namespace $MONITORING_NAMESPACE \
+            --metric-name DeploymentTrafficShift \
+            --value ${{ matrix.weight }} \
+            --unit Percent \
+            --dimensions Environment=${{ inputs.environment }},DeploymentId=${{ github.run_id }}
+
+      - name: Monitor error rate
+        if: ${{ inputs.rollback_on_error }}
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+
+          echo "Monitoring error rate for 60 seconds..."
+          sleep 60
+
+          # Get ALB metrics
+          ALB_NAME=$(aws cloudformation describe-stacks \
+            --stack-name ${ENVIRONMENT}-bluegreen \
+            --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerArn'].OutputValue" \
+            --output text | sed 's/.*loadbalancer\///')
+
+          # Get error count
+          ERROR_COUNT=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/ApplicationELB \
+            --metric-name HTTPCode_Target_5XX_Count \
+            --dimensions Name=LoadBalancer,Value=$ALB_NAME \
+            --start-time $(date -u -d '2 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
+            --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --period 60 \
+            --statistics Sum \
+            --query 'Datapoints[0].Sum' \
+            --output text)
+
+          ERROR_COUNT=${ERROR_COUNT:-0}
+          echo "Error count in last minute: $ERROR_COUNT"
+
+          if [ "$ERROR_COUNT" != "None" ] && [ "$ERROR_COUNT" -gt "$ERROR_RATE_THRESHOLD" ]; then
+            echo "::error::Error rate exceeded threshold ($ERROR_COUNT > $ERROR_RATE_THRESHOLD)"
+            exit 1
+          fi
+
+          echo "Error rate within acceptable limits"
+
+      - name: Wait before next shift
+        if: ${{ matrix.weight != 100 }}
+        run: |
+          echo "Waiting 5 minutes before next traffic shift..."
+          sleep 300
+
+  finalize-deployment:
+    name: Finalize Deployment
+    runs-on: ubuntu-latest
+    needs: [traffic-shift, deploy-to-green]
+    if: success()
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Scale down Blue service
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+          CLUSTER_NAME="${ENVIRONMENT}-${ECS_CLUSTER_SUFFIX}"
+
+          echo "Keeping Blue service running with 1 task for 24h rollback capability"
+          aws ecs update-service \
+            --cluster $CLUSTER_NAME \
+            --service ${ENVIRONMENT}-blue-service \
+            --desired-count 1
+
+      - name: Swap Blue and Green labels
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+
+          echo "Recording deployment completion"
+          aws cloudwatch put-metric-data \
+            --namespace $MONITORING_NAMESPACE \
+            --metric-name DeploymentCompleted \
+            --value 1 \
+            --unit Count \
+            --dimensions Environment=$ENVIRONMENT,DeploymentId=${{ github.run_id }}
+
+      - name: Create deployment record
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+
+          echo "Deployment completed successfully"
+          echo "Environment: $ENVIRONMENT"
+          echo "Image: ${{ needs.build-and-push.outputs.image_uri }}"
+          echo "Deployment ID: ${{ github.run_id }}"
+          echo "Traffic now 100% on Green"
+
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    needs: [traffic-shift, deploy-to-green]
+    if: failure() && inputs.rollback_on_error
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Rollback traffic to Blue
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+
+          echo "Rolling back traffic to Blue..."
+
+          STACK_OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name ${ENVIRONMENT}-bluegreen \
+            --query "Stacks[0].Outputs")
+
+          LISTENER_ARN=$(echo $STACK_OUTPUTS | jq -r '.[] | select(.OutputKey=="ProductionListenerArn") | .OutputValue')
+          BLUE_TG_ARN=$(echo $STACK_OUTPUTS | jq -r '.[] | select(.OutputKey=="BlueTargetGroupArn") | .OutputValue')
+          GREEN_TG_ARN=$(echo $STACK_OUTPUTS | jq -r '.[] | select(.OutputKey=="GreenTargetGroupArn") | .OutputValue')
+
+          aws elbv2 modify-listener \
+            --listener-arn $LISTENER_ARN \
+            --default-actions '[{
+              "Type": "forward",
+              "ForwardConfig": {
+                "TargetGroups": [
+                  {"TargetGroupArn": "'"$BLUE_TG_ARN"'", "Weight": 100},
+                  {"TargetGroupArn": "'"$GREEN_TG_ARN"'", "Weight": 0}
+                ]
+              }
+            }]'
+
+          echo "Traffic rolled back to Blue"
+
+      - name: Scale down Green service
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+          CLUSTER_NAME="${ENVIRONMENT}-${ECS_CLUSTER_SUFFIX}"
+
+          aws ecs update-service \
+            --cluster $CLUSTER_NAME \
+            --service ${ENVIRONMENT}-green-service \
+            --desired-count 0
+
+          echo "Green service scaled down"
+
+      - name: Record rollback metric
+        run: |
+          aws cloudwatch put-metric-data \
+            --namespace $MONITORING_NAMESPACE \
+            --metric-name DeploymentRollback \
+            --value 1 \
+            --unit Count \
+            --dimensions Environment=${{ inputs.environment }},DeploymentId=${{ github.run_id }}
+
+      - name: Create rollback notification
+        run: |
+          echo "::error::Deployment rolled back due to errors"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Deployment ID: ${{ github.run_id }}"
+          echo "Traffic restored to Blue environment"

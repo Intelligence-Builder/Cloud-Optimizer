@@ -1,0 +1,465 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  SSL/TLS Certificate Configuration for Cloud Optimizer
+  Issue #160: ACM certificate setup with HTTPS, TLS 1.2+, and monitoring
+
+  Features:
+  - ACM certificate with DNS validation
+  - HTTPS listener with TLS 1.2+ only policy
+  - HTTP to HTTPS redirect
+  - Certificate expiration monitoring (30-day alert)
+  - Optional Route53 DNS validation automation
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Domain Configuration
+        Parameters:
+          - DomainName
+          - SubjectAlternativeNames
+          - HostedZoneId
+      - Label:
+          default: Load Balancer Configuration
+        Parameters:
+          - LoadBalancerArn
+          - TargetGroupArn
+      - Label:
+          default: TLS Configuration
+        Parameters:
+          - TLSSecurityPolicy
+      - Label:
+          default: Monitoring Configuration
+        Parameters:
+          - CertificateExpirationAlertDays
+          - AlertEmail
+    ParameterLabels:
+      DomainName:
+        default: Primary Domain Name
+      SubjectAlternativeNames:
+        default: Additional Domain Names (SANs)
+      HostedZoneId:
+        default: Route53 Hosted Zone ID (optional)
+      LoadBalancerArn:
+        default: Application Load Balancer ARN
+      TargetGroupArn:
+        default: Target Group ARN
+      TLSSecurityPolicy:
+        default: TLS Security Policy
+      CertificateExpirationAlertDays:
+        default: Days Before Expiration to Alert
+      AlertEmail:
+        default: Alert Email Address
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: |
+      Primary domain name for the certificate (e.g., app.example.com).
+      Must be a valid domain name you own and can validate.
+    AllowedPattern: ^(\*\.)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$
+    ConstraintDescription: Must be a valid domain name
+
+  SubjectAlternativeNames:
+    Type: CommaDelimitedList
+    Description: |
+      Additional domain names (SANs) for the certificate.
+      Comma-separated list (e.g., www.example.com,api.example.com)
+    Default: ''
+
+  HostedZoneId:
+    Type: String
+    Description: |
+      Route53 Hosted Zone ID for automatic DNS validation.
+      Leave empty for manual DNS validation.
+    Default: ''
+
+  LoadBalancerArn:
+    Type: String
+    Description: ARN of the Application Load Balancer to attach the certificate to
+
+  TargetGroupArn:
+    Type: String
+    Description: ARN of the Target Group for HTTPS traffic
+
+  TLSSecurityPolicy:
+    Type: String
+    Description: |
+      TLS security policy for the HTTPS listener.
+      ELBSecurityPolicy-TLS13-1-2-2021-06 provides TLS 1.2+ only with strong ciphers.
+    Default: ELBSecurityPolicy-TLS13-1-2-2021-06
+    AllowedValues:
+      - ELBSecurityPolicy-TLS13-1-2-2021-06
+      - ELBSecurityPolicy-TLS13-1-2-Ext1-2021-06
+      - ELBSecurityPolicy-TLS13-1-2-Ext2-2021-06
+      - ELBSecurityPolicy-TLS-1-2-2017-01
+      - ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+      - ELBSecurityPolicy-FS-1-2-2019-08
+      - ELBSecurityPolicy-FS-1-2-Res-2019-08
+      - ELBSecurityPolicy-FS-1-2-Res-2020-10
+
+  CertificateExpirationAlertDays:
+    Type: Number
+    Description: Number of days before certificate expiration to trigger alert
+    Default: 30
+    MinValue: 7
+    MaxValue: 90
+
+  AlertEmail:
+    Type: String
+    Description: Email address for certificate expiration alerts
+    AllowedPattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+    ConstraintDescription: Must be a valid email address
+
+Conditions:
+  HasHostedZone: !Not [!Equals [!Ref HostedZoneId, '']]
+  HasSANs: !Not [!Equals [!Join ['', !Ref SubjectAlternativeNames], '']]
+
+Resources:
+  # ==================== ACM CERTIFICATE ====================
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      SubjectAlternativeNames: !If
+        - HasSANs
+        - !Ref SubjectAlternativeNames
+        - !Ref AWS::NoValue
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !If [HasHostedZone, !Ref HostedZoneId, !Ref AWS::NoValue]
+      Tags:
+        - Key: Name
+          Value: !Sub cloud-optimizer-${DomainName}
+        - Key: Application
+          Value: cloud-optimizer
+        - Key: Purpose
+          Value: HTTPS encryption
+      # Note: ACM certificates auto-renew automatically when:
+      # 1. Certificate is in use (attached to ALB, CloudFront, etc.)
+      # 2. Certificate is issued or renewed after Nov 2019
+      # 3. DNS validation records are still in place
+
+  # ==================== HTTPS LISTENER ====================
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn: Certificate
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancerArn
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: !Ref TLSSecurityPolicy
+      Certificates:
+        - CertificateArn: !Ref Certificate
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupArn
+
+  # ==================== HTTP TO HTTPS REDIRECT ====================
+  HTTPRedirectListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancerArn
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: '443'
+            StatusCode: HTTP_301
+            Host: '#{host}'
+            Path: '/#{path}'
+            Query: '#{query}'
+
+  # ==================== SNS TOPIC FOR ALERTS ====================
+  CertificateAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub cloud-optimizer-cert-alerts-${AWS::StackName}
+      DisplayName: Cloud Optimizer Certificate Alerts
+      Tags:
+        - Key: Application
+          Value: cloud-optimizer
+        - Key: Purpose
+          Value: Certificate expiration monitoring
+
+  CertificateAlertSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref CertificateAlertTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  # ==================== CERTIFICATE MONITORING ====================
+  # CloudWatch EventBridge rule to monitor certificate expiration
+  CertificateExpirationRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub cloud-optimizer-cert-expiration-${AWS::StackName}
+      Description: Monitor ACM certificate expiration
+      EventPattern:
+        source:
+          - aws.acm
+        detail-type:
+          - ACM Certificate Approaching Expiration
+        resources:
+          - !Ref Certificate
+      State: ENABLED
+      Targets:
+        - Id: CertificateExpirationAlert
+          Arn: !Ref CertificateAlertTopic
+          InputTransformer:
+            InputPathsMap:
+              certificateArn: $.resources[0]
+              daysToExpiry: $.detail.DaysToExpiry
+            InputTemplate: |
+              "ALERT: Cloud Optimizer SSL Certificate Expiring Soon!
+
+              Certificate ARN: <certificateArn>
+              Days until expiration: <daysToExpiry>
+
+              ACTION REQUIRED:
+              - If using DNS validation, ensure CNAME records are still in place
+              - ACM will automatically renew if validation is successful
+              - Check AWS ACM console for renewal status
+
+              Domain: ${DomainName}"
+
+  CertificateAlertTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref CertificateAlertTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref CertificateAlertTopic
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt CertificateExpirationRule.Arn
+
+  # ==================== CUSTOM METRIC FOR CERTIFICATE AGE ====================
+  # Lambda function to check certificate expiration and publish metrics
+  CertificateMetricsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub cloud-optimizer-cert-metrics-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ACMReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - acm:DescribeCertificate
+                Resource: !Ref Certificate
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: CloudOptimizer/Certificates
+
+  CertificateMetricsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub cloud-optimizer-cert-metrics-${AWS::StackName}
+      Description: Publishes certificate expiration metrics to CloudWatch
+      Runtime: python3.11
+      Handler: index.handler
+      Role: !GetAtt CertificateMetricsRole.Arn
+      Timeout: 30
+      Environment:
+        Variables:
+          CERTIFICATE_ARN: !Ref Certificate
+          DOMAIN_NAME: !Ref DomainName
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          from datetime import datetime, timezone
+
+          def handler(event, context):
+              acm = boto3.client('acm')
+              cloudwatch = boto3.client('cloudwatch')
+
+              cert_arn = os.environ['CERTIFICATE_ARN']
+              domain_name = os.environ['DOMAIN_NAME']
+
+              try:
+                  response = acm.describe_certificate(CertificateArn=cert_arn)
+                  cert = response['Certificate']
+
+                  if 'NotAfter' in cert:
+                      expiry_date = cert['NotAfter']
+                      now = datetime.now(timezone.utc)
+                      days_to_expiry = (expiry_date - now).days
+
+                      cloudwatch.put_metric_data(
+                          Namespace='CloudOptimizer/Certificates',
+                          MetricData=[
+                              {
+                                  'MetricName': 'DaysUntilExpiry',
+                                  'Dimensions': [
+                                      {'Name': 'Domain', 'Value': domain_name},
+                                      {'Name': 'CertificateArn', 'Value': cert_arn}
+                                  ],
+                                  'Value': days_to_expiry,
+                                  'Unit': 'Count'
+                              },
+                              {
+                                  'MetricName': 'CertificateStatus',
+                                  'Dimensions': [
+                                      {'Name': 'Domain', 'Value': domain_name},
+                                      {'Name': 'Status', 'Value': cert['Status']}
+                                  ],
+                                  'Value': 1 if cert['Status'] == 'ISSUED' else 0,
+                                  'Unit': 'Count'
+                              }
+                          ]
+                      )
+
+                      return {
+                          'statusCode': 200,
+                          'body': f'Certificate {domain_name} expires in {days_to_expiry} days'
+                      }
+
+              except Exception as e:
+                  print(f'Error checking certificate: {str(e)}')
+                  raise
+
+  CertificateMetricsSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub cloud-optimizer-cert-metrics-schedule-${AWS::StackName}
+      Description: Schedule for certificate metrics collection
+      ScheduleExpression: rate(1 day)
+      State: ENABLED
+      Targets:
+        - Id: CertificateMetricsLambda
+          Arn: !GetAtt CertificateMetricsFunction.Arn
+
+  CertificateMetricsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CertificateMetricsFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt CertificateMetricsSchedule.Arn
+
+  # ==================== CLOUDWATCH ALARMS ====================
+  CertificateExpirationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloud-optimizer-cert-expiring-${AWS::StackName}
+      AlarmDescription: !Sub |
+        Certificate for ${DomainName} is expiring within ${CertificateExpirationAlertDays} days.
+        Check ACM console and ensure DNS validation records are in place for auto-renewal.
+      Namespace: CloudOptimizer/Certificates
+      MetricName: DaysUntilExpiry
+      Dimensions:
+        - Name: Domain
+          Value: !Ref DomainName
+        - Name: CertificateArn
+          Value: !Ref Certificate
+      Statistic: Minimum
+      Period: 86400  # 24 hours
+      EvaluationPeriods: 1
+      Threshold: !Ref CertificateExpirationAlertDays
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: breaching
+      AlarmActions:
+        - !Ref CertificateAlertTopic
+      OKActions:
+        - !Ref CertificateAlertTopic
+
+  # ==================== SSL LABS GRADE TRACKING (OPTIONAL) ====================
+  # This alarm tracks HTTPS connection health
+  HTTPSHealthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloud-optimizer-https-health-${AWS::StackName}
+      AlarmDescription: HTTPS connections failing or unhealthy
+      Namespace: AWS/ApplicationELB
+      MetricName: TargetTLSNegotiationErrorCount
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Select
+            - 1
+            - !Split
+              - ':loadbalancer/'
+              - !Ref LoadBalancerArn
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref CertificateAlertTopic
+
+Outputs:
+  CertificateArn:
+    Description: ARN of the ACM certificate
+    Value: !Ref Certificate
+    Export:
+      Name: !Sub ${AWS::StackName}-CertificateArn
+
+  HTTPSListenerArn:
+    Description: ARN of the HTTPS listener
+    Value: !Ref HTTPSListener
+    Export:
+      Name: !Sub ${AWS::StackName}-HTTPSListenerArn
+
+  DomainName:
+    Description: Primary domain name for the certificate
+    Value: !Ref DomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-DomainName
+
+  TLSPolicy:
+    Description: TLS security policy in use
+    Value: !Ref TLSSecurityPolicy
+    Export:
+      Name: !Sub ${AWS::StackName}-TLSPolicy
+
+  SecurityConfiguration:
+    Description: Security configuration summary
+    Value: !Sub |
+      TLS Policy: ${TLSSecurityPolicy}
+      HTTP Redirect: Enabled (301 to HTTPS)
+      Certificate Auto-Renewal: Enabled (DNS validation)
+      Expiration Monitoring: ${CertificateExpirationAlertDays} days
+
+  DNSValidationInstructions:
+    Description: Instructions for DNS validation (if not using Route53)
+    Value: !If
+      - HasHostedZone
+      - DNS validation will be automatic via Route53
+      - |
+        Manual DNS validation required:
+        1. Go to ACM console after stack creation
+        2. Find the certificate and click "Create records in Route 53" or copy CNAME records
+        3. Add the CNAME records to your DNS provider
+        4. Certificate will be issued after validation (usually 5-30 minutes)
+        5. Keep the CNAME records for automatic renewal
+
+  SSLLabsTestURL:
+    Description: URL to test SSL configuration
+    Value: !Sub https://www.ssllabs.com/ssltest/analyze.html?d=${DomainName}

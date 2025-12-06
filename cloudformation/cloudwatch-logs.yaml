@@ -1,0 +1,256 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudWatch Logs configuration for Cloud Optimizer structured logging
+
+Parameters:
+  Environment:
+    Type: String
+    Default: development
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Deployment environment
+
+  RetentionDays:
+    Type: Number
+    Default: 30
+    AllowedValues:
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 180
+      - 365
+    Description: Log retention period in days
+
+  ApplicationName:
+    Type: String
+    Default: cloud-optimizer
+    Description: Application name for log group naming
+
+Resources:
+  # Main Application Log Group
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/${ApplicationName}/${Environment}/application'
+      RetentionInDays: !Ref RetentionDays
+      Tags:
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: LogType
+          Value: application
+
+  # API Request Log Group
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/${ApplicationName}/${Environment}/api'
+      RetentionInDays: !Ref RetentionDays
+      Tags:
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: LogType
+          Value: api
+
+  # Security Events Log Group
+  SecurityLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/${ApplicationName}/${Environment}/security'
+      RetentionInDays: !Ref RetentionDays
+      Tags:
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: LogType
+          Value: security
+
+  # Error Log Group (longer retention)
+  ErrorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/${ApplicationName}/${Environment}/errors'
+      RetentionInDays: 90  # Keep errors longer
+      Tags:
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: LogType
+          Value: errors
+
+  # Audit Log Group (compliance)
+  AuditLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/${ApplicationName}/${Environment}/audit'
+      RetentionInDays: 365  # Compliance requirement
+      Tags:
+        - Key: Application
+          Value: !Ref ApplicationName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: LogType
+          Value: audit
+
+  # Metric Filter: Error Count
+  ErrorCountMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref ApplicationLogGroup
+      FilterPattern: '{ $.level = "ERROR" }'
+      MetricTransformations:
+        - MetricName: ErrorCount
+          MetricNamespace: !Sub '${ApplicationName}/${Environment}'
+          MetricValue: '1'
+          Unit: Count
+          Dimensions:
+            - Key: Service
+              Value: $.service
+            - Key: LoggerName
+              Value: $.logger
+
+  # Metric Filter: Request Count
+  RequestCountMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref ApiLogGroup
+      FilterPattern: '{ $.event = "request_completed" }'
+      MetricTransformations:
+        - MetricName: RequestCount
+          MetricNamespace: !Sub '${ApplicationName}/${Environment}'
+          MetricValue: '1'
+          Unit: Count
+          Dimensions:
+            - Key: Endpoint
+              Value: $.path
+            - Key: Method
+              Value: $.method
+
+  # Metric Filter: Request Latency
+  RequestLatencyMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref ApiLogGroup
+      FilterPattern: '{ $.event = "request_completed" && $.duration_ms = * }'
+      MetricTransformations:
+        - MetricName: RequestLatency
+          MetricNamespace: !Sub '${ApplicationName}/${Environment}'
+          MetricValue: $.duration_ms
+          Unit: Milliseconds
+          Dimensions:
+            - Key: Endpoint
+              Value: $.path
+
+  # Metric Filter: 4xx Errors
+  ClientErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref ApiLogGroup
+      FilterPattern: '{ $.event = "request_completed" && $.status_code >= 400 && $.status_code < 500 }'
+      MetricTransformations:
+        - MetricName: ClientErrors
+          MetricNamespace: !Sub '${ApplicationName}/${Environment}'
+          MetricValue: '1'
+          Unit: Count
+
+  # Metric Filter: 5xx Errors
+  ServerErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref ApiLogGroup
+      FilterPattern: '{ $.event = "request_completed" && $.status_code >= 500 }'
+      MetricTransformations:
+        - MetricName: ServerErrors
+          MetricNamespace: !Sub '${ApplicationName}/${Environment}'
+          MetricValue: '1'
+          Unit: Count
+
+  # Metric Filter: Security Findings
+  SecurityFindingsMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref SecurityLogGroup
+      FilterPattern: '{ $.event = "security_finding" }'
+      MetricTransformations:
+        - MetricName: SecurityFindings
+          MetricNamespace: !Sub '${ApplicationName}/${Environment}'
+          MetricValue: '1'
+          Unit: Count
+          Dimensions:
+            - Key: Severity
+              Value: $.severity
+
+  # CloudWatch Alarm: High Error Rate
+  HighErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ApplicationName}-${Environment}-HighErrorRate'
+      AlarmDescription: Triggers when error rate exceeds threshold
+      MetricName: ErrorCount
+      Namespace: !Sub '${ApplicationName}/${Environment}'
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  # CloudWatch Alarm: High Latency
+  HighLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ApplicationName}-${Environment}-HighLatency'
+      AlarmDescription: Triggers when p99 latency exceeds threshold
+      MetricName: RequestLatency
+      Namespace: !Sub '${ApplicationName}/${Environment}'
+      ExtendedStatistic: p99
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 5000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  ApplicationLogGroupName:
+    Description: Application log group name
+    Value: !Ref ApplicationLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ApplicationLogGroup'
+
+  ApiLogGroupName:
+    Description: API log group name
+    Value: !Ref ApiLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiLogGroup'
+
+  SecurityLogGroupName:
+    Description: Security log group name
+    Value: !Ref SecurityLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityLogGroup'
+
+  ErrorLogGroupName:
+    Description: Error log group name
+    Value: !Ref ErrorLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ErrorLogGroup'
+
+  AuditLogGroupName:
+    Description: Audit log group name
+    Value: !Ref AuditLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-AuditLogGroup'
+
+  MetricNamespace:
+    Description: CloudWatch metric namespace
+    Value: !Sub '${ApplicationName}/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-MetricNamespace'

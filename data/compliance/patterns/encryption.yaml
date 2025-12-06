@@ -26,11 +26,11 @@ patterns:
           deletion_window_in_days = 10
           enable_key_rotation     = true
         }
-        
+
         # S3 bucket with encryption
         resource "aws_s3_bucket_server_side_encryption_configuration" "example" {
           bucket = aws_s3_bucket.example.id
-          
+
           rule {
             apply_server_side_encryption_by_default {
               sse_algorithm     = "aws:kms"
@@ -39,11 +39,11 @@ patterns:
             bucket_key_enabled = true
           }
         }
-        
+
         # Bucket policy to enforce encryption
         resource "aws_s3_bucket_policy" "enforce_encryption" {
           bucket = aws_s3_bucket.example.id
-          
+
           policy = jsonencode({
             Version = "2012-10-17"
             Statement = [
@@ -67,7 +67,7 @@ patterns:
         aws kms create-key \
           --description "S3 encryption key" \
           --key-policy file://key-policy.json
-        
+
         # Enable bucket encryption
         aws s3api put-bucket-encryption \
           --bucket my-bucket \
@@ -105,18 +105,18 @@ patterns:
           deletion_window_in_days = 10
           enable_key_rotation     = true
         }
-        
+
         resource "aws_db_instance" "example" {
           identifier           = "mydb"
           engine              = "postgres"
           engine_version      = "14.7"
           instance_class      = "db.t3.micro"
           allocated_storage   = 20
-          
+
           # Encryption at rest
           storage_encrypted   = true
           kms_key_id         = aws_kms_key.rds.arn
-          
+
           # Encryption in transit
           ca_cert_identifier = "rds-ca-rsa2048-g1"
         }
