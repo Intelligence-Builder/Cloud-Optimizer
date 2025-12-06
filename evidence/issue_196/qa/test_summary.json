@@ -1,0 +1,19 @@
+{
+  "issue": 196,
+  "title": "Fix ib_client.py path reference in README",
+  "test_date": "2025-12-06",
+  "status": "complete",
+  "changes_made": [
+    "Updated README.md project structure to show correct path: services/intelligence_builder.py",
+    "Added scanners/ directory to project structure documentation",
+    "Fixed duplicate services/ entry in structure"
+  ],
+  "files_modified": [
+    "README.md"
+  ],
+  "verification": {
+    "file_exists": "src/cloud_optimizer/services/intelligence_builder.py",
+    "readme_updated": true,
+    "structure_accurate": true
+  }
+}

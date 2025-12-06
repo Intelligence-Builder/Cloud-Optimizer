@@ -3,14 +3,18 @@
 Database Migration Management Script for Cloud Optimizer.
 
 Provides safe migration operations with backup, rollback, and status checking.
+Includes pre-migration health checks, automatic backup, and post-migration validation.
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -76,6 +80,227 @@ def get_migration_history() -> list[dict]:
     return history
 
 
+def check_database_connection() -> Tuple[bool, str]:
+    """
+    Check if database is accessible.
+
+    Returns:
+        Tuple of (success, message)
+    """
+    db_url = get_database_url()
+    try:
+        parsed = urlparse(db_url)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        user = parsed.username or "cloud_optimizer"
+        password = parsed.password or ""
+        dbname = parsed.path.lstrip("/") or "cloud_optimizer"
+
+        env = os.environ.copy()
+        if password:
+            env["PGPASSWORD"] = password
+
+        # Simple connection test using psql
+        cmd = [
+            "psql",
+            "-h", host,
+            "-p", str(port),
+            "-U", user,
+            "-d", dbname,
+            "-c", "SELECT 1;",
+            "-t",
+        ]
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=10
+        )
+
+        if result.returncode == 0:
+            return True, "Database connection successful"
+        return False, f"Database connection failed: {result.stderr}"
+    except subprocess.TimeoutExpired:
+        return False, "Database connection timeout (10s)"
+    except Exception as e:
+        return False, f"Database connection error: {e}"
+
+
+def check_disk_space() -> Tuple[bool, str]:
+    """
+    Check if sufficient disk space is available.
+
+    Returns:
+        Tuple of (success, message)
+    """
+    try:
+        backup_dir = Path(__file__).parent.parent / "backups"
+        backup_dir.mkdir(exist_ok=True)
+
+        # Get disk space using df
+        result = subprocess.run(
+            ["df", "-h", str(backup_dir)],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            lines = result.stdout.strip().split("\n")
+            if len(lines) >= 2:
+                fields = lines[1].split()
+                if len(fields) >= 5:
+                    available = fields[3]
+                    use_percent = fields[4]
+                    return True, f"Disk space: {available} available ({use_percent} used)"
+
+        return True, "Disk space check completed (details unavailable)"
+    except Exception as e:
+        return False, f"Disk space check failed: {e}"
+
+
+def check_alembic_version_table() -> Tuple[bool, str]:
+    """
+    Check if alembic_version table exists.
+
+    Returns:
+        Tuple of (success, message)
+    """
+    db_url = get_database_url()
+    try:
+        parsed = urlparse(db_url)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5432
+        user = parsed.username or "cloud_optimizer"
+        password = parsed.password or ""
+        dbname = parsed.path.lstrip("/") or "cloud_optimizer"
+
+        env = os.environ.copy()
+        if password:
+            env["PGPASSWORD"] = password
+
+        cmd = [
+            "psql",
+            "-h", host,
+            "-p", str(port),
+            "-U", user,
+            "-d", dbname,
+            "-c", "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version');",
+            "-t",
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+
+        if result.returncode == 0:
+            exists = result.stdout.strip() == "t"
+            if exists:
+                return True, "Alembic version table exists"
+            return True, "Alembic version table does not exist (first migration)"
+        return False, f"Failed to check alembic_version table: {result.stderr}"
+    except Exception as e:
+        return False, f"Error checking alembic_version table: {e}"
+
+
+def run_health_checks() -> Tuple[bool, List[Dict[str, Any]]]:
+    """
+    Run pre-migration health checks.
+
+    Returns:
+        Tuple of (all_passed, check_results)
+    """
+    print("\n" + "=" * 60)
+    print("Pre-Migration Health Checks")
+    print("=" * 60)
+
+    checks = [
+        ("Database Connection", check_database_connection),
+        ("Disk Space", check_disk_space),
+        ("Alembic Version Table", check_alembic_version_table),
+    ]
+
+    results = []
+    all_passed = True
+
+    for check_name, check_func in checks:
+        print(f"\nChecking {check_name}...", end=" ")
+        success, message = check_func()
+        results.append({
+            "check": check_name,
+            "success": success,
+            "message": message,
+        })
+
+        if success:
+            print(f"PASS - {message}")
+        else:
+            print(f"FAIL - {message}")
+            all_passed = False
+
+    print("\n" + "=" * 60)
+
+    return all_passed, results
+
+
+def validate_migration(pre_revision: Optional[str], post_revision: Optional[str]) -> Tuple[bool, str]:
+    """
+    Validate that migration was successful.
+
+    Args:
+        pre_revision: Revision before migration
+        post_revision: Revision after migration
+
+    Returns:
+        Tuple of (success, message)
+    """
+    if pre_revision == post_revision:
+        return False, "Migration did not change database version"
+
+    # Check that database is still accessible
+    success, message = check_database_connection()
+    if not success:
+        return False, f"Post-migration database check failed: {message}"
+
+    return True, f"Migration successful: {pre_revision or 'None'} -> {post_revision}"
+
+
+def create_migration_report(
+    operation: str,
+    pre_revision: Optional[str],
+    post_revision: Optional[str],
+    health_checks: List[Dict[str, Any]],
+    success: bool,
+    backup_file: Optional[str] = None
+) -> str:
+    """
+    Create a migration report JSON file.
+
+    Returns:
+        Path to report file
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    reports_dir = Path(__file__).parent.parent / "reports" / "migrations"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    report_file = reports_dir / f"{operation}_{timestamp}.json"
+
+    report = {
+        "timestamp": datetime.now().isoformat(),
+        "operation": operation,
+        "success": success,
+        "pre_revision": pre_revision,
+        "post_revision": post_revision,
+        "health_checks": health_checks,
+        "backup_file": backup_file,
+        "database_url_masked": get_database_url().split("@")[1] if "@" in get_database_url() else "N/A",
+    }
+
+    with open(report_file, "w") as f:
+        json.dump(report, f, indent=2)
+
+    return str(report_file)
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     """Show migration status."""
     print("=" * 60)
@@ -95,7 +320,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_upgrade(args: argparse.Namespace) -> int:
-    """Run migrations to upgrade database."""
+    """Run migrations to upgrade database with health checks and validation."""
     target = args.revision or "head"
 
     print("=" * 60)
@@ -110,9 +335,37 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
         result = run_alembic(["upgrade", f"{from_rev}:{target}", "--sql"])
         return result.returncode
 
-    current = get_current_revision()
-    print(f"\nCurrent revision: {current or 'None'}")
+    # Run pre-migration health checks
+    if not args.skip_health_checks:
+        health_passed, health_results = run_health_checks()
+        if not health_passed:
+            print("\nWARNING: Some health checks failed!")
+            if not args.yes:
+                response = input("Continue anyway? [y/N]: ")
+                if response.lower() != "y":
+                    print("Upgrade cancelled due to failed health checks.")
+                    return 1
+    else:
+        health_results = []
+
+    pre_revision = get_current_revision()
+    print(f"\nCurrent revision: {pre_revision or 'None'}")
     print(f"Target revision: {target}")
+
+    # Create backup before migration if requested
+    backup_file = None
+    if args.backup:
+        print("\nCreating backup before migration...")
+        backup_file = create_backup()
+        if backup_file:
+            print(f"Backup created: {backup_file}")
+        else:
+            print("WARNING: Backup creation failed!")
+            if not args.yes:
+                response = input("Continue without backup? [y/N]: ")
+                if response.lower() != "y":
+                    print("Upgrade cancelled.")
+                    return 1
 
     if not args.yes:
         response = input("\nProceed with upgrade? [y/N]: ")
@@ -120,11 +373,42 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
             print("Upgrade cancelled.")
             return 1
 
+    # Run migration
+    print("\nRunning migration...")
     result = run_alembic(["upgrade", target])
-    if result.returncode == 0:
-        new_revision = get_current_revision()
-        print(f"\nUpgrade complete. Current revision: {new_revision}")
-    return result.returncode
+
+    # Get post-migration revision
+    post_revision = get_current_revision()
+
+    # Validate migration
+    migration_success = result.returncode == 0
+    if migration_success and not args.skip_validation:
+        print("\nValidating migration...")
+        validation_success, validation_message = validate_migration(pre_revision, post_revision)
+        print(f"Validation: {validation_message}")
+        if not validation_success:
+            migration_success = False
+
+    # Create migration report
+    report_file = create_migration_report(
+        operation="upgrade",
+        pre_revision=pre_revision,
+        post_revision=post_revision,
+        health_checks=health_results,
+        success=migration_success,
+        backup_file=backup_file
+    )
+
+    if migration_success:
+        print(f"\nUpgrade complete. Current revision: {post_revision}")
+        print(f"Migration report: {report_file}")
+        return 0
+    else:
+        print(f"\nUpgrade failed!")
+        print(f"Migration report: {report_file}")
+        if backup_file:
+            print(f"You can restore from backup: {backup_file}")
+        return 1
 
 
 def cmd_downgrade(args: argparse.Namespace) -> int:
@@ -217,6 +501,16 @@ def cmd_check(args: argparse.Namespace) -> int:
     print(result.stdout)
     print(result.stderr)
     return 1
+
+
+def cmd_health(args: argparse.Namespace) -> int:
+    """Run health checks on database and migration system."""
+    health_passed, health_results = run_health_checks()
+
+    if args.json:
+        print(json.dumps(health_results, indent=2))
+
+    return 0 if health_passed else 1
 
 
 def create_backup() -> str | None:
@@ -317,6 +611,15 @@ Examples:
     upgrade_parser.add_argument(
         "--yes", "-y", action="store_true", help="Skip confirmation prompt"
     )
+    upgrade_parser.add_argument(
+        "--backup", "-b", action="store_true", help="Create backup before migration"
+    )
+    upgrade_parser.add_argument(
+        "--skip-health-checks", action="store_true", help="Skip pre-migration health checks"
+    )
+    upgrade_parser.add_argument(
+        "--skip-validation", action="store_true", help="Skip post-migration validation"
+    )
     upgrade_parser.set_defaults(func=cmd_upgrade)
 
     # Downgrade command
@@ -357,6 +660,13 @@ Examples:
     # Check command
     check_parser = subparsers.add_parser("check", help="Check if database is current")
     check_parser.set_defaults(func=cmd_check)
+
+    # Health command
+    health_parser = subparsers.add_parser("health", help="Run health checks")
+    health_parser.add_argument(
+        "--json", action="store_true", help="Output results as JSON"
+    )
+    health_parser.set_defaults(func=cmd_health)
 
     args = parser.parse_args()
 

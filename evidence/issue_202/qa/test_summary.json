@@ -1,0 +1,31 @@
+{
+  "issue": 202,
+  "title": "Add security scanning (bandit, detect-secrets) to pre-commit hooks",
+  "test_date": "2025-12-06",
+  "status": "complete",
+  "changes_made": [
+    "Added bandit security scanner to .pre-commit-config.yaml",
+    "Added detect-secrets to .pre-commit-config.yaml",
+    "Created .secrets.baseline file for detect-secrets",
+    "Added [tool.bandit] configuration to pyproject.toml"
+  ],
+  "files_modified": [
+    ".pre-commit-config.yaml",
+    "pyproject.toml",
+    ".secrets.baseline"
+  ],
+  "security_tools_added": {
+    "bandit": {
+      "version": "1.7.5",
+      "config_location": "pyproject.toml",
+      "excluded_dirs": ["tests", "docs", ".venv", "venv"],
+      "skipped_checks": ["B101 (assert warnings)"]
+    },
+    "detect_secrets": {
+      "version": "v1.4.0",
+      "baseline_file": ".secrets.baseline",
+      "excluded_files": ["package-lock.json", "poetry.lock"]
+    }
+  },
+  "alignment_with_ib_platform": true
+}

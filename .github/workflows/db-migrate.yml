@@ -1,0 +1,167 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      target_revision:
+        description: 'Target revision (default: head)'
+        required: false
+        type: string
+        default: 'head'
+      skip_backup:
+        description: 'Skip backup creation'
+        required: false
+        type: boolean
+        default: false
+
+  # Trigger on deployment events
+  deployment:
+
+jobs:
+  migrate:
+    name: Run Database Migration
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || github.event.deployment.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install alembic psycopg2-binary
+
+      - name: Configure database connection
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          echo "DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}" >> $GITHUB_ENV
+
+      - name: Run health checks
+        run: |
+          python scripts/migrate.py health --json > health-check-results.json
+          cat health-check-results.json
+        continue-on-error: true
+
+      - name: Upload health check results
+        uses: actions/upload-artifact@v3
+        with:
+          name: health-check-results
+          path: health-check-results.json
+          retention-days: 30
+
+      - name: Check migration status
+        run: |
+          python scripts/migrate.py status
+
+      - name: Run database migration
+        id: migrate
+        env:
+          TARGET_REVISION: ${{ github.event.inputs.target_revision || 'head' }}
+          SKIP_BACKUP: ${{ github.event.inputs.skip_backup || 'false' }}
+        run: |
+          if [ "$SKIP_BACKUP" = "false" ]; then
+            python scripts/migrate.py upgrade --revision "$TARGET_REVISION" --backup --yes
+          else
+            python scripts/migrate.py upgrade --revision "$TARGET_REVISION" --yes
+          fi
+
+      - name: Upload migration reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: migration-reports
+          path: reports/migrations/*.json
+          retention-days: 90
+
+      - name: Upload backup files
+        if: always() && github.event.inputs.skip_backup != 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: database-backups
+          path: backups/*.sql
+          retention-days: 30
+
+      - name: Verify migration
+        run: |
+          python scripts/migrate.py check
+
+      - name: Post-migration health check
+        run: |
+          python scripts/migrate.py health
+        continue-on-error: true
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const environment = '${{ github.event.inputs.environment || github.event.deployment.environment }}';
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Database Migration Failed - ${environment}`,
+              body: `Database migration failed in ${environment} environment.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              labels: ['database', 'migration', 'urgent']
+            });
+
+  rollback:
+    name: Rollback Migration
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment != 'production' && failure()
+    needs: migrate
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install alembic psycopg2-binary
+
+      - name: Configure database connection
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          echo "DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}" >> $GITHUB_ENV
+
+      - name: Rollback one migration
+        run: |
+          python scripts/migrate.py downgrade --backup --yes
+
+      - name: Verify rollback
+        run: |
+          python scripts/migrate.py status

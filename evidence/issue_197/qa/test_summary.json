@@ -1,0 +1,24 @@
+{
+  "issue": 197,
+  "title": "Clarify domains/ architecture or update documentation",
+  "test_date": "2025-12-06",
+  "status": "complete",
+  "changes_made": [
+    "Updated README.md to clarify domains/ is for future domain-specific extensions",
+    "Added scanners/ documentation showing actual AWS service scanners",
+    "Documented current architecture: scanners/ for AWS service scanning, services/ for business logic"
+  ],
+  "files_modified": [
+    "README.md"
+  ],
+  "architectural_decision": {
+    "approach": "Document current architecture rather than restructure",
+    "reason": "scanners/ module is well-established with EC2, IAM, S3, RDS, Lambda scanners",
+    "domains_folder": "Reserved for future domain-specific extensions (Well-Architected pillars)",
+    "current_structure": {
+      "scanners": "AWS service-specific scanning (13 scanner modules)",
+      "services": "Business logic and IB Platform integration",
+      "domains": "Future: Domain extensions placeholder"
+    }
+  }
+}

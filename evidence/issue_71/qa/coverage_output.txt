@@ -1,0 +1,69 @@
+
+> cloud-optimizer-frontend@0.0.0 test:coverage
+> vitest run --coverage
+
+
+ RUN  v1.6.1 /Users/robertstanley/Desktop/Cloud-Optimizer/frontend
+      Coverage enabled with v8
+
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx  (22 tests) 65ms
+ ✓ src/components/trial/__tests__/TrialBanner.test.tsx  (31 tests) 86ms
+ ✓ src/hooks/__tests__/useChat.test.ts  (27 tests) 188ms
+ ✓ src/components/chat/__tests__/ChatMessage.test.tsx  (20 tests) 52ms
+
+ Test Files  4 passed (4)
+      Tests  100 passed (100)
+   Start at  10:42:11
+   Duration  922ms (transform 256ms, setup 623ms, collect 625ms, tests 391ms, environment 355ms, prepare 210ms)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   17.33 |    75.86 |   25.64 |   17.33 |                   
+ frontend          |       0 |        0 |       0 |       0 |                   
+  ...N_EXAMPLE.tsx |       0 |        0 |       0 |       0 | 1-184             
+ frontend/src      |       0 |        0 |       0 |       0 |                   
+  App.tsx          |       0 |        0 |       0 |       0 | 1-50              
+  main.tsx         |       0 |        0 |       0 |       0 | 1-10              
+ frontend/src/api  |       0 |        0 |       0 |       0 |                   
+  auth.ts          |       0 |        0 |       0 |       0 | 1-64              
+  awsAccounts.ts   |       0 |        0 |       0 |       0 | 1-93              
+  chat.ts          |       0 |        0 |       0 |       0 | 1-113             
+  client.ts        |       0 |        0 |       0 |       0 | 1-40              
+  documents.ts     |       0 |        0 |       0 |       0 | 1-70              
+  trial.ts         |       0 |        0 |       0 |       0 | 1-45              
+ ...src/components |       0 |        0 |       0 |       0 |                   
+  Layout.tsx       |       0 |        0 |       0 |       0 | 1-130             
+  ...ctedRoute.tsx |       0 |        0 |       0 |       0 | 1-22              
+ ...components/aws |       0 |        0 |       0 |       0 |                   
+  ...onnection.tsx |       0 |        0 |       0 |       0 | 1-538             
+  index.ts         |       0 |        0 |       0 |       0 | 1                 
+ ...omponents/chat |   10.84 |    82.35 |      25 |   10.84 |                   
+  ...Container.tsx |       0 |        0 |       0 |       0 | 1-153             
+  ChatHistory.tsx  |       0 |        0 |       0 |       0 | 1-249             
+  ChatInput.tsx    |       0 |        0 |       0 |       0 | 1-124             
+  ChatMessage.tsx  |     100 |      100 |     100 |     100 |                   
+ ...nents/document |   56.51 |    93.61 |      75 |   56.51 |                   
+  DocumentList.tsx |       0 |        0 |       0 |       0 | 1-247             
+  ...entUpload.tsx |   97.09 |    95.65 |     100 |   97.09 | 77-81,135-139     
+ ...ponents/layout |       0 |        0 |       0 |       0 |                   
+  Sidebar.tsx      |       0 |        0 |       0 |       0 | 1-55              
+ ...mponents/trial |   43.09 |    79.31 |   57.14 |   43.09 |                   
+  TrialBanner.tsx  |   86.19 |    88.46 |     100 |   86.19 | 35,76-103         
+  UpgradeCTA.tsx   |       0 |        0 |       0 |       0 | 1-77              
+  UsageMeters.tsx  |       0 |        0 |       0 |       0 | 1-130             
+  index.ts         |       0 |        0 |       0 |       0 | 1-3               
+ ...tend/src/hooks |   25.78 |    87.87 |      40 |   25.78 |                   
+  ...WSAccounts.ts |       0 |        0 |       0 |       0 | 1-188             
+  useAuth.ts       |       0 |        0 |       0 |       0 | 1-122             
+  useChat.ts       |     100 |    96.66 |     100 |     100 | 32                
+  useTrial.ts      |       0 |        0 |       0 |       0 | 1-67              
+ ...tend/src/pages |       0 |        0 |       0 |       0 |                   
+  Chat.tsx         |       0 |        0 |       0 |       0 | 1-129             
+  ...mentsPage.tsx |       0 |        0 |       0 |       0 | 1-39              
+  Login.tsx        |       0 |        0 |       0 |       0 | 1-143             
+  Register.tsx     |       0 |        0 |       0 |       0 | 1-211             
+ ...tend/src/utils |       0 |        0 |       0 |       0 |                   
+  dateUtils.ts     |       0 |        0 |       0 |       0 | 1-50              
+-------------------|---------|----------|---------|---------|-------------------

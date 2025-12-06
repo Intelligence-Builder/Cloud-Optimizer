@@ -116,11 +116,12 @@ cloud-optimizer/
 ├── src/cloud_optimizer/
 │   ├── main.py              # FastAPI application
 │   ├── config.py            # Configuration
-│   ├── ib_client.py         # Intelligence-Builder SDK client
 │   ├── api/
 │   │   └── routers/         # API endpoints
 │   ├── services/            # Business logic
-│   ├── domains/             # Domain extensions
+│   │   └── intelligence_builder.py  # IB SDK client
+│   ├── domains/             # Future: Domain-specific extensions
+│   ├── scanners/            # AWS service scanners (EC2, IAM, S3, RDS, Lambda, etc.)
 │   ├── integrations/
 │   │   └── aws/             # AWS integration
 │   └── models/              # Data models
