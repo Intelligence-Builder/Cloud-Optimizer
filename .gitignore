@@ -160,3 +160,7 @@ Thumbs.db
 .secrets
 credentials.json
 smart_scaffold_data/temp/
+
+# Build artifacts
+frontend/coverage/
+.qa-bin/
