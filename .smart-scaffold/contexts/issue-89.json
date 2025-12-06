@@ -1,0 +1,30 @@
+{
+  "issue_number": 89,
+  "title": "7.3.5 Create cost API endpoints",
+  "body": "## Parent Issue\n#31 - 7.3 Cost Analysis Scanner\n\n## Objective\nCreate REST API endpoints for cost analysis.\n\n## Endpoints\n- POST /api/v1/cost/scan - Start cost scan\n- GET /api/v1/cost/summary - Get cost summary\n- GET /api/v1/cost/findings - List cost findings\n- PUT /api/v1/cost/findings/:id - Update status\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/cost.py`\n\n## Estimated Time: 2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "cost",
+    "optimization",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:23:23.569720Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-89-735createcostapiendpoints"
+}

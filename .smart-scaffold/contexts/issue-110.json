@@ -1,0 +1,30 @@
+{
+  "issue_number": 110,
+  "title": "8.2.5 Create chat API endpoints and integration tests",
+  "body": "## Parent Issue\n#36 - 8.2 Answer Generation Engine\n\n## Objective\nCreate FastAPI endpoints for chat message handling and streaming, plus comprehensive integration tests.\n\n## Implementation\n\n```python\n# src/cloud_optimizer/api/routers/chat.py\nfrom fastapi import APIRouter, Depends\nfrom fastapi.responses import StreamingResponse\n\nrouter = APIRouter(prefix=\"/api/v1/chat\", tags=[\"chat\"])\n\n@router.post(\"/message\")\nasync def send_message(\n    request: ChatMessageRequest,\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> ChatMessageResponse:\n    \"\"\"Send message and get full response.\"\"\"\n    nlu_result = await nlu_service.process(request.message, request.history)\n    \n    response_text = \"\"\n    async for chunk in answer_service.generate(\n        request.message, nlu_result, tenant_id, request.history\n    ):\n        response_text += chunk\n    \n    return ChatMessageResponse(\n        response=response_text,\n        intent=nlu_result.intent.value,\n        entities=nlu_result.entities.to_dict(),\n    )\n\n\n@router.post(\"/stream\")\nasync def stream_message(\n    request: ChatMessageRequest,\n    tenant_id: UUID = Depends(get_tenant_id),\n):\n    \"\"\"Stream message response via SSE.\"\"\"\n    return StreamingResponse(\n        streaming_handler.stream(request, tenant_id),\n        media_type=\"text/event-stream\",\n        headers={\"Cache-Control\": \"no-cache\", \"Connection\": \"keep-alive\"},\n    )\n\n\n# Request/Response models\nclass ChatMessageRequest(BaseModel):\n    message: str\n    conversation_id: Optional[UUID] = None\n    history: list[dict] = []\n\nclass ChatMessageResponse(BaseModel):\n    response: str\n    intent: str\n    entities: dict\n```\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/chat.py`\n- `tests/ib_platform/answer/test_chat_api.py`\n\n## Acceptance Criteria\n- [ ] POST /chat/message returns full response\n- [ ] POST /chat/stream returns SSE stream\n- [ ] Request validation works\n- [ ] Tenant isolation enforced\n- [ ] Error handling returns proper status codes\n- [ ] Integration tests with mocked services\n- [ ] 80%+ test coverage for answer module\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "api",
+    "ib",
+    "answer-generation"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:52:47.961688Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-110-825createchatapiendpointsandin"
+}

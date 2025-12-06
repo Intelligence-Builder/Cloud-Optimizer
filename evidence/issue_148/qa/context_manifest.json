@@ -1,0 +1,24 @@
+{
+  "issue": 148,
+  "title": "9.2.2 Cross-account role assumption",
+  "qa_recorded_at": "2025-12-05T06:10:27.405538Z",
+  "summary": "Validated STS role assumption helpers and IaC templates.",
+  "tests": [
+    {
+      "command": "pytest tests/scanners/test_cross_account.py -q",
+      "output": "tests/pytest-output.txt"
+    }
+  ],
+  "static_analysis": [
+    {
+      "tool": "ruff",
+      "command": "ruff check --exit-zero src/cloud_optimizer/scanners/cross_account.py tests/scanners/test_cross_account.py",
+      "output": "static_analysis/ruff.log"
+    },
+    {
+      "tool": "bandit",
+      "command": "bandit -q -r src/cloud_optimizer/scanners/cross_account.py tests/scanners/test_cross_account.py",
+      "output": "static_analysis/bandit.log"
+    }
+  ]
+}

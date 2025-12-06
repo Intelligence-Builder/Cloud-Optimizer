@@ -1,0 +1,29 @@
+{
+  "issue_number": 57,
+  "title": "6.3.4 Create trial API endpoints and tests",
+  "body": "## Parent Issue\n#25 - 6.3 Trial Management System\n\n## Objective\nCreate API endpoints for trial status and extension.\n\n## Endpoints\n- GET /api/v1/trial/status - Get trial status and usage\n- POST /api/v1/trial/extend - Extend trial (one-time)\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/trial.py`\n- `tests/services/test_trial.py`\n- `tests/api/test_trial_api.py`\n\n## Acceptance Criteria\n- [ ] Status endpoint returns all usage metrics\n- [ ] Extend endpoint works once only\n- [ ] Tests cover all scenarios\n- [ ] 80%+ coverage\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "billing",
+    "trial"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:29:54.956825Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-57-634createtrialapiendpointsandt"
+}

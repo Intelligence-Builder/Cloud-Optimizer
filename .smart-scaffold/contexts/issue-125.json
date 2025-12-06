@@ -1,0 +1,27 @@
+{
+  "issue_number": 125,
+  "title": "8.5.5 Create KB search functionality",
+  "body": "## Parent Issue\n#39 - 8.5 Knowledge Base Integration\n\n## Objective\nImplement keyword search across KB entries for finding relevant controls and best practices.\n\n## Implementation\n\n```python\n# src/ib_platform/kb/service.py (continued)\n\ndef search(\n    self,\n    query: str,\n    limit: int = 10,\n) -> list[KBEntry]:\n    \"\"\"Search KB entries by keyword.\"\"\"\n    query_lower = query.lower()\n    results = []\n\n    # Search controls\n    for framework, controls in self._frameworks.items():\n        for control in controls:\n            if (\n                query_lower in control.name.lower()\n                or query_lower in control.description.lower()\n            ):\n                results.append(\n                    KBEntry(\n                        entry_type=\"control\",\n                        framework=framework,\n                        control_name=control.name,\n                        description=control.description,\n                        guidance=control.implementation_guidance,\n                    )\n                )\n\n    # Search practices\n    for service, practices in self._services.items():\n        for practice in practices:\n            if (\n                query_lower in practice.title.lower()\n                or query_lower in practice.description.lower()\n            ):\n                results.append(\n                    KBEntry(\n                        entry_type=\"best_practice\",\n                        service=service,\n                        control_name=practice.title,\n                        description=practice.description,\n                        guidance=practice.implementation,\n                    )\n                )\n\n    return results[:limit]\n\n\ndef get_statistics(self) -> dict:\n    \"\"\"Return KB statistics.\"\"\"\n    return {\n        \"frameworks\": len(self._frameworks),\n        \"controls\": sum(len(c) for c in self._frameworks.values()),\n        \"services\": len(self._services),\n        \"best_practices\": sum(len(p) for p in self._services.values()),\n        \"patterns\": len(self._patterns),\n        \"remediation_templates\": len(self._remediation),\n    }\n```\n\n## Files to Create\n- `tests/ib_platform/kb/test_search.py`\n\n## Acceptance Criteria\n- [ ] Search returns relevant entries\n- [ ] Search matches title and description\n- [ ] Results limited by parameter\n- [ ] Search is case-insensitive\n- [ ] Statistics method works\n- [ ] Unit tests for search functionality\n\n## Estimated Time\n1 hour",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "kb"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:40:10.651446Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-125-855createkbsearchfunctionality"
+}

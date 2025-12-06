@@ -1,0 +1,28 @@
+{
+  "issue_number": 87,
+  "title": "7.3.3 Implement UnusedResourceAnalyzer",
+  "body": "## Parent Issue\n#31 - 7.3 Cost Analysis Scanner\n\n## Objective\nDetect unused resources (unattached EBS, unused EIPs, idle instances).\n\n## Detections\n- Unattached EBS volumes\n- Unused Elastic IPs\n- Idle EC2 instances (CPU < 5%)\n\n## Files to Create\n- `src/cloud_optimizer/scanners/cost/unused_analyzer.py`\n\n## Acceptance Criteria\n- [ ] Detect unattached volumes\n- [ ] Detect unused EIPs\n- [ ] Detect idle instances via CloudWatch\n- [ ] Calculate savings amounts\n\n## Estimated Time: 3 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "cost",
+    "optimization",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:21:56.256515Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-87-733implementunusedresourceanal"
+}

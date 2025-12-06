@@ -1,0 +1,30 @@
+{
+  "issue_number": 98,
+  "title": "7.5.3 Implement ComplianceDataLoader",
+  "body": "## Parent Issue\n#33 - 7.5 Compliance Framework Mapping\n\n## Objective\nImplement YAML loader that populates database on startup.\n\n## Features\n- Load all framework YAML files\n- Create domain/control hierarchy\n- Create rule mappings\n- Idempotent loading (safe to re-run)\n\n## Files to Create\n- `src/cloud_optimizer/compliance/loader.py`\n\n## Estimated Time: 2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "data",
+    "compliance",
+    "regulatory"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:30:22.373637Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-98-753implementcompliancedataload"
+}

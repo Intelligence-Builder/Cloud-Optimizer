@@ -1,0 +1,30 @@
+{
+  "issue_number": 114,
+  "title": "8.3.4 Implement finding correlation and clustering",
+  "body": "## Parent Issue\n#37 - 8.3 Security Analysis Integration\n\n## Objective\nCorrelate related findings and cluster them for batch remediation.\n\n## Implementation\n\n```python\n# src/ib_platform/security/correlation.py\nfrom dataclasses import dataclass\n\n@dataclass\nclass FindingCluster:\n    resource_type: str\n    severity: str\n    findings: list[Finding]\n\n    @property\n    def count(self) -> int:\n        return len(self.findings)\n\n\nclass FindingCorrelator:\n    \"\"\"Correlate related findings for holistic analysis.\"\"\"\n\n    async def find_related(\n        self,\n        finding: Finding,\n        all_findings: list[Finding],\n    ) -> list[Finding]:\n        \"\"\"Find findings related to a given finding.\"\"\"\n        related = []\n\n        for f in all_findings:\n            if f.finding_id == finding.finding_id:\n                continue\n\n            # Same resource\n            if f.resource_id == finding.resource_id:\n                related.append(f)\n                continue\n\n            # Same resource type in same region\n            if (\n                f.resource_type == finding.resource_type\n                and f.region == finding.region\n            ):\n                related.append(f)\n                continue\n\n            # Same compliance framework\n            if set(f.compliance_frameworks) & set(finding.compliance_frameworks):\n                related.append(f)\n\n        return related[:5]  # Top 5 related\n\n    async def cluster_findings(\n        self,\n        findings: list[Finding],\n    ) -> list[FindingCluster]:\n        \"\"\"Group findings into clusters for batch remediation.\"\"\"\n        clusters = {}\n\n        for finding in findings:\n            key = (finding.resource_type, finding.severity)\n            if key not in clusters:\n                clusters[key] = FindingCluster(\n                    resource_type=finding.resource_type,\n                    severity=finding.severity,\n                    findings=[],\n                )\n            clusters[key].findings.append(finding)\n\n        return list(clusters.values())\n```\n\n## Files to Create\n- `src/ib_platform/security/correlation.py`\n- `tests/ib_platform/security/test_correlation.py`\n\n## Acceptance Criteria\n- [ ] Related findings found by resource\n- [ ] Related findings found by region\n- [ ] Related findings found by compliance framework\n- [ ] Findings clustered by resource type + severity\n- [ ] Cluster count property works\n- [ ] Unit tests for correlation logic\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "ib",
+    "analysis"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:55:43.353919Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-114-834implementfindingcorrelation"
+}

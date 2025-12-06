@@ -1,0 +1,27 @@
+{
+  "issue_number": 140,
+  "title": "9.1.3 CloudFront distribution scanner",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nImplement security scanning for Amazon CloudFront distributions checking for SSL/TLS configuration, origin access, logging, and security headers.\n\n## Requirements\n- Scan CloudFront distributions and configurations\n- Check SSL/TLS certificate validity and security\n- Verify origin access identity configuration for S3 origins\n- Validate viewer protocol policy (HTTPS enforcement)\n- Check for missing security headers (HSTS, CSP, X-Frame-Options)\n- Verify logging configuration\n- Detect distributions missing WAF integration\n- Check for geo-restriction configuration when appropriate\n- Analyze cache behavior security settings\n- Integration with Intelligence-Builder SDK for CDN security analysis\n\n## Security Rules to Implement\n- CloudFront distribution allows HTTP (not HTTPS only)\n- CloudFront distribution missing origin access identity for S3\n- CloudFront distribution missing security headers\n- CloudFront distribution missing logging\n- CloudFront distribution missing WAF integration\n- CloudFront distribution using outdated SSL/TLS protocols\n- CloudFront distribution with public S3 bucket origin\n- CloudFront distribution missing custom error pages\n- CloudFront distribution cache allowing sensitive headers\n\n## Acceptance Criteria\n- [ ] CloudFront scanner module implemented with all rules\n- [ ] Scanner identifies all distributions across accounts\n- [ ] Each rule produces clear finding with severity and remediation\n- [ ] Integration with Intelligence-Builder SDK for CDN security analysis\n- [ ] Unit tests cover all rules (>80% coverage)\n- [ ] Integration test validates scanning against test distributions\n- [ ] Documentation includes rule descriptions and remediation guidance\n- [ ] Scanner performance: <5s per distribution\n\n## Technical Approach\n- Use boto3 CloudFront client for distribution discovery\n- Parse distribution configurations for security settings\n- Check associated S3 bucket policies for origin access\n- Leverage Intelligence-Builder SDK for security header analysis\n\n## Estimated Effort\n16-20 hours\n\n## Dependencies\n- AWS CloudFront API access\n- S3 bucket policy read permissions for origin verification\n- Intelligence-Builder SDK integration",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:42:08.857098Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-140-913cloudfrontdistributionscann"
+}

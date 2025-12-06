@@ -1,0 +1,325 @@
+{
+  "deployment_guide": {
+    "title": "ElastiCache Redis Deployment Guide",
+    "description": "Example deployment configurations for different environments"
+  },
+  "example_parameters": {
+    "development": [
+      {
+        "ParameterKey": "Environment",
+        "ParameterValue": "development"
+      },
+      {
+        "ParameterKey": "ApplicationName",
+        "ParameterValue": "cloud-optimizer"
+      },
+      {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0123456789abcdef0"
+      },
+      {
+        "ParameterKey": "PrivateSubnetIds",
+        "ParameterValue": "subnet-0123456789abcdef0,subnet-0123456789abcdef1"
+      },
+      {
+        "ParameterKey": "ECSSecurityGroupId",
+        "ParameterValue": "sg-0123456789abcdef0"
+      },
+      {
+        "ParameterKey": "NodeType",
+        "ParameterValue": "cache.t3.micro"
+      },
+      {
+        "ParameterKey": "NumCacheNodes",
+        "ParameterValue": "2"
+      },
+      {
+        "ParameterKey": "EnableEncryptionAtRest",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableEncryptionInTransit",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableAutoFailover",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableCloudWatchAlarms",
+        "ParameterValue": "true"
+      }
+    ],
+    "staging": [
+      {
+        "ParameterKey": "Environment",
+        "ParameterValue": "staging"
+      },
+      {
+        "ParameterKey": "ApplicationName",
+        "ParameterValue": "cloud-optimizer"
+      },
+      {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0123456789abcdef0"
+      },
+      {
+        "ParameterKey": "PrivateSubnetIds",
+        "ParameterValue": "subnet-0123456789abcdef0,subnet-0123456789abcdef1"
+      },
+      {
+        "ParameterKey": "ECSSecurityGroupId",
+        "ParameterValue": "sg-0123456789abcdef0"
+      },
+      {
+        "ParameterKey": "NodeType",
+        "ParameterValue": "cache.t3.small"
+      },
+      {
+        "ParameterKey": "NumCacheNodes",
+        "ParameterValue": "2"
+      },
+      {
+        "ParameterKey": "EnableEncryptionAtRest",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableEncryptionInTransit",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableAutoFailover",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableCloudWatchAlarms",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "AlarmTopicArn",
+        "ParameterValue": "arn:aws:sns:us-east-1:123456789012:cloud-optimizer-staging-alarms"
+      }
+    ],
+    "production": [
+      {
+        "ParameterKey": "Environment",
+        "ParameterValue": "production"
+      },
+      {
+        "ParameterKey": "ApplicationName",
+        "ParameterValue": "cloud-optimizer"
+      },
+      {
+        "ParameterKey": "VpcId",
+        "ParameterValue": "vpc-0123456789abcdef0"
+      },
+      {
+        "ParameterKey": "PrivateSubnetIds",
+        "ParameterValue": "subnet-0123456789abcdef0,subnet-0123456789abcdef1,subnet-0123456789abcdef2"
+      },
+      {
+        "ParameterKey": "ECSSecurityGroupId",
+        "ParameterValue": "sg-0123456789abcdef0"
+      },
+      {
+        "ParameterKey": "NodeType",
+        "ParameterValue": "cache.m6g.large"
+      },
+      {
+        "ParameterKey": "NumCacheNodes",
+        "ParameterValue": "3"
+      },
+      {
+        "ParameterKey": "EngineVersion",
+        "ParameterValue": "7.0"
+      },
+      {
+        "ParameterKey": "EnableEncryptionAtRest",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableEncryptionInTransit",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableAutoFailover",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "EnableCloudWatchAlarms",
+        "ParameterValue": "true"
+      },
+      {
+        "ParameterKey": "CPUThresholdPercent",
+        "ParameterValue": "75"
+      },
+      {
+        "ParameterKey": "MemoryThresholdPercent",
+        "ParameterValue": "80"
+      },
+      {
+        "ParameterKey": "AlarmTopicArn",
+        "ParameterValue": "arn:aws:sns:us-east-1:123456789012:cloud-optimizer-production-critical-alerts"
+      }
+    ]
+  },
+  "deployment_commands": {
+    "validate_template": "aws cloudformation validate-template --template-body file://cloudformation/elasticache-redis.yaml",
+    "create_stack_development": "aws cloudformation create-stack --stack-name cloud-optimizer-dev-redis --template-body file://cloudformation/elasticache-redis.yaml --parameters file://parameters/redis-dev.json --tags Key=Environment,Value=development Key=Application,Value=cloud-optimizer",
+    "create_stack_production": "aws cloudformation create-stack --stack-name cloud-optimizer-prod-redis --template-body file://cloudformation/elasticache-redis.yaml --parameters file://parameters/redis-prod.json --tags Key=Environment,Value=production Key=Application,Value=cloud-optimizer",
+    "update_stack": "aws cloudformation update-stack --stack-name cloud-optimizer-prod-redis --template-body file://cloudformation/elasticache-redis.yaml --parameters file://parameters/redis-prod.json",
+    "delete_stack": "aws cloudformation delete-stack --stack-name cloud-optimizer-prod-redis",
+    "describe_stack": "aws cloudformation describe-stacks --stack-name cloud-optimizer-prod-redis",
+    "get_outputs": "aws cloudformation describe-stacks --stack-name cloud-optimizer-prod-redis --query 'Stacks[0].Outputs' --output table"
+  },
+  "environment_variable_configuration": {
+    "description": "After deployment, configure your application with these environment variables",
+    "variables": {
+      "REDIS_HOST": {
+        "source": "CloudFormation Output: PrimaryEndpoint",
+        "example": "cloud-optimizer-production-redis.abc123.ng.0001.use1.cache.amazonaws.com"
+      },
+      "REDIS_PORT": {
+        "source": "CloudFormation Output: PrimaryEndpointPort",
+        "example": "6379"
+      },
+      "REDIS_URL": {
+        "source": "CloudFormation Output: SecureConnectionString",
+        "example": "rediss://cloud-optimizer-production-redis.abc123.ng.0001.use1.cache.amazonaws.com:6379"
+      },
+      "REDIS_READER_ENDPOINT": {
+        "source": "CloudFormation Output: ReaderEndpoint",
+        "example": "cloud-optimizer-production-redis-ro.abc123.ng.0001.use1.cache.amazonaws.com",
+        "note": "Use for read-only operations to distribute load"
+      },
+      "REDIS_TLS_ENABLED": {
+        "value": "true",
+        "note": "Set to true when EnableEncryptionInTransit is enabled"
+      }
+    }
+  },
+  "connection_examples": {
+    "python_redis": {
+      "library": "redis-py",
+      "install": "pip install redis",
+      "code": "import redis\nimport ssl\n\n# For encrypted connection\nredis_client = redis.Redis(\n    host='cloud-optimizer-production-redis.abc123.ng.0001.use1.cache.amazonaws.com',\n    port=6379,\n    ssl=True,\n    ssl_cert_reqs='required',\n    ssl_ca_certs='/path/to/ca-bundle.crt',\n    decode_responses=True\n)\n\n# Test connection\nredis_client.ping()\nprint('Connected to Redis!')"
+    },
+    "python_fastapi": {
+      "library": "aioredis",
+      "install": "pip install aioredis",
+      "code": "from aioredis import create_redis_pool\nimport ssl\n\nasync def get_redis_pool():\n    ssl_context = ssl.create_default_context()\n    pool = await create_redis_pool(\n        'rediss://cloud-optimizer-production-redis.abc123.ng.0001.use1.cache.amazonaws.com:6379',\n        ssl=ssl_context\n    )\n    return pool"
+    },
+    "nodejs": {
+      "library": "ioredis",
+      "install": "npm install ioredis",
+      "code": "const Redis = require('ioredis');\n\nconst redis = new Redis({\n  host: 'cloud-optimizer-production-redis.abc123.ng.0001.use1.cache.amazonaws.com',\n  port: 6379,\n  tls: {\n    rejectUnauthorized: true\n  }\n});\n\nredis.on('connect', () => {\n  console.log('Connected to Redis!');\n});"
+    }
+  },
+  "monitoring_setup": {
+    "cloudwatch_metrics_to_watch": [
+      "CPUUtilization",
+      "DatabaseMemoryUsagePercentage",
+      "Evictions",
+      "CurrConnections",
+      "NewConnections",
+      "ReplicationLag",
+      "EngineCPUUtilization",
+      "NetworkBytesIn",
+      "NetworkBytesOut",
+      "CacheHits",
+      "CacheMisses"
+    ],
+    "recommended_dashboards": {
+      "performance": [
+        "CPU utilization over time",
+        "Memory usage percentage",
+        "Cache hit ratio (Hits / (Hits + Misses))",
+        "Connection count"
+      ],
+      "reliability": [
+        "Replication lag",
+        "Failover events",
+        "Node health status"
+      ],
+      "capacity_planning": [
+        "Memory trends",
+        "Eviction rate",
+        "Network throughput"
+      ]
+    }
+  },
+  "troubleshooting": {
+    "connection_timeout": {
+      "possible_causes": [
+        "Security group rules not allowing ECS task access",
+        "Network ACLs blocking traffic",
+        "Redis cluster not in same VPC",
+        "Wrong endpoint being used"
+      ],
+      "solutions": [
+        "Verify security group rules allow port 6379 from ECS security group",
+        "Check VPC routing and network ACLs",
+        "Ensure ECS tasks are in private subnets with route to Redis",
+        "Use PrimaryEndpoint for writes, ReaderEndpoint for reads"
+      ]
+    },
+    "high_memory_usage": {
+      "possible_causes": [
+        "Too much data cached",
+        "Memory leak in application",
+        "Eviction policy not working as expected"
+      ],
+      "solutions": [
+        "Review maxmemory-policy (set to allkeys-lru)",
+        "Implement TTL on cached keys",
+        "Scale up to larger node type",
+        "Add more cache nodes"
+      ]
+    },
+    "replication_lag": {
+      "possible_causes": [
+        "High write load",
+        "Network issues between AZs",
+        "Undersized replica nodes"
+      ],
+      "solutions": [
+        "Monitor write patterns and optimize",
+        "Check network metrics in CloudWatch",
+        "Scale to larger node type",
+        "Reduce write frequency if possible"
+      ]
+    },
+    "tls_certificate_errors": {
+      "possible_causes": [
+        "Missing CA certificate bundle",
+        "TLS not enabled in client configuration",
+        "Certificate validation issues"
+      ],
+      "solutions": [
+        "Use rediss:// URL instead of redis://",
+        "Include CA bundle in client configuration",
+        "Set ssl_cert_reqs='required' in Python redis client"
+      ]
+    }
+  },
+  "cost_optimization_tips": [
+    "Use cache.t4g or cache.m6g instance types for better price/performance (Graviton2)",
+    "Right-size nodes based on actual memory usage (start smaller, scale up)",
+    "Use Reserved Nodes for production workloads (up to 55% savings)",
+    "Reduce snapshot retention in non-production environments",
+    "Monitor cache hit ratio and eviction rate to optimize memory allocation",
+    "Consider single-node clusters for development/testing environments"
+  ],
+  "security_checklist": [
+    "✓ Encryption at rest enabled",
+    "✓ Encryption in transit (TLS) enabled",
+    "✓ Deployed in private subnets only",
+    "✓ Security group limits access to ECS tasks",
+    "✓ No public accessibility",
+    "✓ CloudWatch Logs enabled for audit trail",
+    "✓ Automated backups configured",
+    "✓ CloudWatch alarms configured",
+    "✓ SNS notifications for critical events",
+    "✓ Resource tagging for compliance tracking"
+  ]
+}

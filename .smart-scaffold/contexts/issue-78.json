@@ -1,0 +1,30 @@
+{
+  "issue_number": 78,
+  "title": "7.2.2 Implement S3Scanner with rules",
+  "body": "## Parent Issue\n#30 - 7.2 Security Scanner Engine\n\n## Objective\nImplement S3 security scanner with public access, encryption, versioning, logging rules.\n\n## Rules\n- S3_001: Public Access Enabled (Critical)\n- S3_002: No Default Encryption (High)\n- S3_003: Versioning Disabled (Medium)\n- S3_004: Access Logging Disabled (Medium)\n\n## Files to Create\n- `src/cloud_optimizer/scanners/s3.py`\n- `src/cloud_optimizer/scanners/rules/s3_rules.py`\n\n## Estimated Time: 3 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:15:00.348560Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-78-722implements3scannerwithrules"
+}

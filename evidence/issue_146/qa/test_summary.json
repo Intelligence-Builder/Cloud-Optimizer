@@ -1,0 +1,31 @@
+{
+  "issue": 146,
+  "title": "CloudWatch monitoring and alerting",
+  "test_date": "2025-12-06",
+  "cloudformation": "cloudformation/cloudwatch-dashboard.yaml",
+  "template_valid": true,
+  "components": [
+    "CloudWatch Dashboard with comprehensive metrics",
+    "CPU utilization monitoring",
+    "Memory usage tracking",
+    "API request metrics",
+    "Error rate monitoring",
+    "Latency tracking (p50, p95, p99)",
+    "Database connection monitoring",
+    "CloudWatch Alarms for critical thresholds"
+  ],
+  "dashboard_widgets": [
+    "ECS Service CPU/Memory",
+    "ALB Request Count",
+    "ALB Target Response Time",
+    "RDS CPU and Connections",
+    "API Gateway Requests",
+    "Lambda Invocations and Errors"
+  ],
+  "alarm_thresholds": {
+    "cpu_high": "80%",
+    "memory_high": "80%",
+    "error_rate": "5%",
+    "latency_p99": "2000ms"
+  }
+}

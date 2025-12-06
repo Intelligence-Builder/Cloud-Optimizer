@@ -1,0 +1,15 @@
+{
+  "valid": false,
+  "issues": [
+    "Missing artifact: context_manifest.json",
+    "Missing artifact: tests/pytest-summary.md"
+  ],
+  "warnings": [
+    "Missing static_analysis directory"
+  ],
+  "metadata": {
+    "issue": 31,
+    "evidence_dir": "evidence/issue_31",
+    "artifacts_found": []
+  }
+}

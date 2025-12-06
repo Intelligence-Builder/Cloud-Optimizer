@@ -1,0 +1,35 @@
+{
+  "issue": 154,
+  "title": "GitHub Actions workflow for testing",
+  "test_date": "2025-12-06",
+  "workflow_file": ".github/workflows/ci.yml",
+  "workflow_valid": true,
+  "components": [
+    "Lint job with black, isort, flake8, mypy",
+    "Test job with pytest and 80% coverage threshold",
+    "Quality gate job checking file sizes and LOC",
+    "Build job creating Python package artifacts",
+    "Codecov integration for coverage reports",
+    "Triggered on push and PR to main branch"
+  ],
+  "jobs": {
+    "lint": {
+      "steps": ["checkout", "setup-python", "install deps", "black check", "isort check", "flake8 lint", "mypy type check"]
+    },
+    "test": {
+      "steps": ["checkout", "setup-python", "install deps", "pytest with coverage", "upload coverage"]
+    },
+    "quality-gate": {
+      "steps": ["checkout", "check file sizes (max 500 lines)", "count total LOC"]
+    },
+    "build": {
+      "steps": ["checkout", "setup-python", "install build tools", "build package", "upload artifacts"]
+    }
+  },
+  "validation": {
+    "yaml_syntax": "valid",
+    "actions_versions": "current (v4/v5)",
+    "coverage_threshold": "80%",
+    "line_limit": 500
+  }
+}

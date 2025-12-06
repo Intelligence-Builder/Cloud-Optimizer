@@ -1,0 +1,28 @@
+{
+  "issue": 139,
+  "title": "Production VPC and networking (multi-AZ)",
+  "test_date": "2025-12-06",
+  "cloudformation": "cloudformation/nested/vpc.yaml",
+  "template_valid": true,
+  "components": [
+    "VPC with 10.0.0.0/16 CIDR block",
+    "Internet Gateway with VPC attachment",
+    "2 Public Subnets across different AZs",
+    "2 Private Subnets across different AZs",
+    "NAT Gateway for private subnet internet access",
+    "Route tables for public/private subnets",
+    "DNS support and hostnames enabled"
+  ],
+  "network_design": {
+    "cidr": "10.0.0.0/16",
+    "public_subnets": ["10.0.1.0/24", "10.0.2.0/24"],
+    "private_subnets": ["10.0.3.0/24", "10.0.4.0/24"],
+    "multi_az": true,
+    "az_count": 2
+  },
+  "security": {
+    "private_subnet_isolation": true,
+    "nat_gateway_enabled": true,
+    "no_public_ip_private_subnets": true
+  }
+}

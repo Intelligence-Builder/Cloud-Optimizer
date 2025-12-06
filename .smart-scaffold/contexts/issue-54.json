@@ -1,0 +1,29 @@
+{
+  "issue_number": 54,
+  "title": "6.3.1 Create trial database schema and models",
+  "body": "## Parent Issue\n#25 - 6.3 Trial Management System\n\n## Objective\nCreate database schema and SQLAlchemy models for trial tracking.\n\n## Implementation\n\n```sql\nCREATE TABLE trials (\n    trial_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    tenant_id UUID NOT NULL REFERENCES tenants(tenant_id),\n    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    expires_at TIMESTAMPTZ NOT NULL,\n    extended_at TIMESTAMPTZ,\n    converted_at TIMESTAMPTZ,\n    status VARCHAR(20) NOT NULL DEFAULT 'active',\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE trial_usage (\n    usage_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    trial_id UUID NOT NULL REFERENCES trials(trial_id),\n    dimension VARCHAR(50) NOT NULL,\n    count INTEGER NOT NULL DEFAULT 0,\n    last_reset_at TIMESTAMPTZ,\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    UNIQUE(trial_id, dimension)\n);\n```\n\n## Files to Create\n- `src/cloud_optimizer/models/trial.py`\n- `alembic/versions/xxx_create_trial_tables.py`\n\n## Acceptance Criteria\n- [ ] Migration creates tables successfully\n- [ ] SQLAlchemy models map correctly\n- [ ] Indexes created for queries\n- [ ] Tests verify schema\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "billing",
+    "trial"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:27:48.778788Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-54-631createtrialdatabaseschemaan"
+}

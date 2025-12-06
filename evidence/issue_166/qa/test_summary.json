@@ -1,0 +1,33 @@
+{
+  "issue": 166,
+  "title": "Application metrics with CloudWatch Metrics",
+  "test_date": "2025-12-05",
+  "tests_collected": 69,
+  "tests_passed": 69,
+  "test_files": [
+    "tests/unit/metrics/test_decorators.py",
+    "tests/unit/metrics/test_metrics_decorators.py",
+    "tests/unit/metrics/test_metrics_service.py",
+    "tests/unit/metrics/test_metrics_types.py"
+  ],
+  "components_implemented": [
+    "MetricsService with CloudWatch batching",
+    "MetricsMiddleware for FastAPI",
+    "Metric decorators (track_latency, track_errors, count_invocations, track_all)",
+    "Metric types (MetricUnit, MetricDimension, MetricDataPoint)",
+    "Standard metric names and dimensions",
+    "CloudWatch Dashboard CloudFormation template"
+  ],
+  "files_modified": [
+    "src/cloud_optimizer/main.py",
+    "src/cloud_optimizer/middleware/__init__.py"
+  ],
+  "files_created": [
+    "src/cloud_optimizer/middleware/metrics.py",
+    "tests/unit/metrics/__init__.py",
+    "tests/unit/metrics/test_metrics_service.py",
+    "tests/unit/metrics/test_metrics_types.py",
+    "tests/unit/metrics/test_metrics_decorators.py"
+  ],
+  "cloudformation": "cloudformation/cloudwatch-dashboard.yaml"
+}

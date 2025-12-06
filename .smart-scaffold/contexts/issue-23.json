@@ -19,13 +19,13 @@
     "effort": "medium",
     "confidence": 0.8,
     "required_expertise": [
-      "backend",
-      "database"
+      "database",
+      "backend"
     ],
     "dependencies": [],
     "related_files": []
   },
-  "generated_at": "2025-12-03T18:22:26.814160Z",
+  "generated_at": "2025-12-04T10:20:42.521100Z",
   "generated_by": "smart-scaffold-cli",
   "branch_name": "feature/issue-23-61containerpackaging"
 }

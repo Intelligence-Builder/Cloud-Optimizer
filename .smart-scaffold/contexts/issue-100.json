@@ -1,0 +1,30 @@
+{
+  "issue_number": 100,
+  "title": "7.5.5 Create compliance API endpoints and tests",
+  "body": "## Parent Issue\n#33 - 7.5 Compliance Framework Mapping\n\n## Endpoints\n- GET /api/v1/compliance/frameworks\n- GET /api/v1/compliance/frameworks/:id/controls\n- GET /api/v1/compliance/status/:framework\n- GET /api/v1/compliance/findings/:framework\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/compliance.py`\n- `tests/services/test_compliance.py`\n- `tests/compliance/test_loader.py`\n\n## Estimated Time: 2.5 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "data",
+    "compliance",
+    "regulatory"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:31:52.864112Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-100-755createcomplianceapiendpoint"
+}

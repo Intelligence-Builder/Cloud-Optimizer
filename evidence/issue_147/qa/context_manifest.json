@@ -1,0 +1,24 @@
+{
+  "issue": 147,
+  "title": "9.2.1 Multi-account scanning",
+  "qa_recorded_at": "2025-12-05T06:10:27.405538Z",
+  "summary": "Validated multi-account registry and aggregation behavior.",
+  "tests": [
+    {
+      "command": "pytest tests/scanners/test_multi_account.py -q",
+      "output": "tests/pytest-output.txt"
+    }
+  ],
+  "static_analysis": [
+    {
+      "tool": "ruff",
+      "command": "ruff check --exit-zero src/cloud_optimizer/scanners/multi_account.py tests/scanners/test_multi_account.py",
+      "output": "static_analysis/ruff.log"
+    },
+    {
+      "tool": "bandit",
+      "command": "bandit -q -r src/cloud_optimizer/scanners/multi_account.py tests/scanners/test_multi_account.py",
+      "output": "static_analysis/bandit.log"
+    }
+  ]
+}

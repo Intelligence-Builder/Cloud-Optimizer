@@ -1,0 +1,35 @@
+
+> cloud-optimizer-frontend@0.0.0 test
+> vitest --run DocumentUpload --reporter=verbose
+
+
+ RUN  v1.6.1 /Users/robertstanley/Desktop/Cloud-Optimizer/frontend
+
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Rendering > renders the drop zone correctly
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Rendering > displays default max files limit
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Rendering > displays custom max files limit
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Rendering > renders the hidden file input
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > File Validation > accepts valid PDF files
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > File Validation > accepts valid TXT files
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > File Validation > rejects files with invalid types
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > File Validation > rejects files larger than 10MB
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > File Validation > shows error alert when max files limit is exceeded
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Drag and Drop > changes style when dragging files over drop zone
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Drag and Drop > resets style when dragging leaves drop zone
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Drag and Drop > handles file drop correctly
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Drag and Drop > prevents default behavior on drag over
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Upload Progress > shows uploading state with progress bar
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Upload Progress > shows success state after upload completes
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Upload Progress > shows error state when upload fails
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Upload Progress > displays file size in MB
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Callbacks > calls onUploadComplete when upload succeeds
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Callbacks > does not call onUploadComplete when upload fails
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Click to Upload > opens file picker when drop zone is clicked
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Click to Upload > resets file input value after selection
+ ✓ src/components/document/__tests__/DocumentUpload.test.tsx > DocumentUpload > Multiple Files > handles multiple file uploads simultaneously
+
+ Test Files  1 passed (1)
+      Tests  22 passed (22)
+   Start at  05:08:18
+   Duration  394ms (transform 34ms, setup 69ms, collect 29ms, tests 52ms, environment 52ms, prepare 34ms)
+

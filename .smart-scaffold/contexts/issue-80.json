@@ -1,0 +1,30 @@
+{
+  "issue_number": 80,
+  "title": "7.2.4 Implement RDSScanner with rules",
+  "body": "## Parent Issue\n#30 - 7.2 Security Scanner Engine\n\n## Objective\nImplement RDS security scanner with encryption, public access rules.\n\n## Rules\n- RDS_001: Instance Publicly Accessible (Critical)\n- RDS_002: Storage Not Encrypted (High)\n- RDS_003: Backup Retention < 7 Days (Medium)\n- RDS_004: Multi-AZ Not Enabled (Medium)\n\n## Files to Create\n- `src/cloud_optimizer/scanners/rds.py`\n- `src/cloud_optimizer/scanners/rules/rds_rules.py`\n\n## Estimated Time: 2.5 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:16:32.285387Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-80-724implementrdsscannerwithrule"
+}

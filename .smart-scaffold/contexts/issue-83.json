@@ -1,0 +1,31 @@
+{
+  "issue_number": 83,
+  "title": "7.2.7 Create scan API endpoints",
+  "body": "## Parent Issue\n#30 - 7.2 Security Scanner Engine\n\n## Objective\nCreate REST API endpoints for scan management.\n\n## Endpoints\n- POST /api/v1/scans - Start new scan\n- GET /api/v1/scans - List scans\n- GET /api/v1/scans/:id - Get scan status\n- POST /api/v1/scans/:id/cancel - Cancel running scan\n- GET /api/v1/scans/:id/findings - Get findings for scan\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/scans.py`\n\n## Estimated Time: 2 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:18:45.925728Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-83-727createscanapiendpoints"
+}

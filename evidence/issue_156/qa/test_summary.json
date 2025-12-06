@@ -1,0 +1,40 @@
+{
+  "issue": 156,
+  "title": "Automated deployment to ECS/EKS",
+  "test_date": "2025-12-06",
+  "workflow_file": ".github/workflows/blue-green-deploy.yml",
+  "workflow_valid": true,
+  "components": [
+    "Blue/green ECS deployment with zero-downtime",
+    "Canary weight traffic shifting (10%, 50%, 100%)",
+    "Pre-deployment test validation",
+    "CloudWatch metrics monitoring",
+    "Auto-rollback on error rate increase",
+    "Multi-environment support (staging, production)",
+    "AWS OIDC authentication"
+  ],
+  "deployment_strategy": {
+    "type": "blue-green",
+    "traffic_shifting": ["10,50,100", "25,50,100", "100"],
+    "error_rate_threshold": 5,
+    "rollback_enabled": true
+  },
+  "jobs": [
+    "pre-deployment-tests",
+    "deploy-green",
+    "validate-deployment",
+    "shift-traffic",
+    "cleanup"
+  ],
+  "infrastructure": {
+    "ecs_cluster": "${env}-bluegreen-cluster",
+    "ecr_repository": "cloud-optimizer",
+    "aws_region": "us-east-1"
+  },
+  "validation": {
+    "yaml_syntax": "valid",
+    "oidc_permissions": true,
+    "workflow_dispatch": true,
+    "environment_selection": true
+  }
+}

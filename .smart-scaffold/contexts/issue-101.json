@@ -1,0 +1,30 @@
+{
+  "issue_number": 101,
+  "title": "8.1.1 Create intent definitions and classification examples",
+  "body": "## Parent Issue\n#35 - 8.1 NLU Pipeline\n\n## Objective\nDefine all intent types and provide classification examples for the NLU system.\n\n## Implementation\n\n```python\n# src/ib_platform/nlu/intents.py\nfrom enum import Enum\n\nclass Intent(Enum):\n    SECURITY_ADVICE = \"security_advice\"          # General security questions\n    FINDING_EXPLANATION = \"finding_explanation\"  # Explain a specific finding\n    COMPLIANCE_QUESTION = \"compliance_question\"  # Compliance-related questions\n    DOCUMENT_ANALYSIS = \"document_analysis\"      # Questions about uploaded docs\n    COST_OPTIMIZATION = \"cost_optimization\"      # Cost-related questions\n    REMEDIATION_HELP = \"remediation_help\"        # How to fix something\n    GENERAL_QUESTION = \"general_question\"        # General cloud/security questions\n    GREETING = \"greeting\"                        # Greetings\n    OUT_OF_SCOPE = \"out_of_scope\"                # Not cloud security related\n\n\nINTENT_EXAMPLES = {\n    Intent.SECURITY_ADVICE: [\n        \"What security concerns should I have with S3?\",\n        \"Is my Redshift cluster secure?\",\n        \"How should I secure my API Gateway?\",\n    ],\n    Intent.FINDING_EXPLANATION: [\n        \"Explain this finding about public S3 buckets\",\n        \"What does the IAM_002 finding mean?\",\n        \"Why is this marked as critical?\",\n    ],\n    Intent.COMPLIANCE_QUESTION: [\n        \"What do I need for HIPAA compliance?\",\n        \"How does this relate to SOC 2?\",\n        \"Is this a PCI-DSS violation?\",\n    ],\n    # ... additional examples\n}\n```\n\n## Files to Create\n- `src/ib_platform/nlu/__init__.py`\n- `src/ib_platform/nlu/intents.py`\n\n## Acceptance Criteria\n- [ ] All 9 intent types defined as enum\n- [ ] 3+ examples per intent type\n- [ ] Intent enum is importable from nlu package\n- [ ] Unit tests for intent enum\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "nlu"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:32:35.351562Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-101-811createintentdefinitionsandc"
+}

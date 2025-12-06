@@ -1,0 +1,15 @@
+{
+  "valid": true,
+  "issues": [],
+  "warnings": [
+    "Missing static_analysis directory"
+  ],
+  "metadata": {
+    "issue": 43,
+    "evidence_dir": "evidence/issue_43",
+    "artifacts_found": [
+      "context_manifest.json",
+      "tests/pytest-summary.md"
+    ]
+  }
+}

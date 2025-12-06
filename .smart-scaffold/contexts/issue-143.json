@@ -1,0 +1,27 @@
+{
+  "issue_number": 143,
+  "title": "9.1.5 Secrets Manager and Parameter Store scanner",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nImplement security scanning for AWS Secrets Manager and Systems Manager Parameter Store checking for rotation policies, access controls, encryption, and unused secrets.\n\n## Requirements\n- Scan Secrets Manager secrets and configurations\n- Scan Parameter Store parameters (standard and advanced)\n- Check automatic rotation configuration\n- Verify KMS encryption for secrets and secure parameters\n- Analyze IAM and resource policies for overly permissive access\n- Detect secrets not accessed in 90+ days (unused)\n- Check for secrets without expiration dates\n- Verify replication configuration for critical secrets\n- Detect potential secrets stored in plain text parameters\n- Integration with Intelligence-Builder SDK for secret lifecycle analysis\n\n## Security Rules to Implement\n\n### Secrets Manager Rules\n- Secret missing automatic rotation\n- Secret not accessed in 90+ days\n- Secret missing KMS encryption\n- Secret with overly permissive resource policy\n- Secret not replicated for high-availability applications\n- Secret missing tags for classification\n- Secret rotation configuration invalid or broken\n\n### Parameter Store Rules\n- Secure parameter missing KMS encryption\n- Parameter containing credentials not marked as SecureString\n- Parameter with overly permissive IAM policy\n- Parameter not accessed in 90+ days\n- Parameter missing description or tags\n- Advanced parameter tier used unnecessarily\n\n## Acceptance Criteria\n- [ ] Secrets Manager scanner module implemented with all rules\n- [ ] Parameter Store scanner module implemented with all rules\n- [ ] Scanner identifies all secrets and parameters across accounts\n- [ ] Pattern detection for credentials in plain text parameters\n- [ ] Each rule produces clear finding with severity and remediation\n- [ ] Integration with Intelligence-Builder SDK for lifecycle analysis\n- [ ] Unit tests cover all rules (>80% coverage)\n- [ ] Integration tests validate scanning against test secrets\n- [ ] Documentation includes rule descriptions and remediation guidance\n- [ ] Scanner performance: <1s per secret/parameter\n\n## Technical Approach\n- Use boto3 Secrets Manager and SSM clients\n- Implement pattern matching for credential detection in plain text\n- Use CloudTrail integration for access tracking (optional enhancement)\n- Cache KMS key configurations to reduce API calls\n- Leverage Intelligence-Builder SDK for secret lifecycle recommendations\n\n## Estimated Effort\n18-22 hours\n\n## Dependencies\n- AWS Secrets Manager and Systems Manager API access\n- KMS read permissions for encryption verification\n- CloudTrail read access for usage tracking (optional)\n- Intelligence-Builder SDK integration",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:43:40.854367Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-143-915secretsmanagerandparameters"
+}

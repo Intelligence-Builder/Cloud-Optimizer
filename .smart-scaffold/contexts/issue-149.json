@@ -1,0 +1,29 @@
+{
+  "issue_number": 149,
+  "title": "9.2.3 Organization-wide security posture dashboard",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nCreate a comprehensive dashboard providing organization-wide visibility into security posture across all AWS accounts with trend analysis, heat maps, and executive-level metrics.\n\n## Requirements\n- Aggregate security findings across all accounts\n- Display organization-wide security score and trends\n- Provide account-level security scores with ranking\n- Show top security issues across organization\n- Heat map visualization of accounts by security posture\n- Trend charts showing improvement/degradation over time\n- Executive summary with key metrics and recommendations\n- Drill-down capability from organization to account to resource\n- Exportable reports for stakeholders\n- Integration with Intelligence-Builder SDK for AI-powered insights\n\n## Dashboard Components\n\n### Overview Section\n- Total accounts monitored\n- Organization-wide security score (0-100)\n- Total findings by severity (critical, high, medium, low)\n- Compliance status across frameworks\n- Trend indicators (improving/declining)\n\n### Account Heat Map\n- Visual grid of all accounts\n- Color-coded by security score (green=good, red=poor)\n- Hover details: account name, score, critical findings count\n- Click to drill down to account details\n\n### Top Issues Section\n- Most common security issues across organization\n- Issue frequency and affected accounts count\n- Prioritized remediation recommendations\n- Estimated time to remediate\n\n### Trend Analysis\n- 30/60/90-day security score trends\n- New findings vs resolved findings over time\n- Compliance trend tracking\n- Account comparison over time\n\n### Recommendations Panel\n- AI-powered prioritized recommendations from Intelligence-Builder SDK\n- Quick wins (easy fixes with high impact)\n- Critical path issues (blockers for compliance)\n- Resource optimization opportunities\n\n## Acceptance Criteria\n- [ ] Dashboard UI implemented with all sections\n- [ ] Organization-wide aggregation logic implemented\n- [ ] Security score calculation algorithm defined and tested\n- [ ] Heat map visualization rendering correctly\n- [ ] Trend charts displaying historical data\n- [ ] Drill-down navigation working from org \u2192 account \u2192 resource\n- [ ] Export functionality for PDF/CSV reports\n- [ ] Integration with Intelligence-Builder SDK for recommendations\n- [ ] Real-time updates when scans complete\n- [ ] Responsive design for mobile/tablet viewing\n- [ ] Unit tests for aggregation logic (>80% coverage)\n- [ ] Integration test validates end-to-end dashboard\n- [ ] Documentation includes dashboard user guide\n- [ ] Dashboard loads in <3 seconds for 100+ accounts\n\n## Technical Approach\n- Backend: Aggregation queries for organization-wide metrics\n- Frontend: React components with visualization libraries (Chart.js, D3.js)\n- Caching: Redis cache for expensive aggregations\n- Database: Materialized views for performance\n- Real-time updates: WebSocket or polling for scan progress\n- Leverage Intelligence-Builder SDK for AI insights\n\n## Estimated Effort\n28-32 hours\n\n## Dependencies\n- Multi-account scanning support (issue 9.2.1)\n- Historical scan data in database\n- Intelligence-Builder SDK integration\n- Frontend visualization libraries",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database",
+      "frontend",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:45:55.067002Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-149-923organization-widesecuritypo"
+}

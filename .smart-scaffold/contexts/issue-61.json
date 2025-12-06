@@ -1,0 +1,30 @@
+{
+  "issue_number": 61,
+  "title": "6.4.4 Create AuthMiddleware and API endpoints",
+  "body": "## Parent Issue\n#26 - 6.4 Basic Authentication\n\n## Objective\nCreate auth middleware and API endpoints.\n\n## Endpoints\n- POST /api/v1/auth/register\n- POST /api/v1/auth/login\n- POST /api/v1/auth/refresh\n- POST /api/v1/auth/logout\n- GET /api/v1/auth/me\n- PUT /api/v1/auth/me\n- PUT /api/v1/auth/password\n\n## Middleware\n- Extract Bearer token from Authorization header\n- Validate token and inject user_id into request state\n- Return 401 for invalid/missing token\n\n## Files to Create\n- `src/cloud_optimizer/middleware/auth.py`\n- `src/cloud_optimizer/api/routers/auth.py`\n- `tests/auth/test_*.py`\n\n## Acceptance Criteria\n- [ ] All endpoints work\n- [ ] Middleware validates tokens\n- [ ] 401 for protected routes without token\n- [ ] 80%+ test coverage\n\n## Estimated Time\n3 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-1",
+    "auth"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:32:03.635806Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-61-644createauthmiddlewareandapie"
+}

@@ -1,0 +1,28 @@
+{
+  "issue_number": 104,
+  "title": "8.1.4 Implement conversation context tracking",
+  "body": "## Parent Issue\n#35 - 8.1 NLU Pipeline\n\n## Objective\nTrack conversation context across multiple turns to maintain topic threads and referenced resources.\n\n## Implementation\n\n```python\n# src/ib_platform/nlu/context.py\nfrom dataclasses import dataclass\n\n@dataclass\nclass ConversationContext:\n    topics: list[str]\n    mentioned_services: list[str]\n    mentioned_frameworks: list[str]\n    active_resources: list[str]\n    turn_count: int\n\n\ndef build_context(\n    history: list[dict],\n    entities: ExtractedEntities,\n) -> ConversationContext:\n    \"\"\"Build context from conversation history.\"\"\"\n    # Extract topic thread from last 5 messages\n    topics = []\n    for msg in history[-5:]:\n        if msg[\"role\"] == \"user\":\n            topics.extend(extract_keywords(msg[\"content\"]))\n\n    # Track mentioned resources\n    resources = []\n    for msg in history:\n        if \"resource\" in msg.get(\"metadata\", {}):\n            resources.append(msg[\"metadata\"][\"resource\"])\n\n    return ConversationContext(\n        topics=list(set(topics)),\n        mentioned_services=entities.aws_services,\n        mentioned_frameworks=entities.compliance_frameworks,\n        active_resources=resources,\n        turn_count=len([m for m in history if m[\"role\"] == \"user\"]),\n    )\n```\n\n## Files to Create\n- `src/ib_platform/nlu/context.py`\n- `tests/ib_platform/nlu/test_context_building.py`\n\n## Acceptance Criteria\n- [ ] Topics extracted from conversation history\n- [ ] Services and frameworks tracked across turns\n- [ ] Active resources maintained\n- [ ] Turn count tracked\n- [ ] Unit tests for context building\n- [ ] Multi-turn conversation tests\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "nlu"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:48:27.891489Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-104-814implementconversationcontex"
+}

@@ -1,0 +1,31 @@
+{
+  "issue": 145,
+  "title": "Application Load Balancer with WAF",
+  "test_date": "2025-12-06",
+  "cloudformation": "cloudformation/nested/alb.yaml",
+  "template_valid": true,
+  "components": [
+    "Application Load Balancer (internet-facing)",
+    "HTTPS listener with TLS 1.2+ security policy",
+    "HTTP to HTTPS redirect",
+    "Target group with health checks",
+    "ACM certificate integration",
+    "Multi-AZ deployment across public subnets"
+  ],
+  "security_features": {
+    "tls_version": "TLS 1.2+",
+    "ssl_policies": [
+      "ELBSecurityPolicy-TLS-1-2-2017-01",
+      "ELBSecurityPolicy-TLS-1-2-Ext-2018-06",
+      "ELBSecurityPolicy-FS-1-2-2019-08",
+      "ELBSecurityPolicy-FS-1-2-Res-2020-10"
+    ],
+    "https_redirect": true
+  },
+  "alb_config": {
+    "type": "application",
+    "scheme": "internet-facing",
+    "ip_address_type": "ipv4"
+  },
+  "note": "WAF configuration requires AWS WAFv2 association (done in security-groups.yaml or separate stack)"
+}

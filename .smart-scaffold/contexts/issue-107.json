@@ -1,0 +1,28 @@
+{
+  "issue_number": 107,
+  "title": "8.2.2 Implement answer service with expert prompting",
+  "body": "## Parent Issue\n#36 - 8.2 Answer Generation Engine\n\n## Objective\nImplement the main answer service using Claude with expert security persona and compliance awareness.\n\n## Implementation\n\n```python\n# src/ib_platform/answer/service.py\nfrom anthropic import Anthropic\nfrom typing import AsyncIterator\n\nclass AnswerService:\n    SYSTEM_PROMPT = \"\"\"You are a cloud security expert assistant for Cloud Optimizer.\nYour role is to provide accurate, actionable security advice for AWS environments.\n\nKey behaviors:\n1. Ground advice in specific compliance frameworks (HIPAA, SOC2, PCI-DSS, GDPR, CIS, NIST)\n2. Provide specific, actionable remediation steps\n3. Include severity assessment when discussing risks\n4. Reference the user's actual findings when available\n5. Be concise but thorough - prioritize the most important points\n6. Use markdown formatting for readability\n7. If you're not sure about something, say so\n\nFormat severity indicators:\n- \ud83d\udd34 CRITICAL: Immediate action required\n- \ud83d\udfe0 HIGH: Address within 24-48 hours\n- \ud83d\udfe1 MEDIUM: Address within 1-2 weeks\n- \ud83d\udfe2 LOW: Address in next review cycle\"\"\"\n\n    def __init__(\n        self,\n        anthropic_client: Anthropic,\n        context_assembler: ContextAssembler,\n    ):\n        self.client = anthropic_client\n        self.context_assembler = context_assembler\n\n    async def generate(\n        self,\n        question: str,\n        nlu_result: NLUResult,\n        tenant_id: UUID,\n        conversation_history: list[dict],\n    ) -> AsyncIterator[str]:\n        \"\"\"Generate answer with streaming.\"\"\"\n        context = await self.context_assembler.assemble(nlu_result, tenant_id)\n        messages = self._build_messages(question, context, conversation_history)\n\n        async with self.client.messages.stream(\n            model=\"claude-3-5-sonnet-20241022\",\n            max_tokens=2000,\n            system=self.SYSTEM_PROMPT,\n            messages=messages,\n        ) as stream:\n            async for text in stream.text_stream:\n                yield text\n```\n\n## Files to Create\n- `src/ib_platform/answer/service.py`\n- `src/ib_platform/answer/prompts.py`\n- `tests/ib_platform/answer/test_answer_generation.py`\n\n## Acceptance Criteria\n- [ ] Expert system prompt defined\n- [ ] Context assembled and included in messages\n- [ ] Conversation history maintained (last 10)\n- [ ] Claude Sonnet used for generation\n- [ ] Severity indicators documented\n- [ ] Integration tests with mocked LLM\n\n## Estimated Time\n3 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "answer-generation"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:50:23.725886Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-107-822implementanswerservicewithe"
+}

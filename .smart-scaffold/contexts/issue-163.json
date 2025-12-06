@@ -1,0 +1,27 @@
+{
+  "issue_number": 163,
+  "title": "13.4.4 SOC 2 readiness checklist",
+  "body": "# Objective\nPrepare Cloud Optimizer for SOC 2 Type I compliance by implementing required security controls and documentation.\n\n## Requirements\n- Conduct SOC 2 gap analysis\n- Implement access controls and MFA\n- Set up audit logging for all systems\n- Implement data encryption (at rest and in transit)\n- Create security policies and procedures\n- Implement change management process\n- Set up incident response plan\n- Configure backup and disaster recovery\n- Implement vendor management program\n- Document system architecture and data flows\n- Conduct employee security training\n- Prepare for SOC 2 audit\n\n## Acceptance Criteria\n- Gap analysis completed with remediation plan\n- All security controls implemented\n- Policies and procedures documented\n- Audit logs capturing all required events\n- Encryption implemented everywhere\n- Incident response plan tested\n- Backup and DR tested successfully\n- All documentation ready for auditor\n- Internal audit passed\n- SOC 2 Type I audit scheduled\n\n## Dependencies\n- Parent: Epic 13 (#131)\n- Requires: #152 (Secrets Manager), #162 (Pen testing)\n- Related: #137 (EULA and documentation)\n\n## Estimated Effort\n**Story Points:** 21\n**Time:** 4 weeks\n**Complexity:** Very High",
+  "labels": [
+    "security",
+    "production"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-05T19:09:02.215612Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-163-1344soc2readinesschecklist"
+}

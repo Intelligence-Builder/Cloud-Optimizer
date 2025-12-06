@@ -1,0 +1,28 @@
+{
+  "issue_number": 88,
+  "title": "7.3.4 Implement RightsizingAnalyzer",
+  "body": "## Parent Issue\n#31 - 7.3 Cost Analysis Scanner\n\n## Objective\nRecommend EC2 instance rightsizing based on utilization.\n\n## Features\n- Get CloudWatch CPU/memory metrics\n- Recommend downsizing for underutilized instances\n- Calculate savings amounts\n- Confidence levels\n\n## Files to Create\n- `src/cloud_optimizer/scanners/cost/rightsizing_analyzer.py`\n- `data/pricing/ec2_pricing.json`\n\n## Estimated Time: 3 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "cost",
+    "optimization",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:22:40.878010Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-88-734implementrightsizinganalyze"
+}

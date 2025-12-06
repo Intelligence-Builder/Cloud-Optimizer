@@ -1,0 +1,30 @@
+{
+  "issue_number": 94,
+  "title": "7.4.4 Implement chat query parsing for findings",
+  "body": "## Parent Issue\n#32 - 7.4 Findings Management System\n\n## Objective\nParse natural language queries into finding filters for chat.\n\n## Examples\n- \"Show me critical findings\" \u2192 severity=[critical]\n- \"What S3 issues do I have?\" \u2192 resource_type=[s3_bucket]\n- \"HIPAA violations\" \u2192 compliance_framework=HIPAA\n\n## Files to Create\n- `src/cloud_optimizer/services/findings.py` (_parse_chat_query method)\n\n## Estimated Time: 2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "findings",
+    "data",
+    "api"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:27:11.867971Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-94-744implementchatqueryparsingfo"
+}

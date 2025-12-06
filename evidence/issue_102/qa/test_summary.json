@@ -1,0 +1,100 @@
+{
+  "issue": "102",
+  "title": "8.1.2 Implement entity extraction",
+  "test_date": "2025-12-06",
+  "implementation_status": "COMPLETE",
+  "components": {
+    "entity_extractor_class": {
+      "description": "Main class for extracting entities from user queries",
+      "extraction_types": [
+        "AWS service names",
+        "Compliance frameworks",
+        "Finding identifiers",
+        "Resource identifiers"
+      ],
+      "status": "implemented"
+    },
+    "aws_service_extraction": {
+      "description": "Extract AWS service names from text",
+      "services_supported": [
+        "S3", "EC2", "IAM", "RDS", "Lambda", "VPC", "CloudWatch",
+        "CloudTrail", "Config", "GuardDuty", "SecurityHub", "KMS",
+        "CloudFormation", "ECS", "EKS", "DynamoDB", "SNS", "SQS",
+        "API Gateway", "Route53", "ELB", "ALB", "NLB", "AutoScaling",
+        "CloudFront", "WAF", "Shield", "Secrets Manager", "Systems Manager",
+        "ACM", "Certificate Manager"
+      ],
+      "case_insensitive": true,
+      "status": "implemented"
+    },
+    "compliance_framework_extraction": {
+      "description": "Extract compliance framework names",
+      "frameworks_supported": [
+        "SOC2", "SOC 2", "HIPAA", "PCI-DSS", "PCI DSS", "GDPR",
+        "ISO 27001", "ISO27001", "NIST", "FedRAMP", "CCPA", "CIS"
+      ],
+      "normalization": true,
+      "status": "implemented"
+    },
+    "finding_id_extraction": {
+      "description": "Extract security finding identifiers",
+      "patterns_supported": [
+        "SEC-###",
+        "FND-#####",
+        "FINDING-###",
+        "CVE-YYYY-#####"
+      ],
+      "regex_based": true,
+      "status": "implemented"
+    },
+    "resource_id_extraction": {
+      "description": "Extract AWS resource identifiers",
+      "patterns_supported": [
+        "ARNs (arn:aws:...)",
+        "S3 bucket names",
+        "EC2 instance IDs (i-*)",
+        "Security group IDs (sg-*)",
+        "VPC IDs (vpc-*)",
+        "Subnet IDs (subnet-*)"
+      ],
+      "regex_based": true,
+      "status": "implemented"
+    },
+    "nlu_entities_model": {
+      "description": "Data model for extracted entities",
+      "methods": [
+        "has_entities()",
+        "get_all_entities()"
+      ],
+      "status": "implemented"
+    }
+  },
+  "files_created": [
+    "src/ib_platform/nlu/entities.py",
+    "src/ib_platform/nlu/models.py (partial - NLUEntities)"
+  ],
+  "test_files": [
+    "tests/ib_platform/nlu/test_entities.py"
+  ],
+  "test_coverage": {
+    "test_classes": 8,
+    "test_methods": 48,
+    "coverage_areas": [
+      "EntityExtractor basic functionality",
+      "AWS service extraction (single, multiple, case-insensitive)",
+      "Compliance framework extraction (all frameworks, normalization)",
+      "Finding ID extraction (all patterns)",
+      "Resource ID extraction (ARNs, buckets, instances, security groups, VPCs, subnets)",
+      "NLUEntities model (has_entities, get_all_entities)",
+      "Complex real-world query scenarios",
+      "Multi-resource and multi-framework queries"
+    ]
+  },
+  "validation": {
+    "all_extraction_types_implemented": true,
+    "regex_patterns_tested": true,
+    "case_insensitive_working": true,
+    "normalization_working": true,
+    "test_coverage": "comprehensive"
+  }
+}

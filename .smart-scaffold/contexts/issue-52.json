@@ -1,0 +1,30 @@
+{
+  "issue_number": 52,
+  "title": "6.2.5 Add marketplace environment configuration",
+  "body": "## Parent Issue\n#24 - 6.2 AWS Marketplace Integration\n\n## Objective\nAdd marketplace configuration to application settings.\n\n## Requirements\n- MARKETPLACE_ENABLED toggle\n- MARKETPLACE_PRODUCT_CODE setting\n- TRIAL_MODE for local development\n- AWS_REGION for metering API\n\n## Implementation\n\n```python\n# src/cloud_optimizer/config.py (additions)\nfrom pydantic_settings import BaseSettings\n\nclass Settings(BaseSettings):\n    # Existing settings...\n    \n    # Marketplace settings\n    MARKETPLACE_ENABLED: bool = True\n    MARKETPLACE_PRODUCT_CODE: str = \"\"\n    TRIAL_MODE: bool = False\n    \n    # AWS settings\n    AWS_REGION: str = \"us-east-1\"\n    \n    @property\n    def marketplace_config(self) -> MarketplaceConfig:\n        return MarketplaceConfig(\n            enabled=self.MARKETPLACE_ENABLED,\n            product_code=self.MARKETPLACE_PRODUCT_CODE,\n        )\n    \n    class Config:\n        env_file = \".env\"\n```\n\n## Environment Variables\n```bash\n# .env.example additions\nMARKETPLACE_ENABLED=true\nMARKETPLACE_PRODUCT_CODE=abc123xyz\nAWS_REGION=us-east-1\nTRIAL_MODE=false\n```\n\n## Files to Modify\n- `src/cloud_optimizer/config.py`\n- `.env.example`\n\n## Acceptance Criteria\n- [ ] Settings load from environment\n- [ ] Defaults work for local dev (TRIAL_MODE)\n- [ ] Validation errors for missing required values\n- [ ] .env.example updated\n\n## Estimated Time\n1 hour",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "marketplace",
+    "aws",
+    "billing"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:27:07.646650Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-52-625addmarketplaceenvironmentco"
+}

@@ -1,0 +1,30 @@
+{
+  "issue_number": 160,
+  "title": "13.4.1 SSL/TLS certificate setup (ACM)",
+  "body": "# Objective\nObtain and configure SSL/TLS certificates from AWS Certificate Manager for secure HTTPS communication.\n\n## Requirements\n- Request SSL certificate from ACM for production domain\n- Validate domain ownership (DNS or email)\n- Configure certificate on Application Load Balancer\n- Set up automatic certificate renewal\n- Enforce HTTPS-only access (redirect HTTP to HTTPS)\n- Configure TLS 1.2+ only (disable older versions)\n- Set up HSTS headers for security\n- Add certificate to CloudFront if using CDN\n- Monitor certificate expiration\n- Document certificate management procedures\n\n## Acceptance Criteria\n- SSL certificate issued and validated\n- Certificate attached to ALB\n- HTTPS working for all endpoints\n- HTTP automatically redirects to HTTPS\n- TLS 1.2+ enforced (no SSLv3, TLS 1.0, 1.1)\n- HSTS header configured with 1-year max-age\n- Certificate auto-renewal working\n- SSL Labs test score A or A+\n- Monitoring alerts 30 days before expiry\n\n## Dependencies\n- Parent: Epic 13 (#131)\n- Requires: #145 (ALB setup)\n- Required for: Production launch\n\n## Estimated Effort\n**Story Points:** 3\n**Time:** 3 days\n**Complexity:** Low-Medium",
+  "labels": [
+    "security",
+    "infrastructure",
+    "aws",
+    "production"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-05T18:47:42.882047Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-160-1341ssltlscertificatesetupacm"
+}

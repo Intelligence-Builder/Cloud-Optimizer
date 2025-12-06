@@ -1,0 +1,24 @@
+{
+  "issue": 140,
+  "title": "9.1.3 CloudFront scanner",
+  "qa_recorded_at": "2025-12-05T06:10:27.405538Z",
+  "summary": "Validated CloudFront scanner rule coverage.",
+  "tests": [
+    {
+      "command": "pytest tests/scanners/test_cloudfront_scanner.py -q",
+      "output": "tests/pytest-output.txt"
+    }
+  ],
+  "static_analysis": [
+    {
+      "tool": "ruff",
+      "command": "ruff check --exit-zero src/cloud_optimizer/scanners/cloudfront_scanner.py tests/scanners/test_cloudfront_scanner.py",
+      "output": "static_analysis/ruff.log"
+    },
+    {
+      "tool": "bandit",
+      "command": "bandit -q -r src/cloud_optimizer/scanners/cloudfront_scanner.py tests/scanners/test_cloudfront_scanner.py",
+      "output": "static_analysis/bandit.log"
+    }
+  ]
+}

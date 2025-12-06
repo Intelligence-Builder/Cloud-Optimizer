@@ -1,0 +1,30 @@
+{
+  "issue_number": 82,
+  "title": "7.2.6 Create ScanOrchestrator service",
+  "body": "## Parent Issue\n#30 - 7.2 Security Scanner Engine\n\n## Objective\nImplement scan orchestration with parallel scanning and progress tracking.\n\n## Features\n- start_scan(tenant_id, aws_account_id) - Start background scan\n- get_scan_status(job_id) - Get progress\n- cancel_scan(job_id) - Cancel running scan\n- Parallel scanner execution\n- Trial limit enforcement\n\n## Files to Create\n- `src/cloud_optimizer/services/scan_orchestrator.py`\n\n## Estimated Time: 3 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:18:01.032732Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-82-726createscanorchestratorservi"
+}

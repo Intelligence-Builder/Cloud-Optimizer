@@ -1,0 +1,30 @@
+{
+  "issue_number": 113,
+  "title": "8.3.3 Build remediation plan generator",
+  "body": "## Parent Issue\n#37 - 8.3 Security Analysis Integration\n\n## Objective\nGenerate comprehensive remediation plans with step-by-step instructions, Terraform code, CLI commands, and console steps.\n\n## Implementation\n\n```python\n# src/ib_platform/security/remediation.py\nfrom dataclasses import dataclass\nfrom datetime import datetime\n\n@dataclass\nclass RemediationPlan:\n    findings: list[Finding]\n    plan: str\n    generated_at: datetime\n\n\nclass RemediationGenerator:\n    def __init__(self, anthropic_client: Anthropic):\n        self.client = anthropic_client\n\n    async def generate_plan(\n        self,\n        tenant_id: UUID,\n        finding_ids: list[UUID],\n        findings_service: FindingsService,\n    ) -> RemediationPlan:\n        \"\"\"Generate comprehensive remediation plan for findings.\"\"\"\n        findings = []\n        for fid in finding_ids:\n            finding = await findings_service.get_finding(tenant_id, fid)\n            findings.append(finding)\n\n        prompt = f'''Generate a remediation plan for these security findings:\n\n{self._format_findings(findings)}\n\nFor each finding provide:\n1. Step-by-step remediation instructions\n2. Terraform code to fix (if applicable)\n3. AWS CLI commands (if applicable)\n4. AWS Console steps\n5. Verification steps to confirm remediation\n\nGroup related findings if they can be fixed together.'''\n\n        response = await self.client.messages.create(\n            model=\"claude-3-5-sonnet-20241022\",\n            max_tokens=3000,\n            system=\"You are a cloud security engineer creating remediation plans.\",\n            messages=[{\"role\": \"user\", \"content\": prompt}],\n        )\n\n        return RemediationPlan(\n            findings=findings,\n            plan=response.content[0].text,\n            generated_at=datetime.utcnow(),\n        )\n\n    def _format_findings(self, findings: list[Finding]) -> str:\n        lines = []\n        for i, f in enumerate(findings, 1):\n            lines.append(f\"{i}. **{f.title}** ({f.severity})\")\n            lines.append(f\"   Resource: {f.resource_id}\")\n            lines.append(f\"   Compliance: {', '.join(f.compliance_frameworks)}\")\n        return \"\\n\".join(lines)\n```\n\n## Files to Create\n- `src/ib_platform/security/remediation.py`\n- `tests/ib_platform/security/test_remediation.py`\n\n## Acceptance Criteria\n- [ ] Remediation plan includes step-by-step instructions\n- [ ] Terraform code examples generated\n- [ ] AWS CLI commands included\n- [ ] Console steps provided\n- [ ] Related findings grouped\n- [ ] Verification steps included\n- [ ] Integration tests with mocked LLM\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "ib",
+    "analysis"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:55:00.050207Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-113-833buildremediationplangenerat"
+}

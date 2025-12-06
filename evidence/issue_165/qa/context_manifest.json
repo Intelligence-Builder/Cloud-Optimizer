@@ -1,0 +1,82 @@
+{
+  "issue_number": 165,
+  "title": "13.5.1 Structured logging with CloudWatch Logs",
+  "status": "completed",
+  "branch": "feature/issue-165-1351structuredloggingwithcloud",
+  "validation_date": "2025-12-04T16:00:00Z",
+  "files_modified": [
+    "src/cloud_optimizer/logging/__init__.py",
+    "src/cloud_optimizer/logging/config.py",
+    "src/cloud_optimizer/logging/context.py",
+    "src/cloud_optimizer/logging/pii_filter.py",
+    "src/cloud_optimizer/middleware/correlation.py",
+    "src/cloud_optimizer/middleware/__init__.py",
+    "src/cloud_optimizer/main.py",
+    "cloudformation/cloudwatch-logs.yaml",
+    "tests/unit/logging/__init__.py",
+    "tests/unit/logging/test_pii_filter.py",
+    "tests/unit/logging/test_context.py",
+    "tests/unit/logging/test_config.py"
+  ],
+  "tests": {
+    "passed": 59,
+    "failed": 0,
+    "skipped": 0
+  },
+  "acceptance_criteria": [
+    {
+      "criteria": "All services logging in JSON format",
+      "met": true
+    },
+    {
+      "criteria": "Consistent log structure across services",
+      "met": true
+    },
+    {
+      "criteria": "Correlation IDs linking related logs",
+      "met": true
+    },
+    {
+      "criteria": "No PII in log messages",
+      "met": true
+    },
+    {
+      "criteria": "Log Groups organized by service",
+      "met": true
+    },
+    {
+      "criteria": "Retention policies configured (30-90 days)",
+      "met": true
+    },
+    {
+      "criteria": "CloudWatch Insights queries saved",
+      "met": true
+    },
+    {
+      "criteria": "Log-based metrics created",
+      "met": true
+    },
+    {
+      "criteria": "Logging standards documented",
+      "met": true
+    }
+  ],
+  "deliverables": {
+    "logging_module": {
+      "path": "src/cloud_optimizer/logging/",
+      "description": "Structured logging module with JSON format, PII redaction, and correlation IDs"
+    },
+    "correlation_middleware": {
+      "path": "src/cloud_optimizer/middleware/correlation.py",
+      "description": "Request correlation ID middleware with X-Ray trace integration"
+    },
+    "cloudwatch_config": {
+      "path": "cloudformation/cloudwatch-logs.yaml",
+      "description": "CloudFormation template for Log Groups, metric filters, and alarms"
+    },
+    "tests": {
+      "path": "tests/unit/logging/",
+      "description": "59 unit tests covering all logging functionality"
+    }
+  }
+}

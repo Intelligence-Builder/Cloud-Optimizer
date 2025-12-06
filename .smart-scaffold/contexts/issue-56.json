@@ -1,0 +1,29 @@
+{
+  "issue_number": 56,
+  "title": "6.3.3 Create TrialEnforcementMiddleware",
+  "body": "## Parent Issue\n#25 - 6.3 Trial Management System\n\n## Objective\nCreate middleware to enforce trial limits on metered endpoints.\n\n## Requirements\n- Map endpoints to usage dimensions\n- Return 429 when limit reached\n- Include upgrade URL in response\n\n## Files to Create\n- `src/cloud_optimizer/middleware/trial.py`\n\n## Acceptance Criteria\n- [ ] Metered endpoints checked\n- [ ] 429 returned at limit\n- [ ] Response includes current/limit counts\n- [ ] Non-metered endpoints pass through\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "billing",
+    "trial"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:29:11.622381Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-56-633createtrialenforcementmiddl"
+}

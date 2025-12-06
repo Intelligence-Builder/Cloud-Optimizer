@@ -1,0 +1,26 @@
+{
+  "issue_number": 159,
+  "title": "13.3.5 Blue/green deployment strategy",
+  "body": "# Objective\nImplement blue/green deployment strategy for zero-downtime deployments with instant rollback capability and traffic shifting.\n\n## Requirements\n- Set up blue/green infrastructure (two environments)\n- Implement traffic shifting between environments\n- Create deployment workflow for blue/green\n- Configure health checks for new environment\n- Implement gradual traffic shift (canary)\n- Add instant rollback to previous environment\n- Monitor deployment metrics during shift\n- Automate environment cleanup after deployment\n- Test disaster recovery scenarios\n- Document blue/green procedures\n\n## Acceptance Criteria\n- Blue and green environments deployed\n- Traffic shifts between environments seamlessly\n- Zero downtime during deployments\n- Canary deployment shifts 10%, 50%, 100%\n- Automatic rollback on error rate increase\n- Metrics monitored during deployment\n- Rollback completes in under 1 minute\n- Old environment kept for 24h after deployment\n\n## Dependencies\n- Parent: Epic 13 (#131)\n- Requires: #156 (Automated deployment), #145 (ALB)\n- Related: #146 (CloudWatch monitoring)\n\n## Estimated Effort\n**Story Points:** 13\n**Time:** 2 weeks\n**Complexity:** Very High",
+  "labels": [
+    "platform",
+    "production",
+    "devops"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-05T18:13:14.801460Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-159-1335bluegreendeploymentstrateg"
+}

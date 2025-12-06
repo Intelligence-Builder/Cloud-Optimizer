@@ -1,0 +1,27 @@
+{
+  "issue_number": 133,
+  "title": "9.1.1 Lambda function scanner with rules",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nImplement comprehensive security scanning for AWS Lambda functions with configurable rules checking for common misconfigurations and security vulnerabilities.\n\n## Requirements\n- Scan Lambda function configurations (runtime, handler, timeout, memory)\n- Check IAM execution roles for least privilege violations\n- Analyze environment variables for exposed secrets\n- Verify VPC configuration and network security\n- Check for outdated runtimes and security patches\n- Validate logging and monitoring configuration (CloudWatch Logs)\n- Detect unused or orphaned Lambda functions\n- Check for overly permissive resource policies\n- Integration with Intelligence-Builder SDK for AI-powered analysis\n\n## Security Rules to Implement\n- Lambda function uses deprecated runtime version\n- Lambda function has overly permissive IAM role\n- Lambda function exposes secrets in environment variables\n- Lambda function not in VPC when accessing private resources\n- Lambda function missing CloudWatch Logs configuration\n- Lambda function unused for 90+ days\n- Lambda function has public access via resource policy\n- Lambda function uses default execution role\n\n## Acceptance Criteria\n- [ ] Lambda scanner module implemented with all rules\n- [ ] Scanner identifies all Lambda functions across scanned accounts\n- [ ] Each rule produces clear finding with severity and remediation\n- [ ] Integration with Intelligence-Builder SDK for enhanced analysis\n- [ ] Unit tests cover all rules (>80% coverage)\n- [ ] Integration test validates scanning against test Lambda functions\n- [ ] Documentation includes rule descriptions and remediation guidance\n- [ ] Scanner performance: <2s per function\n\n## Technical Approach\n- Use boto3 Lambda client for function discovery and configuration retrieval\n- Implement rule engine pattern for extensibility\n- Cache IAM role analysis to avoid redundant API calls\n- Leverage Intelligence-Builder SDK for advanced pattern detection\n\n## Estimated Effort\n20-24 hours\n\n## Dependencies\n- AWS Lambda API access\n- IAM read permissions for role analysis\n- Intelligence-Builder SDK integration",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:48:11.533997Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-133-911lambdafunctionscannerwithru"
+}

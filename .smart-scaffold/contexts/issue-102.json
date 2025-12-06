@@ -1,0 +1,31 @@
+{
+  "issue_number": 102,
+  "title": "8.1.2 Implement entity extraction for AWS services and compliance",
+  "body": "## Parent Issue\n#35 - 8.1 NLU Pipeline\n\n## Objective\nImplement entity extraction to identify AWS services, compliance frameworks, finding IDs, and severity levels from user messages.\n\n## Implementation\n\n```python\n# src/ib_platform/nlu/entities.py\nfrom dataclasses import dataclass\n\n@dataclass\nclass ExtractedEntities:\n    aws_services: list[str]           # [\"S3\", \"RDS\", \"Lambda\"]\n    compliance_frameworks: list[str]  # [\"HIPAA\", \"SOC2\"]\n    resource_ids: list[str]           # [\"bucket-name\", \"i-abc123\"]\n    severity_levels: list[str]        # [\"critical\", \"high\"]\n    finding_ids: list[str]            # [\"S3_001\", \"IAM_002\"]\n    regions: list[str]                # [\"us-east-1\"]\n    keywords: list[str]               # Key terms extracted\n\n\nAWS_SERVICES = {\n    \"s3\": [\"s3\", \"bucket\", \"buckets\", \"simple storage\"],\n    \"ec2\": [\"ec2\", \"instance\", \"instances\", \"virtual machine\", \"vm\"],\n    \"rds\": [\"rds\", \"database\", \"databases\", \"aurora\", \"mysql\", \"postgres\"],\n    \"iam\": [\"iam\", \"user\", \"users\", \"role\", \"roles\", \"policy\", \"permission\"],\n    \"lambda\": [\"lambda\", \"function\", \"serverless\"],\n    \"vpc\": [\"vpc\", \"network\", \"subnet\", \"security group\"],\n    \"kms\": [\"kms\", \"key\", \"encryption\"],\n    \"cloudtrail\": [\"cloudtrail\", \"trail\", \"logging\", \"audit\"],\n    \"redshift\": [\"redshift\", \"warehouse\", \"data warehouse\"],\n    \"glue\": [\"glue\", \"etl\", \"catalog\"],\n}\n\nCOMPLIANCE_FRAMEWORKS = {\n    \"hipaa\": [\"hipaa\", \"phi\", \"healthcare\", \"patient\"],\n    \"soc2\": [\"soc2\", \"soc 2\", \"type 2\", \"type ii\"],\n    \"pci\": [\"pci\", \"pci-dss\", \"payment\", \"cardholder\"],\n    \"gdpr\": [\"gdpr\", \"privacy\", \"data protection\", \"eu\"],\n    \"cis\": [\"cis\", \"benchmark\", \"benchmarks\"],\n    \"nist\": [\"nist\", \"800-53\", \"framework\"],\n}\n\n\ndef extract_entities(message: str) -> ExtractedEntities:\n    \"\"\"Extract entities from user message using keyword matching.\"\"\"\n    ...\n```\n\n## Files to Create\n- `src/ib_platform/nlu/entities.py`\n- `tests/ib_platform/nlu/test_entity_extraction.py`\n\n## Acceptance Criteria\n- [ ] AWS services extracted from messages\n- [ ] Compliance frameworks detected\n- [ ] Finding IDs extracted (pattern: XXX_NNN)\n- [ ] Severity levels detected\n- [ ] Keywords extracted (stopwords removed)\n- [ ] Unit tests with 90%+ coverage\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "nlu"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend",
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:47:13.085677Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-102-812implemententityextractionfo"
+}

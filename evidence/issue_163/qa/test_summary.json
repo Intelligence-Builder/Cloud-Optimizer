@@ -1,0 +1,33 @@
+{
+  "issue": 163,
+  "title": "SOC 2 readiness checklist",
+  "test_date": "2025-12-06",
+  "tests_passed": 35,
+  "tests_failed": 0,
+  "components": [
+    "Service Level Agreement documentation",
+    "Business Continuity Plan",
+    "SOC 2 evidence collection script",
+    "SOC 2 control tests",
+    "Contributing guidelines"
+  ],
+  "files_created": [
+    "docs/compliance/SERVICE_LEVEL_AGREEMENT.md",
+    "docs/compliance/BUSINESS_CONTINUITY_PLAN.md",
+    "scripts/compliance/collect-soc2-evidence.sh",
+    "tests/compliance/test_soc2_controls.py",
+    "CONTRIBUTING.md"
+  ],
+  "checklist_progress": {
+    "before": "70/162 (43%)",
+    "after": "75/162 (46%)",
+    "items_completed": 5
+  },
+  "trust_principles_addressed": [
+    "Security",
+    "Availability",
+    "Processing Integrity",
+    "Confidentiality",
+    "Privacy"
+  ]
+}

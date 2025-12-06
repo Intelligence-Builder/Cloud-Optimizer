@@ -1,0 +1,30 @@
+{
+  "issue_number": 92,
+  "title": "7.4.2 Implement findings pagination and sorting",
+  "body": "## Parent Issue\n#32 - 7.4 Findings Management System\n\n## Objective\nAdd pagination and sorting to findings queries.\n\n## Features\n- Page-based pagination with total counts\n- Sort by severity (custom order)\n- Sort by created_at\n- Sort by resource_type\n\n## Estimated Time: 1.5 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "findings",
+    "data",
+    "api"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:25:42.982538Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-92-742implementfindingspagination"
+}

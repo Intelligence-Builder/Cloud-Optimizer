@@ -1,0 +1,36 @@
+{
+  "issue": 155,
+  "title": "Container build and push to ECR",
+  "test_date": "2025-12-06",
+  "workflow_file": ".github/workflows/docker-build.yml",
+  "workflow_valid": true,
+  "components": [
+    "Docker Buildx multi-platform builds (amd64, arm64)",
+    "AWS OIDC authentication (no long-term credentials)",
+    "Amazon ECR login and push",
+    "Semantic versioning with docker/metadata-action",
+    "Trivy vulnerability scanning (blocks on CRITICAL/HIGH)",
+    "SARIF output for GitHub Security tab",
+    "Build caching with GitHub Actions cache",
+    "Notification job for build status"
+  ],
+  "security_features": {
+    "trivy_scanning": true,
+    "severity_threshold": "CRITICAL,HIGH",
+    "sarif_integration": true,
+    "oidc_auth": true,
+    "no_hardcoded_credentials": true
+  },
+  "tagging_strategy": [
+    "Branch name",
+    "Semantic version (major.minor.patch)",
+    "Short commit SHA",
+    "Latest for main branch",
+    "Manual workflow dispatch"
+  ],
+  "validation": {
+    "yaml_syntax": "valid",
+    "dockerfile_exists": true,
+    "ecr_integration": true
+  }
+}

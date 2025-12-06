@@ -1,0 +1,18 @@
+{
+  "issue": 160,
+  "title": "SSL/TLS certificate setup (ACM)",
+  "test_date": "2025-12-06",
+  "tests_collected": 44,
+  "tests_passed": 44,
+  "cloudformation_valid": true,
+  "components": [
+    "ACM Certificate with DNS validation",
+    "HTTPS listener on port 443",
+    "HTTP to HTTPS redirect (301)",
+    "TLS 1.2+ security policy",
+    "Certificate expiration monitoring",
+    "SNS alerts for certificate expiration",
+    "Lambda for certificate metrics"
+  ],
+  "cloudformation": "cloudformation/acm-certificate.yaml"
+}

@@ -1,0 +1,29 @@
+{
+  "issue_number": 43,
+  "title": "6.1.4 Create Helm chart templates",
+  "body": "## Parent Issue\n#23 - 6.1 Container Packaging\n\n## Objective\nCreate Helm chart for Kubernetes deployment on EKS.\n\n## Requirements\n- Deployment with configurable replicas\n- Service for internal/external access\n- ConfigMap for non-sensitive config\n- Secret references for sensitive data\n- Ingress for external access\n- HPA for autoscaling\n\n## Files to Create\n```\nhelm/cloud-optimizer/\n\u251c\u2500\u2500 Chart.yaml\n\u251c\u2500\u2500 values.yaml\n\u251c\u2500\u2500 values-dev.yaml\n\u251c\u2500\u2500 values-prod.yaml\n\u251c\u2500\u2500 templates/\n\u2502   \u251c\u2500\u2500 deployment.yaml\n\u2502   \u251c\u2500\u2500 service.yaml\n\u2502   \u251c\u2500\u2500 configmap.yaml\n\u2502   \u251c\u2500\u2500 secret.yaml\n\u2502   \u251c\u2500\u2500 ingress.yaml\n\u2502   \u251c\u2500\u2500 hpa.yaml\n\u2502   \u2514\u2500\u2500 _helpers.tpl\n\u2514\u2500\u2500 README.md\n```\n\n## Key values.yaml Structure\n```yaml\nreplicaCount: 2\n\nimage:\n  repository: cloud-optimizer\n  tag: latest\n  pullPolicy: IfNotPresent\n\nservice:\n  type: ClusterIP\n  port: 8000\n\ningress:\n  enabled: true\n  className: alb\n  hosts:\n    - host: cloud-optimizer.example.com\n\nresources:\n  limits:\n    cpu: 1000m\n    memory: 1Gi\n  requests:\n    cpu: 500m\n    memory: 512Mi\n\ndatabase:\n  host: \"\"\n  port: 5432\n  name: cloud_optimizer\n\nsecrets:\n  databasePasswordSecret: cloud-optimizer-db\n  jwtSecretKey: cloud-optimizer-jwt\n```\n\n## Acceptance Criteria\n- [ ] Chart.yaml valid with version info\n- [ ] helm lint passes\n- [ ] helm template renders correctly\n- [ ] Installs on local kind cluster\n- [ ] README documents all values\n\n## Estimated Time\n3 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "container",
+    "infrastructure"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:09:37.855743Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-43-614createhelmcharttemplates"
+}

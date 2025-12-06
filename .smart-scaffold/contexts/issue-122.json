@@ -1,0 +1,29 @@
+{
+  "issue_number": 122,
+  "title": "8.5.2 Implement YAML loading for compliance frameworks",
+  "body": "## Parent Issue\n#39 - 8.5 Knowledge Base Integration\n\n## Objective\nLoad compliance framework data from YAML files (HIPAA, SOC2, PCI-DSS, GDPR, CIS, NIST).\n\n## Implementation\n\n```python\n# src/ib_platform/kb/loader.py\nimport yaml\nfrom pathlib import Path\n\nclass KBLoader:\n    \"\"\"Load KB data from YAML files.\"\"\"\n\n    def __init__(self, data_dir: Path):\n        self.data_dir = data_dir\n\n    async def load_frameworks(self) -> dict[str, list[ComplianceControl]]:\n        \"\"\"Load all compliance frameworks.\"\"\"\n        frameworks = {}\n        frameworks_dir = self.data_dir / \"frameworks\"\n\n        for framework_dir in frameworks_dir.iterdir():\n            if framework_dir.is_dir():\n                controls_file = framework_dir / \"controls.yaml\"\n                if controls_file.exists():\n                    data = yaml.safe_load(controls_file.read_text())\n                    framework = data[\"framework\"]\n                    frameworks[framework] = [\n                        ComplianceControl(\n                            framework=framework,\n                            **control\n                        )\n                        for control in data.get(\"controls\", [])\n                    ]\n\n        return frameworks\n```\n\n## Sample Data Structure\n\n```yaml\n# data/compliance/frameworks/hipaa/controls.yaml\nframework: HIPAA\nversion: \"2013\"\ncontrols:\n  - control_id: \"164.312(a)(1)\"\n    name: Access Control\n    description: |\n      Implement technical policies and procedures for electronic information\n      systems that maintain ePHI to allow access only to authorized persons.\n    requirements:\n      - Unique User Identification\n      - Emergency Access Procedure\n      - Automatic Logoff\n      - Encryption and Decryption\n    aws_services:\n      - IAM\n      - KMS\n      - S3\n      - RDS\n    implementation_guidance: |\n      1. Use IAM for user authentication and authorization\n      2. Implement MFA for all users with ePHI access\n      3. Enable CloudTrail for access logging\n```\n\n## Files to Create\n- `src/ib_platform/kb/loader.py`\n- `data/compliance/frameworks/hipaa/controls.yaml`\n- `data/compliance/frameworks/soc2/controls.yaml`\n- `data/compliance/frameworks/pci-dss/controls.yaml`\n- `data/compliance/frameworks/gdpr/controls.yaml`\n- `data/compliance/frameworks/cis/controls.yaml`\n- `data/compliance/frameworks/nist/controls.yaml`\n- `tests/ib_platform/kb/test_loader.py`\n\n## Acceptance Criteria\n- [ ] 6 compliance frameworks loaded\n- [ ] Controls parsed from YAML correctly\n- [ ] Framework version tracked\n- [ ] AWS services mapped to controls\n- [ ] Implementation guidance included\n- [ ] Unit tests for loader\n\n## Estimated Time\n3 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "data",
+    "compliance",
+    "ib",
+    "kb"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:37:56.005210Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-122-852implementyamlloadingforcomp"
+}

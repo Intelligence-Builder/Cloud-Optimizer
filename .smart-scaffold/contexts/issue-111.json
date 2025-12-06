@@ -1,0 +1,30 @@
+{
+  "issue_number": 111,
+  "title": "8.3.1 Implement risk scoring and finding prioritization",
+  "body": "## Parent Issue\n#37 - 8.3 Security Analysis Integration\n\n## Objective\nImplement risk scoring algorithm that considers severity, compliance impact, and exposure to prioritize security findings.\n\n## Implementation\n\n```python\n# src/ib_platform/security/scoring.py\nfrom dataclasses import dataclass\n\n@dataclass\nclass PrioritizedFinding:\n    finding: Finding\n    risk_score: float\n    rank: int\n\n\nclass RiskScorer:\n    \"\"\"Calculate risk score for prioritization.\"\"\"\n\n    def calculate_risk_score(self, finding: Finding) -> float:\n        \"\"\"Calculate risk score for prioritization.\"\"\"\n        score = 0.0\n\n        # Severity weight (0-40 points)\n        severity_weights = {\n            \"critical\": 40,\n            \"high\": 30,\n            \"medium\": 15,\n            \"low\": 5,\n        }\n        score += severity_weights.get(finding.severity, 0)\n\n        # Compliance weight (0-30 points)\n        high_value_frameworks = [\"HIPAA\", \"PCI-DSS\"]\n        if any(f in finding.compliance_frameworks for f in high_value_frameworks):\n            score += 30\n        elif finding.compliance_frameworks:\n            score += 15\n\n        # Resource type weight (0-20 points)\n        high_risk_resources = [\"iam\", \"s3\", \"rds\"]\n        if any(r in finding.resource_type.lower() for r in high_risk_resources):\n            score += 20\n\n        # Public exposure weight (0-10 points)\n        if \"public\" in finding.title.lower() or \"public\" in finding.description.lower():\n            score += 10\n\n        return score\n\n\nasync def prioritize_findings(\n    findings: list[Finding],\n    limit: int = 10,\n) -> list[PrioritizedFinding]:\n    \"\"\"Prioritize findings by risk score.\"\"\"\n    scorer = RiskScorer()\n    scored = [(f, scorer.calculate_risk_score(f)) for f in findings]\n    scored.sort(key=lambda x: x[1], reverse=True)\n    \n    return [\n        PrioritizedFinding(finding=f, risk_score=s, rank=i + 1)\n        for i, (f, s) in enumerate(scored[:limit])\n    ]\n```\n\n## Files to Create\n- `src/ib_platform/security/__init__.py`\n- `src/ib_platform/security/scoring.py`\n- `tests/ib_platform/security/test_scoring.py`\n\n## Acceptance Criteria\n- [ ] Risk score considers severity (0-40 pts)\n- [ ] Compliance weight applied (HIPAA/PCI highest)\n- [ ] Resource type weighting works\n- [ ] Public exposure bonus applied\n- [ ] Findings sorted by score descending\n- [ ] Unit tests for scoring logic\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "ib",
+    "analysis"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:53:33.740157Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-111-831implementriskscoringandfind"
+}

@@ -1,0 +1,28 @@
+{
+  "issue_number": 147,
+  "title": "9.2.1 Multi-account scanning support",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nEnable Cloud Optimizer to scan multiple AWS accounts simultaneously with centralized result aggregation and account relationship management.\n\n## Requirements\n- Support scanning multiple AWS accounts from single control plane\n- Manage account credentials and access methods\n- Aggregate scan results across all accounts\n- Track account metadata (account ID, name, environment, business unit)\n- Support different authentication methods per account\n- Handle account-level errors gracefully without failing entire scan\n- Provide account-level result filtering and reporting\n- Support scheduling scans for different accounts\n- Track scan history and compliance posture per account\n\n## Features to Implement\n- Account registry for managing multiple accounts\n- Credential management (IAM roles, access keys, assume role)\n- Multi-threaded/async scanning for performance\n- Result aggregation with account context\n- Account grouping (by environment, business unit, etc.)\n- Centralized dashboard showing all accounts\n- Account-level compliance scoring\n- Differential scanning (detect changes between scans)\n\n## Acceptance Criteria\n- [ ] Account registry database schema implemented\n- [ ] API endpoints for account management (add, update, delete, list)\n- [ ] Multi-account scanner orchestrator implemented\n- [ ] Concurrent scanning with configurable thread pool\n- [ ] Results properly tagged with account context\n- [ ] Dashboard shows all accounts with summary statistics\n- [ ] Account-level filtering in UI and API\n- [ ] Error handling prevents cascade failures\n- [ ] Unit tests cover account management (>80% coverage)\n- [ ] Integration test validates multi-account scanning\n- [ ] Documentation for account setup and management\n- [ ] Scanner performance: 10+ accounts in parallel\n\n## Technical Approach\n- Database schema: accounts table with credentials and metadata\n- Use boto3 STS for assume role authentication\n- Implement ThreadPoolExecutor or asyncio for concurrent scanning\n- Result schema includes account_id as required field\n- Centralized error handling and retry logic\n- UI: Account selector/filter component\n\n## Estimated Effort\n24-28 hours\n\n## Dependencies\n- Database schema migration\n- AWS STS API access\n- Cross-account IAM roles (setup documentation)\n- Updated result aggregation logic",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:44:25.831426Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-147-921multi-accountscanningsuppor"
+}

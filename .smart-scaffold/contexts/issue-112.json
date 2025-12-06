@@ -1,0 +1,31 @@
+{
+  "issue_number": 112,
+  "title": "8.3.2 Create finding explanation service",
+  "body": "## Parent Issue\n#37 - 8.3 Security Analysis Integration\n\n## Objective\nImplement LLM-powered finding explanation that provides business context, impact assessment, and compliance implications.\n\n## Implementation\n\n```python\n# src/ib_platform/security/analysis_service.py\nfrom anthropic import Anthropic\n\nclass SecurityAnalysisService:\n    ANALYSIS_PROMPT = \"\"\"You are a senior cloud security engineer analyzing AWS security findings.\n\nFor each finding, provide:\n1. Plain language explanation of the risk\n2. Business impact if exploited\n3. Likelihood of exploitation\n4. Compliance implications\n5. Prioritized remediation steps\n6. Example code to fix (Terraform, CLI, or Console steps)\n\nBe specific and actionable. Reference the exact resource and configuration.\"\"\"\n\n    def __init__(\n        self,\n        anthropic_client: Anthropic,\n        findings_service: FindingsService,\n        compliance_service: ComplianceService,\n    ):\n        self.client = anthropic_client\n        self.findings_service = findings_service\n        self.compliance_service = compliance_service\n\n    async def explain_finding(\n        self,\n        tenant_id: UUID,\n        finding_id: UUID,\n    ) -> FindingExplanation:\n        \"\"\"Generate detailed explanation for a finding.\"\"\"\n        finding = await self.findings_service.get_finding(tenant_id, finding_id)\n        compliance_controls = await self.compliance_service.get_controls_for_rule(\n            finding.rule_id\n        )\n\n        prompt = f'''Analyze this security finding:\n\n**Finding:** {finding.title}\n**Severity:** {finding.severity}\n**Resource:** {finding.resource_type} - {finding.resource_id}\n**Description:** {finding.description}\n\n**Compliance Frameworks Affected:** {', '.join(finding.compliance_frameworks)}'''\n\n        response = await self.client.messages.create(\n            model=\"claude-3-5-sonnet-20241022\",\n            max_tokens=1500,\n            system=self.ANALYSIS_PROMPT,\n            messages=[{\"role\": \"user\", \"content\": prompt}],\n        )\n\n        return FindingExplanation(\n            finding_id=finding_id,\n            explanation=response.content[0].text,\n            compliance_controls=compliance_controls,\n        )\n```\n\n## Files to Create\n- `src/ib_platform/security/analysis_service.py`\n- `tests/ib_platform/security/test_analysis_service.py`\n\n## Acceptance Criteria\n- [ ] Finding explanation includes business context\n- [ ] Compliance controls mapped\n- [ ] Severity and impact explained\n- [ ] Response actionable and specific\n- [ ] Integration tests with mocked LLM\n- [ ] Response time < 5 seconds\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "analysis"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:54:16.521795Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-112-832createfindingexplanationser"
+}

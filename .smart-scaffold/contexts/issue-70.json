@@ -1,0 +1,32 @@
+{
+  "issue_number": 70,
+  "title": "6.5.9 Create backend chat and document endpoints",
+  "body": "## Parent Issue\n#27 - 6.5 Chat Interface + Dashboard UI\n\n## Objective\nCreate backend API endpoints for chat and documents.\n\n## Chat Endpoints\n- POST /api/v1/chat/message - Send message (non-streaming)\n- POST /api/v1/chat/stream - Initiate streaming response\n- GET /api/v1/chat/stream/:id - SSE endpoint\n- GET /api/v1/chat/conversations - List conversations\n- GET /api/v1/chat/conversations/:id - Get messages\n- DELETE /api/v1/chat/conversations/:id - Delete\n\n## Document Endpoints\n- POST /api/v1/documents/upload - Upload file\n- GET /api/v1/documents - List documents\n- DELETE /api/v1/documents/:id - Delete\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/chat.py`\n- `src/cloud_optimizer/api/routers/documents.py`\n- `src/cloud_optimizer/services/chat.py`\n- `src/cloud_optimizer/services/document.py`\n\n## Acceptance Criteria\n- [ ] All endpoints work\n- [ ] SSE streaming functional\n- [ ] File upload saves to storage\n- [ ] Conversations persist\n\n## Estimated Time\n4 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "ui",
+    "frontend",
+    "chat",
+    "api"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend",
+      "frontend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:47:06.308179Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-70-659createbackendchatanddocumen"
+}

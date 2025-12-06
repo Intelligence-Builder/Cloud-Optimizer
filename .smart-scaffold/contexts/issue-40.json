@@ -1,0 +1,27 @@
+{
+  "issue_number": 40,
+  "title": "6.1.1 Create multi-stage Dockerfile",
+  "body": "## Parent Issue\n#23 - 6.1 Container Packaging\n\n## Objective\nCreate a production-ready multi-stage Dockerfile that builds Cloud Optimizer with IB embedded.\n\n## Requirements\n- Multi-stage build (builder + runtime)\n- Final image < 500MB\n- Non-root user (appuser, uid 1000)\n- Python 3.11-slim base\n- HEALTHCHECK directive included\n\n## Implementation\n\n```dockerfile\n# Stage 1: Build\nFROM python:3.11-slim as builder\nWORKDIR /app\nCOPY pyproject.toml poetry.lock ./\nRUN pip install poetry && poetry export -f requirements.txt > requirements.txt\nCOPY src/ ./src/\nRUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt\n\n# Stage 2: Runtime\nFROM python:3.11-slim as runtime\nRUN useradd -m -u 1000 appuser\nWORKDIR /app\nCOPY --from=builder /wheels /wheels\nRUN pip install --no-cache-dir /wheels/*\nCOPY src/ ./src/\nCOPY alembic/ ./alembic/\nCOPY data/compliance/ ./data/compliance/\nUSER appuser\nEXPOSE 8000\nHEALTHCHECK --interval=30s --timeout=10s --start-period=60s \\\n  CMD curl -f http://localhost:8000/health || exit 1\nENTRYPOINT [\"python\", \"-m\", \"cloud_optimizer.entrypoint\"]\n```\n\n## Files to Create\n- `docker/Dockerfile`\n- `docker/.dockerignore`\n\n## Acceptance Criteria\n- [ ] Dockerfile builds successfully\n- [ ] Image size < 500MB\n- [ ] Runs as non-root user\n- [ ] HEALTHCHECK passes\n- [ ] Trivy security scan has no HIGH/CRITICAL vulnerabilities\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "container",
+    "infrastructure"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:07:28.071417Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-40-611createmulti-stagedockerfile"
+}

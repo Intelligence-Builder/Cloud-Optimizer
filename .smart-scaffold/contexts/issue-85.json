@@ -1,0 +1,30 @@
+{
+  "issue_number": 85,
+  "title": "7.3.1 Create cost findings database schema",
+  "body": "## Parent Issue\n#31 - 7.3 Cost Analysis Scanner\n\n## Objective\nCreate database schema for cost findings and summaries.\n\n## Tables\n- cost_findings: Individual cost optimization opportunities\n- cost_summaries: Aggregate spend data per scan\n\n## Files to Create\n- `src/cloud_optimizer/models/cost_finding.py`\n- `src/cloud_optimizer/models/cost_summary.py`\n- `alembic/versions/xxx_create_cost_tables.py`\n\n## Estimated Time: 1.5 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "cost",
+    "optimization",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:20:15.007786Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-85-731createcostfindingsdatabases"
+}

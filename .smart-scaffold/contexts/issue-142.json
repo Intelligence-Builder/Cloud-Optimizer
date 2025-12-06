@@ -1,0 +1,27 @@
+{
+  "issue_number": 142,
+  "title": "9.1.4 EKS/ECS container security scanner",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nImplement comprehensive security scanning for AWS container services (EKS and ECS) checking for cluster configuration, container security, network policies, and IAM roles.\n\n## Requirements\n- Scan EKS cluster configurations and node groups\n- Scan ECS cluster, task definitions, and services\n- Check container image sources and vulnerability scanning\n- Verify IAM roles for pods/tasks (IRSA/task roles)\n- Analyze network security (security groups, network policies)\n- Check for privileged containers and capabilities\n- Verify logging and monitoring configuration\n- Detect secrets exposed in environment variables\n- Check for outdated Kubernetes/ECS agent versions\n- Integration with Intelligence-Builder SDK for container security analysis\n\n## Security Rules to Implement\n\n### EKS Rules\n- EKS cluster API endpoint publicly accessible\n- EKS cluster missing CloudWatch logging\n- EKS cluster using outdated Kubernetes version\n- EKS node group missing automatic security updates\n- EKS pods running as privileged containers\n- EKS missing network policies\n- EKS pods using host network namespace\n- EKS missing secrets encryption (KMS)\n\n### ECS Rules\n- ECS task definition using privileged containers\n- ECS task definition exposing secrets in environment variables\n- ECS task missing task execution role\n- ECS service missing load balancer health checks\n- ECS cluster missing container insights\n- ECS task using outdated platform version\n- ECS task using images from untrusted registries\n- ECS service missing auto-scaling configuration\n\n## Acceptance Criteria\n- [ ] EKS scanner module implemented with all rules\n- [ ] ECS scanner module implemented with all rules\n- [ ] Scanner identifies all clusters, services, and task definitions\n- [ ] Each rule produces clear finding with severity and remediation\n- [ ] Integration with Intelligence-Builder SDK for container security analysis\n- [ ] Unit tests cover all rules (>80% coverage)\n- [ ] Integration tests validate scanning against test clusters\n- [ ] Documentation includes rule descriptions and remediation guidance\n- [ ] Scanner performance: <10s per cluster\n\n## Technical Approach\n- Use boto3 EKS and ECS clients for discovery\n- For EKS: Use Kubernetes Python client for in-cluster analysis\n- For ECS: Analyze task definitions and service configurations\n- Cache container image metadata to reduce registry queries\n- Leverage Intelligence-Builder SDK for advanced threat detection\n\n## Estimated Effort\n28-32 hours\n\n## Dependencies\n- AWS EKS and ECS API access\n- Kubernetes cluster access for in-cluster scanning (optional)\n- ECR read permissions for image analysis\n- Intelligence-Builder SDK integration",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:42:54.925885Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-142-914eksecscontainersecurityscan"
+}

@@ -1,0 +1,30 @@
+{
+  "issue_number": 63,
+  "title": "6.5.2 Create ChatMessage component with markdown rendering",
+  "body": "## Parent Issue\n#27 - 6.5 Chat Interface + Dashboard UI\n\n## Objective\nCreate chat message bubble component with markdown and code highlighting.\n\n## Requirements\n- User/assistant message styling\n- Markdown rendering (react-markdown)\n- Code syntax highlighting (Prism.js)\n- Timestamp display\n- Document chip attachments\n\n## Files to Create\n- `frontend/src/components/chat/ChatMessage.tsx`\n- `frontend/src/components/chat/DocumentChip.tsx`\n\n## Acceptance Criteria\n- [ ] User messages right-aligned, blue\n- [ ] Assistant messages left-aligned, gray\n- [ ] Markdown headers, lists, bold render\n- [ ] Code blocks have syntax highlighting\n- [ ] Document chips show filename\n\n## Estimated Time\n2.5 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "ui",
+    "frontend",
+    "chat"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "frontend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:33:50.839956Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-63-652createchatmessagecomponentw"
+}

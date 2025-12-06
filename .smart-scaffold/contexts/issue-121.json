@@ -1,0 +1,29 @@
+{
+  "issue_number": 121,
+  "title": "8.5.1 Create KB data models for controls, practices, and patterns",
+  "body": "## Parent Issue\n#39 - 8.5 Knowledge Base Integration\n\n## Objective\nDefine data models for compliance controls, service best practices, security patterns, and remediation templates.\n\n## Implementation\n\n```python\n# src/ib_platform/kb/models.py\nfrom dataclasses import dataclass\nfrom typing import Optional\n\n@dataclass\nclass ComplianceControl:\n    framework: str\n    control_id: str\n    name: str\n    description: str\n    requirements: list[str]\n    aws_services: list[str]\n    implementation_guidance: str\n\n\n@dataclass\nclass ServiceBestPractice:\n    service: str\n    category: str  # encryption, access_control, logging, etc.\n    title: str\n    description: str\n    compliance_frameworks: list[str]\n    implementation: str\n    terraform_example: Optional[str] = None\n    cli_example: Optional[str] = None\n    console_steps: Optional[list[str]] = None\n\n\n@dataclass\nclass SecurityPattern:\n    pattern_id: str\n    name: str\n    category: str\n    description: str\n    applicable_services: list[str]\n    compliance_frameworks: list[str]\n    implementation_steps: list[str]\n    code_examples: dict[str, str]  # language -> code\n\n\n@dataclass\nclass RemediationTemplate:\n    template_id: str\n    rule_id: str  # Maps to scanner rule\n    title: str\n    description: str\n    terraform: Optional[str] = None\n    cli: Optional[str] = None\n    console_steps: Optional[list[str]] = None\n\n\n@dataclass\nclass KBEntry:\n    entry_type: str  # control, best_practice, pattern\n    control_name: str\n    description: str\n    guidance: str\n    framework: str = None\n    service: str = None\n    terraform: str = None\n    cli: str = None\n```\n\n## Files to Create\n- `src/ib_platform/kb/__init__.py`\n- `src/ib_platform/kb/models.py`\n- `tests/ib_platform/kb/test_models.py`\n\n## Acceptance Criteria\n- [ ] ComplianceControl dataclass created\n- [ ] ServiceBestPractice dataclass created\n- [ ] SecurityPattern dataclass created\n- [ ] RemediationTemplate dataclass created\n- [ ] KBEntry dataclass for query results\n- [ ] All models serializable to dict\n- [ ] Unit tests for model creation\n\n## Estimated Time\n1 hour",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "data",
+    "compliance",
+    "ib",
+    "kb"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:37:13.132275Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-121-851createkbdatamodelsforcontro"
+}

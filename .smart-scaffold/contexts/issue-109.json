@@ -1,0 +1,27 @@
+{
+  "issue_number": 109,
+  "title": "8.2.4 Create response formatter with severity indicators",
+  "body": "## Parent Issue\n#36 - 8.2 Answer Generation Engine\n\n## Objective\nImplement response formatting utilities for consistent structure with severity indicators and remediation guidance.\n\n## Implementation\n\n```python\n# src/ib_platform/answer/formatter.py\nclass ResponseFormatter:\n    \"\"\"Format responses with consistent structure.\"\"\"\n\n    @staticmethod\n    def format_security_advice(\n        content: str,\n        findings: list[Finding] = None,\n        compliance: list[str] = None,\n    ) -> str:\n        \"\"\"Format security advice response.\"\"\"\n        parts = [content]\n\n        if findings:\n            parts.append(\"\\n---\\n\")\n            parts.append(\"**Related Findings:**\\n\")\n            for f in findings[:3]:\n                parts.append(f\"- [{f.rule_id}] {f.title} ({f.severity})\")\n\n        if compliance:\n            parts.append(\"\\n**Compliance Frameworks:**\")\n            parts.append(\", \".join(compliance))\n\n        return \"\\n\".join(parts)\n\n    @staticmethod\n    def format_remediation(\n        title: str,\n        steps: list[str],\n        code: str = None,\n        language: str = \"hcl\",\n    ) -> str:\n        \"\"\"Format remediation guidance.\"\"\"\n        parts = [f\"## Remediation: {title}\\n\"]\n\n        parts.append(\"### Steps:\\n\")\n        for i, step in enumerate(steps, 1):\n            parts.append(f\"{i}. {step}\")\n\n        if code:\n            parts.append(f\"\\n### Code Example ({language}):\\n\")\n            parts.append(f\"```{language}\")\n            parts.append(code)\n            parts.append(\"```\")\n\n        return \"\\n\".join(parts)\n\n    @staticmethod\n    def severity_badge(severity: str) -> str:\n        \"\"\"Return severity indicator emoji.\"\"\"\n        badges = {\n            \"critical\": \"\ud83d\udd34\",\n            \"high\": \"\ud83d\udfe0\",\n            \"medium\": \"\ud83d\udfe1\",\n            \"low\": \"\ud83d\udfe2\",\n        }\n        return badges.get(severity.lower(), \"\u26aa\")\n```\n\n## Files to Create\n- `src/ib_platform/answer/formatter.py`\n- `tests/ib_platform/answer/test_formatter.py`\n\n## Acceptance Criteria\n- [ ] Security advice formatted with related findings\n- [ ] Remediation steps numbered\n- [ ] Code examples with syntax highlighting\n- [ ] Severity badges correct\n- [ ] Compliance frameworks listed\n- [ ] Unit tests for all formatters\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "answer-generation"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:51:52.751525Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-109-824createresponseformatterwith"
+}

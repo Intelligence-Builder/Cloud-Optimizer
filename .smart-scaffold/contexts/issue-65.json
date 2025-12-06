@@ -1,0 +1,31 @@
+{
+  "issue_number": 65,
+  "title": "6.5.4 Implement useStreaming SSE hook",
+  "body": "## Parent Issue\n#27 - 6.5 Chat Interface + Dashboard UI\n\n## Objective\nCreate React hook for SSE streaming responses.\n\n## Requirements\n- Connect to SSE endpoint\n- Handle chunk events\n- Handle done/error events\n- Progressive text display\n- Cleanup on unmount\n\n## Implementation\n\n```typescript\nfunction useStreaming(options: UseStreamingOptions) {\n  const [isStreaming, setIsStreaming] = useState(false);\n  const [content, setContent] = useState('');\n  \n  const startStream = useCallback(async (url: string, body: object, token: string) => {\n    // POST to initiate, then connect to SSE\n  }, []);\n  \n  const stopStream = useCallback(() => {\n    // Close EventSource\n  }, []);\n  \n  return { isStreaming, content, startStream, stopStream };\n}\n```\n\n## Files to Create\n- `frontend/src/hooks/useStreaming.ts`\n\n## Acceptance Criteria\n- [ ] SSE connection established\n- [ ] Chunks accumulated progressively\n- [ ] Done event completes streaming\n- [ ] Error handling works\n- [ ] Cleanup on unmount\n\n## Estimated Time\n2.5 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "ui",
+    "frontend",
+    "chat"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "frontend",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:45:52.415637Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-65-654implementusestreamingssehoo"
+}

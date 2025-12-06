@@ -1,0 +1,28 @@
+{
+  "issue_number": 117,
+  "title": "8.4.2 Implement PDF and TXT text extraction",
+  "body": "## Parent Issue\n#38 - 8.4 Document Analysis Service\n\n## Objective\nExtract text content from PDF and TXT files for analysis.\n\n## Implementation\n\n```python\n# src/ib_platform/document/extraction.py\nimport pypdf\nfrom pathlib import Path\n\nclass TextExtractor:\n    \"\"\"Extract text from various document formats.\"\"\"\n\n    async def extract(self, document: Document) -> str:\n        \"\"\"Extract text from document based on type.\"\"\"\n        file_path = Path(document.storage_path)\n\n        if document.content_type == \"application/pdf\":\n            return await self._extract_pdf_text(file_path)\n        elif document.content_type == \"text/plain\":\n            return file_path.read_text()\n        else:\n            raise UnsupportedDocumentTypeException(\n                f\"Cannot extract text from {document.content_type}\"\n            )\n\n    async def _extract_pdf_text(self, file_path: Path) -> str:\n        \"\"\"Extract text from PDF using pypdf.\"\"\"\n        text_parts = []\n\n        with open(file_path, \"rb\") as f:\n            reader = pypdf.PdfReader(f)\n            for page_num, page in enumerate(reader.pages):\n                text = page.extract_text()\n                if text:\n                    text_parts.append(f\"--- Page {page_num + 1} ---\\n{text}\")\n\n        return \"\\n\\n\".join(text_parts)\n\n    async def extract_with_metadata(self, document: Document) -> dict:\n        \"\"\"Extract text and PDF metadata.\"\"\"\n        text = await self.extract(document)\n        metadata = {}\n\n        if document.content_type == \"application/pdf\":\n            with open(document.storage_path, \"rb\") as f:\n                reader = pypdf.PdfReader(f)\n                metadata = {\n                    \"page_count\": len(reader.pages),\n                    \"title\": reader.metadata.get(\"/Title\", \"\"),\n                    \"author\": reader.metadata.get(\"/Author\", \"\"),\n                }\n\n        return {\n            \"text\": text,\n            \"metadata\": metadata,\n            \"character_count\": len(text),\n        }\n```\n\n## Files to Create\n- `src/ib_platform/document/extraction.py`\n- `tests/ib_platform/document/test_extraction.py`\n- `tests/fixtures/documents/sample_architecture.pdf`\n- `tests/fixtures/documents/simple_design.txt`\n\n## Acceptance Criteria\n- [ ] PDF text extraction works\n- [ ] Multi-page PDFs handled correctly\n- [ ] Page numbers included in output\n- [ ] TXT files read correctly\n- [ ] PDF metadata extracted (page count, title)\n- [ ] Character count returned\n- [ ] Unit tests with fixture files\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "document",
+    "pdf"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:34:02.575103Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-117-842implementpdfandtxttextextra"
+}

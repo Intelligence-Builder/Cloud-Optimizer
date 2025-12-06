@@ -1,0 +1,31 @@
+{
+  "issue_number": 76,
+  "title": "7.1.5 Write AWS connection tests with mocked STS",
+  "body": "## Parent Issue\n#29 - 7.1 AWS Account Connection\n\n## Objective\nWrite comprehensive tests for AWS connection functionality.\n\n## Test Coverage\n- Role ARN validation\n- Credential encryption/decryption\n- STS assume_role mocking\n- Permission verification\n- API endpoints\n\n## Files to Create\n- `tests/services/test_aws_connection.py`\n- `tests/api/test_aws_api.py`\n\n## Estimated Time: 2 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "connection"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend",
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:13:28.328009Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-76-715writeawsconnectiontestswith"
+}

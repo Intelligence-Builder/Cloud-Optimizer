@@ -1,0 +1,27 @@
+{
+  "issue_number": 55,
+  "title": "6.3.2 Implement TrialService",
+  "body": "## Parent Issue\n#25 - 6.3 Trial Management System\n\n## Objective\nImplement trial management service with usage tracking.\n\n## Key Methods\n- get_or_create_trial(tenant_id) - Auto-create trial on first access\n- check_limit(tenant_id, dimension) - Check if action allowed\n- record_usage(tenant_id, dimension, count) - Record usage\n- extend_trial(tenant_id) - One-time 7-day extension\n- get_trial_status(tenant_id) - Get comprehensive status for UI\n\n## Files to Create\n- `src/cloud_optimizer/services/trial.py`\n\n## Acceptance Criteria\n- [ ] Trial auto-created on first access\n- [ ] Limits enforced correctly\n- [ ] Usage recorded and persisted\n- [ ] Extension works once only\n- [ ] Status includes all usage metrics\n\n## Estimated Time\n3 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "billing",
+    "trial"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:28:30.525517Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-55-632implementtrialservice"
+}

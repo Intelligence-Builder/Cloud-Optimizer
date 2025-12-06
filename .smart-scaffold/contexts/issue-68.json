@@ -1,0 +1,31 @@
+{
+  "issue_number": 68,
+  "title": "6.5.7 Create API service layer",
+  "body": "## Parent Issue\n#27 - 6.5 Chat Interface + Dashboard UI\n\n## Objective\nCreate typed API service functions for chat, auth, trial.\n\n## Services\n- chatService: sendMessage, getConversations, getMessages\n- authService: login, register, refresh, logout\n- trialService: getStatus, extend\n- documentService: upload, list, delete\n\n## Files to Create\n- `frontend/src/services/api.ts`\n- `frontend/src/services/chatService.ts`\n- `frontend/src/services/authService.ts`\n- `frontend/src/services/trialService.ts`\n- `frontend/src/services/documentService.ts`\n- `frontend/src/types/*.ts`\n\n## Acceptance Criteria\n- [ ] All API calls typed\n- [ ] Error handling consistent\n- [ ] Auth token attached to requests\n- [ ] Response types match backend\n\n## Estimated Time\n2.5 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "ui",
+    "frontend",
+    "chat"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend",
+      "frontend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:46:29.581006Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-68-657createapiservicelayer"
+}

@@ -1,0 +1,31 @@
+{
+  "issue_number": 72,
+  "title": "7.1.1 Create aws_accounts database schema",
+  "body": "## Parent Issue\n#29 - 7.1 AWS Account Connection\n\n## Objective\nCreate database schema for storing AWS account connections.\n\n## Implementation\n```sql\nCREATE TABLE aws_accounts (\n    account_id UUID PRIMARY KEY,\n    tenant_id UUID NOT NULL REFERENCES tenants(tenant_id),\n    aws_account_id VARCHAR(12) NOT NULL,\n    friendly_name VARCHAR(255),\n    connection_type VARCHAR(20) NOT NULL,  -- 'iam_role' or 'access_keys'\n    role_arn VARCHAR(2048),\n    external_id VARCHAR(255),\n    access_key_id_encrypted BYTEA,\n    secret_access_key_encrypted BYTEA,\n    status VARCHAR(20) NOT NULL DEFAULT 'pending',\n    last_validated_at TIMESTAMPTZ,\n    last_error TEXT,\n    region VARCHAR(20) NOT NULL DEFAULT 'us-east-1',\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    UNIQUE(tenant_id, aws_account_id)\n);\n```\n\n## Files to Create\n- `src/cloud_optimizer/models/aws_account.py`\n- `alembic/versions/xxx_create_aws_accounts.py`\n\n## Estimated Time: 1.5 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "connection"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database",
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:10:21.470047Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-72-711createaws_accountsdatabases"
+}

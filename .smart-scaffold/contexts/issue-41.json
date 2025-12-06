@@ -1,0 +1,30 @@
+{
+  "issue_number": 41,
+  "title": "6.1.2 Implement entrypoint.py startup sequence",
+  "body": "## Parent Issue\n#23 - 6.1 Container Packaging\n\n## Objective\nCreate the container entrypoint script that orchestrates startup sequence.\n\n## Requirements\n- Validate required environment variables\n- Wait for database connectivity (60s timeout)\n- Run Alembic migrations\n- Initialize IB Platform\n- Load compliance KB\n- Validate Marketplace license (if enabled)\n- Start FastAPI with uvicorn\n\n## Implementation\n\n```python\n# src/cloud_optimizer/entrypoint.py\nimport asyncio\nimport uvicorn\nfrom cloud_optimizer.config import settings\n\nasync def main():\n    # 1. Validate environment\n    validate_required_env_vars()\n    \n    # 2. Wait for database\n    await wait_for_database(timeout=60)\n    \n    # 3. Run migrations\n    await run_migrations()\n    \n    # 4. Initialize IB Platform\n    ib_platform = await initialize_ib_platform()\n    \n    # 5. Load compliance KB\n    await load_compliance_kb()\n    \n    # 6. Validate Marketplace license\n    license_status = await validate_marketplace_license()\n    \n    # 7. Create and start app\n    app = create_app(ib_platform=ib_platform, license_status=license_status)\n    config = uvicorn.Config(app, host=\"0.0.0.0\", port=8000)\n    server = uvicorn.Server(config)\n    await server.serve()\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n## Files to Create\n- `src/cloud_optimizer/entrypoint.py`\n\n## Acceptance Criteria\n- [ ] Container starts successfully with all deps\n- [ ] Fails fast with clear error if DB unavailable\n- [ ] Migrations run automatically\n- [ ] Startup completes in < 60 seconds\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "container",
+    "infrastructure"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:08:12.782034Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-41-612implemententrypointpystartu"
+}

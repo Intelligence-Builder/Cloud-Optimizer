@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.7, pytest-8.4.2, pluggy-1.6.0
+benchmark: 5.1.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /Users/robertstanley/Desktop/Cloud-Optimizer
+configfile: pyproject.toml
+plugins: mypy-1.0.1, flake8-1.3.0, pdb-0.3.1, html-4.1.1, env-1.1.5, json-report-1.5.0, httpx-0.35.0, timeout-2.4.0, metadata-3.1.1, mimesis-18.0.0, hypothesis-6.100.0, clarity-1.0.1, anyio-4.10.0, black-0.6.0, Faker-37.3.0, mock-3.14.1, factoryboy-2.7.0, benchmark-5.1.0, xdist-3.5.0, typeguard-4.4.4, testmon-2.1.1, sugar-0.9.7, bdd-8.1.0, cov-6.1.1, asyncio-1.0.0, requests-mock-1.12.1
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 14 items
+
+tests/scanners/test_lambda_scanner.py ..............                     [100%]
+
+============================== 14 passed in 0.26s ==============================
+

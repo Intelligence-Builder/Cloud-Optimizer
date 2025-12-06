@@ -1,0 +1,31 @@
+{
+  "issue_number": 75,
+  "title": "7.1.4 Create AWS connection API endpoints",
+  "body": "## Parent Issue\n#29 - 7.1 AWS Account Connection\n\n## Objective\nCreate REST API endpoints for AWS connection management.\n\n## Endpoints\n- POST /api/v1/aws/connect/role\n- POST /api/v1/aws/connect/keys\n- GET /api/v1/aws/accounts\n- GET /api/v1/aws/accounts/:id\n- POST /api/v1/aws/accounts/:id/validate\n- DELETE /api/v1/aws/accounts/:id\n- GET /api/v1/aws/setup-instructions\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/aws.py`\n- `data/iam/policy.json`\n- `data/iam/trust-policy.json`\n\n## Estimated Time: 2.5 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "connection"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:12:33.923653Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-75-714createawsconnectionapiendpo"
+}

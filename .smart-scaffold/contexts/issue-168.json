@@ -1,0 +1,26 @@
+{
+  "issue_number": 168,
+  "title": "13.5.4 PagerDuty/OpsGenie alerting integration",
+  "body": "# Objective\nIntegrate PagerDuty or OpsGenie for intelligent alert routing, on-call management, and incident response coordination.\n\n## Requirements\n- Choose alerting platform (PagerDuty or OpsGenie)\n- Set up account and configure services\n- Integrate with CloudWatch Alarms via SNS\n- Configure escalation policies\n- Set up on-call schedules\n- Implement alert grouping and deduplication\n- Configure alert severity levels\n- Set up notification channels (SMS, phone, push)\n- Create incident response runbooks\n- Integrate with Slack for team collaboration\n- Configure alert analytics and reporting\n\n## Acceptance Criteria\n- Alerting platform account configured\n- CloudWatch alarms routing to platform\n- Escalation policies defined\n- On-call schedule created\n- Test alerts delivered successfully\n- Runbooks linked to alerts\n- Incident response tested\n- Alert fatigue minimized with grouping\n- Team trained on incident response\n\n## Dependencies\n- Parent: Epic 13 (#131)\n- Requires: #146 (CloudWatch monitoring)\n- Related: #166 (Application metrics)\n\n## Estimated Effort\n**Story Points:** 5\n**Time:** 1 week\n**Complexity:** Medium",
+  "labels": [
+    "platform",
+    "infrastructure",
+    "production"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T16:13:07.104261Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-168-1354pagerdutyopsgeniealertingi"
+}

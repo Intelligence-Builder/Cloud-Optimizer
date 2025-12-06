@@ -1,0 +1,30 @@
+{
+  "issue_number": 126,
+  "title": "8.5.6 Create KB API endpoints and integration tests",
+  "body": "## Parent Issue\n#39 - 8.5 Knowledge Base Integration\n\n## Objective\nCreate API endpoints for KB access and comprehensive integration tests.\n\n## Implementation\n\n```python\n# src/cloud_optimizer/api/routers/kb.py\nfrom fastapi import APIRouter\n\nrouter = APIRouter(prefix=\"/api/v1/kb\", tags=[\"knowledge-base\"])\n\n@router.get(\"/frameworks\")\nasync def list_frameworks() -> list[str]:\n    \"\"\"List available compliance frameworks.\"\"\"\n    return list(kb_service._frameworks.keys())\n\n\n@router.get(\"/frameworks/{framework}/controls\")\nasync def get_framework_controls(\n    framework: str,\n) -> list[ControlResponse]:\n    \"\"\"Get controls for a framework.\"\"\"\n    controls = kb_service.get_framework_controls(framework)\n    return [ControlResponse.from_control(c) for c in controls]\n\n\n@router.get(\"/services\")\nasync def list_services() -> list[str]:\n    \"\"\"List AWS services with best practices.\"\"\"\n    return list(kb_service._services.keys())\n\n\n@router.get(\"/services/{service}/practices\")\nasync def get_service_practices(\n    service: str,\n    category: Optional[str] = None,\n) -> list[PracticeResponse]:\n    \"\"\"Get best practices for a service.\"\"\"\n    practices = kb_service.get_service_best_practices(service, category)\n    return [PracticeResponse.from_practice(p) for p in practices]\n\n\n@router.get(\"/search\")\nasync def search_kb(\n    q: str,\n    limit: int = 10,\n) -> list[KBEntryResponse]:\n    \"\"\"Search KB entries.\"\"\"\n    entries = kb_service.search(q, limit)\n    return [KBEntryResponse.from_entry(e) for e in entries]\n\n\n@router.get(\"/remediation/{rule_id}\")\nasync def get_remediation(\n    rule_id: str,\n) -> RemediationResponse:\n    \"\"\"Get remediation template for a rule.\"\"\"\n    template = kb_service.get_remediation(rule_id)\n    if not template:\n        raise HTTPException(404, \"Remediation not found\")\n    return RemediationResponse.from_template(template)\n\n\n@router.get(\"/stats\")\nasync def get_statistics() -> dict:\n    \"\"\"Get KB statistics.\"\"\"\n    return kb_service.get_statistics()\n```\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/kb.py`\n- `tests/ib_platform/kb/test_api.py`\n\n## Acceptance Criteria\n- [ ] GET /kb/frameworks lists frameworks\n- [ ] GET /kb/frameworks/:id/controls returns controls\n- [ ] GET /kb/services lists services\n- [ ] GET /kb/services/:id/practices returns practices\n- [ ] GET /kb/search returns matching entries\n- [ ] GET /kb/remediation/:rule_id returns template\n- [ ] GET /kb/stats returns statistics\n- [ ] KB size < 25MB\n- [ ] Load time < 5 seconds\n- [ ] Integration tests for all endpoints\n- [ ] 80%+ test coverage for KB module\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "api",
+    "ib",
+    "kb"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:41:10.703628Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-126-856createkbapiendpointsandinte"
+}

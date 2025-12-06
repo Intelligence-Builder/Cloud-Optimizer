@@ -1,0 +1,27 @@
+{
+  "issue_number": 151,
+  "title": "9.3.2 Rule import/export functionality",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nEnable users to import and export custom rules for sharing across teams, backup purposes, and community rule sharing.\n\n## Requirements\n- Export rules to YAML/JSON files\n- Import rules from YAML/JSON files\n- Validate imported rules before activation\n- Support bulk import/export of multiple rules\n- Handle rule conflicts during import (duplicate IDs)\n- Provide rule sharing via URL or file\n- Create rule packages (collection of related rules)\n- Support versioning for imported rules\n- Enable rule marketplace/community repository integration\n- Track rule provenance (source, author, version)\n\n## Features to Implement\n\n### Export Features\n- Export single rule to file\n- Export multiple selected rules to file\n- Export all rules to file (full backup)\n- Export as YAML or JSON format\n- Include rule metadata (author, version, created date)\n- Option to include rule execution history\n\n### Import Features\n- Import single rule from file\n- Import multiple rules from file (bulk import)\n- Validate rule specification before import\n- Handle duplicate rule IDs (skip, overwrite, rename options)\n- Preview imported rules before activation\n- Map imported rules to compliance frameworks\n- Import from URL (shared rules)\n\n### Rule Packages\n- Create rule package with multiple related rules\n- Package metadata (name, description, author, version)\n- Package dependencies (if rules reference each other)\n- Install/uninstall entire packages\n- Update packages when new versions available\n\n### Community Repository\n- Submit rules to community repository\n- Browse and search community rules\n- Rate and review community rules\n- Download popular community rules\n- Track community rule usage statistics\n\n## Acceptance Criteria\n- [ ] Export functionality implemented (single, multiple, all)\n- [ ] Import functionality implemented with validation\n- [ ] Conflict resolution options working (skip, overwrite, rename)\n- [ ] Rule packages supported with metadata\n- [ ] API endpoints for import/export operations\n- [ ] UI for importing and exporting rules\n- [ ] File format validation prevents malformed imports\n- [ ] Preview mode shows imported rules before activation\n- [ ] Community repository integration (optional Phase 3)\n- [ ] Unit tests for import/export logic (>80% coverage)\n- [ ] Integration test validates import/export round-trip\n- [ ] Documentation includes import/export guide with examples\n- [ ] Performance: Import 100 rules in <5 seconds\n\n## File Format Example\n```yaml\nrule_package:\n  name: \"AWS Security Best Practices\"\n  description: \"Common security rules for AWS resources\"\n  author: \"Security Team\"\n  version: \"1.0\"\n  rules:\n    - id: custom-001\n      name: \"Require encryption for S3 buckets\"\n      # ... rule specification\n    - id: custom-002\n      name: \"Enforce MFA for IAM users\"\n      # ... rule specification\n```\n\n## Technical Approach\n- Use pyyaml library for YAML serialization\n- JSON module for JSON serialization\n- Schema validation using jsonschema\n- Conflict resolution: Present options to user\n- Package format: Wrapper around rule array with metadata\n- Community repository: REST API integration (future phase)\n- File upload: API endpoint with file size limits (<10MB)\n\n## Security Considerations\n- Validate file size limits (prevent DoS)\n- Sanitize rule content during import\n- Scan for malicious patterns in Python expressions\n- Audit log all import operations\n- Rate limit community repository submissions\n\n## Estimated Effort\n18-22 hours\n\n## Dependencies\n- Custom rule engine (issue 9.3.1)\n- File upload infrastructure\n- YAML/JSON parsing libraries\n- Schema validation library",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:47:26.023935Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-151-932ruleimportexportfunctionali"
+}

@@ -1,0 +1,30 @@
+{
+  "issue_number": 86,
+  "title": "7.3.2 Implement Cost Explorer integration",
+  "body": "## Parent Issue\n#31 - 7.3 Cost Analysis Scanner\n\n## Objective\nIntegrate with AWS Cost Explorer API for spend analysis.\n\n## Features\n- Get last 30 days spend\n- Breakdown by service\n- Calculate spend trend vs previous period\n\n## Files to Create\n- `src/cloud_optimizer/scanners/cost/spend_analyzer.py`\n\n## Acceptance Criteria\n- [ ] Query Cost Explorer API\n- [ ] Parse spend by service\n- [ ] Calculate trend percentage\n\n## Estimated Time: 2.5 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "cost",
+    "optimization",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:21:10.900501Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-86-732implementcostexplorerintegr"
+}

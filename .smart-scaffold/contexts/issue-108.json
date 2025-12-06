@@ -1,0 +1,31 @@
+{
+  "issue_number": 108,
+  "title": "8.2.3 Build SSE streaming handler for real-time responses",
+  "body": "## Parent Issue\n#36 - 8.2 Answer Generation Engine\n\n## Objective\nImplement Server-Sent Events (SSE) streaming handler for real-time response delivery to the UI.\n\n## Implementation\n\n```python\n# src/ib_platform/answer/streaming.py\nimport json\nfrom typing import AsyncIterator\n\nclass StreamingHandler:\n    \"\"\"Handle SSE streaming of answer chunks.\"\"\"\n\n    def __init__(self, answer_service: AnswerService):\n        self.answer_service = answer_service\n\n    async def stream_answer(\n        self,\n        question: str,\n        nlu_result: NLUResult,\n        tenant_id: UUID,\n        conversation_history: list[dict],\n    ) -> AsyncIterator[str]:\n        \"\"\"Generate SSE events for streaming response.\"\"\"\n        try:\n            # Send start event\n            yield self._sse_event(\"start\", {\"type\": \"start\"})\n\n            # Stream answer chunks\n            async for chunk in self.answer_service.generate(\n                question, nlu_result, tenant_id, conversation_history\n            ):\n                yield self._sse_event(\"chunk\", {\"content\": chunk})\n\n            # Send completion event with metadata\n            yield self._sse_event(\"done\", {\n                \"type\": \"done\",\n                \"intent\": nlu_result.intent.value,\n                \"entities\": nlu_result.entities.aws_services,\n            })\n\n        except Exception as e:\n            yield self._sse_event(\"error\", {\"type\": \"error\", \"message\": str(e)})\n\n    def _sse_event(self, event: str, data: dict) -> str:\n        \"\"\"Format as SSE event.\"\"\"\n        return f\"event: {event}\\ndata: {json.dumps(data)}\\n\\n\"\n\n\n# FastAPI endpoint\n@router.post(\"/chat/stream\")\nasync def stream_chat(request: ChatRequest, tenant_id: UUID = Depends(get_tenant_id)):\n    async def generate():\n        nlu_result = await nlu_service.process(request.message, request.conversation_history)\n        async for event in streaming_handler.stream_answer(\n            request.message, nlu_result, tenant_id, request.conversation_history\n        ):\n            yield event\n\n    return StreamingResponse(generate(), media_type=\"text/event-stream\")\n```\n\n## Files to Create\n- `src/ib_platform/answer/streaming.py`\n- `tests/ib_platform/answer/test_streaming.py`\n\n## Acceptance Criteria\n- [ ] SSE event formatting correct\n- [ ] Start event sent before streaming\n- [ ] Chunks sent as they arrive\n- [ ] Done event includes metadata\n- [ ] Error events handled gracefully\n- [ ] First chunk < 3 seconds\n- [ ] Integration tests for streaming\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "streaming",
+    "answer-generation"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:51:16.995962Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-108-823buildssestreaminghandlerfor"
+}

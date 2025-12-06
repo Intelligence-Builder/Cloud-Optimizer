@@ -1,0 +1,30 @@
+{
+  "issue_number": 77,
+  "title": "7.2.1 Create scanner base classes and models",
+  "body": "## Parent Issue\n#30 - 7.2 Security Scanner Engine\n\n## Objective\nCreate base classes for scanner framework and data models.\n\n## Classes\n- BaseScannerRule: Individual security check\n- BaseScanner: Service scanner base class\n- Finding: Finding data model\n- ScanJob: Scan job tracking model\n\n## Files to Create\n- `src/cloud_optimizer/scanners/base.py`\n- `src/cloud_optimizer/models/scan_job.py`\n- `src/cloud_optimizer/models/finding.py`\n- `alembic/versions/xxx_create_scan_tables.py`\n\n## Estimated Time: 2.5 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:14:14.364293Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-77-721createscannerbaseclassesand"
+}

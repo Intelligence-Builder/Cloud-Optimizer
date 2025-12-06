@@ -1,0 +1,15 @@
+{
+  "valid": true,
+  "issues": [],
+  "warnings": [],
+  "metadata": {
+    "issue": 150,
+    "evidence_dir": "evidence/issue_150",
+    "artifacts_found": [
+      "context_manifest.json",
+      "tests/pytest-summary.md",
+      "static_analysis/bandit.log",
+      "static_analysis/ruff.log"
+    ]
+  }
+}

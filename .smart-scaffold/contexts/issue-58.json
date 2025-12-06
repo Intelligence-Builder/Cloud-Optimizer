@@ -1,0 +1,30 @@
+{
+  "issue_number": 58,
+  "title": "6.4.1 Create user database schema and models",
+  "body": "## Parent Issue\n#26 - 6.4 Basic Authentication\n\n## Objective\nCreate database schema for users and sessions.\n\n## Implementation\n\n```sql\nCREATE TABLE users (\n    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    email VARCHAR(255) NOT NULL UNIQUE,\n    password_hash VARCHAR(255) NOT NULL,\n    name VARCHAR(255),\n    is_admin BOOLEAN NOT NULL DEFAULT true,\n    email_verified BOOLEAN NOT NULL DEFAULT false,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    last_login_at TIMESTAMPTZ\n);\n\nCREATE TABLE sessions (\n    session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,\n    token_hash VARCHAR(255) NOT NULL,\n    expires_at TIMESTAMPTZ NOT NULL,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    revoked_at TIMESTAMPTZ\n);\n```\n\n## Files to Create\n- `src/cloud_optimizer/models/user.py`\n- `src/cloud_optimizer/models/session.py`\n- `alembic/versions/xxx_create_user_tables.py`\n\n## Acceptance Criteria\n- [ ] Migration runs successfully\n- [ ] Models map correctly\n- [ ] Unique constraint on email\n- [ ] Indexes created\n\n## Estimated Time\n1.5 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-1",
+    "auth"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security",
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:30:37.470564Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-58-641createuserdatabaseschemaand"
+}

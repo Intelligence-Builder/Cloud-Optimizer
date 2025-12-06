@@ -1,0 +1,30 @@
+{
+  "issue_number": 116,
+  "title": "8.4.1 Create document upload service with validation",
+  "body": "## Parent Issue\n#38 - 8.4 Document Analysis Service\n\n## Objective\nImplement document upload service with file type validation, size limits, and storage management.\n\n## Implementation\n\n```python\n# src/ib_platform/document/service.py\nfrom pathlib import Path\nfrom uuid import UUID\n\nclass DocumentService:\n    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB\n    ALLOWED_TYPES = [\"application/pdf\", \"text/plain\"]\n\n    def __init__(\n        self,\n        db: AsyncSession,\n        storage_path: Path,\n    ):\n        self.db = db\n        self.storage_path = storage_path\n\n    async def upload(\n        self,\n        tenant_id: UUID,\n        file: UploadFile,\n        conversation_id: UUID = None,\n    ) -> Document:\n        \"\"\"Upload and process a document.\"\"\"\n        # Validate file type\n        if file.content_type not in self.ALLOWED_TYPES:\n            raise InvalidDocumentTypeException(\n                f\"Unsupported file type: {file.content_type}\"\n            )\n\n        content = await file.read()\n        \n        # Validate file size\n        if len(content) > self.MAX_FILE_SIZE:\n            raise DocumentTooLargeException(\n                f\"File exceeds {self.MAX_FILE_SIZE / 1024 / 1024}MB limit\"\n            )\n\n        # Save file to storage\n        storage_path = await self._save_file(tenant_id, file.filename, content)\n\n        # Create document record\n        document = Document(\n            tenant_id=tenant_id,\n            conversation_id=conversation_id,\n            filename=file.filename,\n            content_type=file.content_type,\n            file_size=len(content),\n            storage_path=str(storage_path),\n            status=\"processing\",\n        )\n        self.db.add(document)\n        await self.db.commit()\n\n        return document\n\n    async def _save_file(\n        self,\n        tenant_id: UUID,\n        filename: str,\n        content: bytes,\n    ) -> Path:\n        \"\"\"Save file to tenant-specific directory.\"\"\"\n        tenant_dir = self.storage_path / str(tenant_id)\n        tenant_dir.mkdir(parents=True, exist_ok=True)\n        \n        file_path = tenant_dir / f\"{uuid4()}_{filename}\"\n        file_path.write_bytes(content)\n        return file_path\n```\n\n## Database Migration\n\n```sql\nCREATE TABLE documents (\n    document_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    tenant_id UUID NOT NULL REFERENCES tenants(tenant_id),\n    conversation_id UUID,\n    filename VARCHAR(255) NOT NULL,\n    content_type VARCHAR(100) NOT NULL,\n    file_size INTEGER NOT NULL,\n    storage_path VARCHAR(500) NOT NULL,\n    status VARCHAR(20) NOT NULL DEFAULT 'processing',\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX idx_documents_tenant ON documents(tenant_id);\nCREATE INDEX idx_documents_conversation ON documents(conversation_id);\n```\n\n## Files to Create\n- `src/ib_platform/document/__init__.py`\n- `src/ib_platform/document/service.py`\n- `src/ib_platform/document/models.py`\n- `alembic/versions/xxx_create_document_tables.py`\n- `tests/ib_platform/document/test_upload.py`\n\n## Acceptance Criteria\n- [ ] PDF upload works (up to 10MB)\n- [ ] TXT upload works\n- [ ] Invalid file types rejected\n- [ ] Oversized files rejected\n- [ ] Files stored in tenant-specific directories\n- [ ] Document record created in database\n- [ ] Unit tests for validation logic\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "document",
+    "pdf"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:33:18.714568Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-116-841createdocumentuploadservice"
+}

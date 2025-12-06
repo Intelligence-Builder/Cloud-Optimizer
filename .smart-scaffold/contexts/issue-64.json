@@ -1,0 +1,30 @@
+{
+  "issue_number": 64,
+  "title": "6.5.3 Create ChatInput and ChatContainer components",
+  "body": "## Parent Issue\n#27 - 6.5 Chat Interface + Dashboard UI\n\n## Objective\nCreate chat input area and main container layout.\n\n## Requirements\n- ChatInput: Text input, send button, file attach button\n- ChatContainer: Message list with scroll, input at bottom\n- Send on Enter key\n- Auto-scroll to bottom on new messages\n\n## Files to Create\n- `frontend/src/components/chat/ChatInput.tsx`\n- `frontend/src/components/chat/ChatContainer.tsx`\n\n## Acceptance Criteria\n- [ ] Input accepts text\n- [ ] Send button works\n- [ ] Enter key sends message\n- [ ] Messages scroll into view\n- [ ] File attach button present\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "ui",
+    "frontend",
+    "chat"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "frontend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:45:13.194442Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-64-653createchatinputandchatconta"
+}

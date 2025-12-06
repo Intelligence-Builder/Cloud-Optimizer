@@ -1,0 +1,30 @@
+{
+  "issue_number": 48,
+  "title": "6.2.1 Implement MarketplaceLicenseValidator service",
+  "body": "## Parent Issue\n#24 - 6.2 AWS Marketplace Integration\n\n## Objective\nImplement license validation service using AWS Marketplace Metering API.\n\n## Requirements\n- Call RegisterUsage on container startup\n- Handle VALID, TRIAL, EXPIRED states\n- Cache license status (refresh hourly)\n- Graceful handling of API failures\n\n## Implementation\n\n```python\n# src/cloud_optimizer/marketplace/license.py\nfrom enum import Enum\nimport boto3\nfrom datetime import datetime, timedelta\n\nclass LicenseStatus(Enum):\n    VALID = \"valid\"\n    TRIAL = \"trial\"\n    TRIAL_EXPIRED = \"trial_expired\"\n    SUBSCRIPTION_EXPIRED = \"subscription_expired\"\n    INVALID = \"invalid\"\n\nclass MarketplaceLicenseValidator:\n    def __init__(self, product_code: str):\n        self.product_code = product_code\n        self.client = boto3.client('meteringmarketplace')\n        self._cached_status = None\n        self._cache_expires = None\n    \n    async def validate_on_startup(self) -> LicenseStatus:\n        try:\n            response = self.client.register_usage(\n                ProductCode=self.product_code,\n                PublicKeyVersion=1,\n            )\n            return LicenseStatus.VALID\n        except self.client.exceptions.CustomerNotEntitledException:\n            return await self._check_trial_status()\n        except self.client.exceptions.CustomerNotSubscribedException:\n            return LicenseStatus.SUBSCRIPTION_EXPIRED\n        except Exception as e:\n            logger.error(f\"License validation failed: {e}\")\n            return LicenseStatus.INVALID\n    \n    async def get_cached_status(self) -> LicenseStatus:\n        if self._cache_expires and datetime.utcnow() < self._cache_expires:\n            return self._cached_status\n        self._cached_status = await self.validate_on_startup()\n        self._cache_expires = datetime.utcnow() + timedelta(hours=1)\n        return self._cached_status\n```\n\n## Files to Create\n- `src/cloud_optimizer/marketplace/license.py`\n\n## Acceptance Criteria\n- [ ] RegisterUsage called on startup\n- [ ] License status cached for 1 hour\n- [ ] All status types handled correctly\n- [ ] Graceful degradation on API errors\n\n## Estimated Time\n2.5 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "marketplace",
+    "aws",
+    "billing"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:26:25.667783Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-48-621implementmarketplacelicense"
+}

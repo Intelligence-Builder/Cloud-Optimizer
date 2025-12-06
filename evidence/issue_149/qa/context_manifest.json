@@ -1,0 +1,24 @@
+{
+  "issue": 149,
+  "title": "9.2.3 Organization-wide security posture dashboard",
+  "qa_recorded_at": "2025-12-05T06:19:35.552127Z",
+  "summary": "Validated dashboard aggregation logic, heat map generation, and recommendations.",
+  "tests": [
+    {
+      "command": "pytest tests/services/test_security_dashboard.py -q",
+      "output": "tests/pytest-output.txt"
+    }
+  ],
+  "static_analysis": [
+    {
+      "tool": "ruff",
+      "command": "ruff check --exit-zero src/cloud_optimizer/services/security_dashboard.py tests/services/test_security_dashboard.py",
+      "output": "static_analysis/ruff.log"
+    },
+    {
+      "tool": "bandit",
+      "command": "bandit -q -r src/cloud_optimizer/services/security_dashboard.py tests/services/test_security_dashboard.py",
+      "output": "static_analysis/bandit.log"
+    }
+  ]
+}

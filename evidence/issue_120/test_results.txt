@@ -1,0 +1,101 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.7, pytest-8.4.2, pluggy-1.6.0 -- /opt/anaconda3/bin/python3.12
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.7', 'Platform': 'macOS-26.1-x86_64-i386-64bit', 'Packages': {'pytest': '8.4.2', 'pluggy': '1.6.0'}, 'Plugins': {'mypy': '1.0.1', 'flake8': '1.3.0', 'pdb': '0.3.1', 'html': '4.1.1', 'env': '1.1.5', 'json-report': '1.5.0', 'httpx': '0.35.0', 'timeout': '2.4.0', 'metadata': '3.1.1', 'mimesis': '18.0.0', 'hypothesis': '6.100.0', 'clarity': '1.0.1', 'anyio': '4.10.0', 'black': '0.6.0', 'Faker': '37.3.0', 'mock': '3.14.1', 'factoryboy': '2.7.0', 'benchmark': '5.1.0', 'xdist': '3.5.0', 'typeguard': '4.4.4', 'testmon': '2.1.1', 'sugar': '0.9.7', 'bdd': '8.1.0', 'cov': '6.1.1', 'asyncio': '1.0.0', 'requests-mock': '1.12.1'}}
+hypothesis profile 'default' -> database=DirectoryBasedExampleDatabase(PosixPath('/Users/robertstanley/Desktop/Cloud-Optimizer/.hypothesis/examples'))
+benchmark: 5.1.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /Users/robertstanley/Desktop/Cloud-Optimizer
+configfile: pyproject.toml
+plugins: mypy-1.0.1, flake8-1.3.0, pdb-0.3.1, html-4.1.1, env-1.1.5, json-report-1.5.0, httpx-0.35.0, timeout-2.4.0, metadata-3.1.1, mimesis-18.0.0, hypothesis-6.100.0, clarity-1.0.1, anyio-4.10.0, black-0.6.0, Faker-37.3.0, mock-3.14.1, factoryboy-2.7.0, benchmark-5.1.0, xdist-3.5.0, typeguard-4.4.4, testmon-2.1.1, sugar-0.9.7, bdd-8.1.0, cov-6.1.1, asyncio-1.0.0, requests-mock-1.12.1
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 79 items
+
+tests/ib_platform/document/test_analysis.py::test_extract_entities_aws_resources PASSED [  1%]
+tests/ib_platform/document/test_analysis.py::test_extract_entities_compliance PASSED [  2%]
+tests/ib_platform/document/test_analysis.py::test_extract_entities_no_matches PASSED [  3%]
+tests/ib_platform/document/test_analysis.py::test_analyzer_requires_api_key FAILED [  5%]
+tests/ib_platform/document/test_analysis.py::test_analyze_document_too_short PASSED [  6%]
+tests/ib_platform/document/test_analysis.py::test_build_analysis_prompt PASSED [  7%]
+tests/ib_platform/document/test_analysis.py::test_parse_analysis_result PASSED [  8%]
+tests/ib_platform/document/test_analysis.py::test_parse_analysis_result_with_extra_text PASSED [ 10%]
+tests/ib_platform/document/test_analysis.py::test_parse_analysis_result_invalid_json PASSED [ 11%]
+tests/ib_platform/document/test_analysis.py::test_parse_analysis_result_missing_fields PASSED [ 12%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explainer_initialization_without_api_key PASSED [ 13%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explainer_initialization_with_api_key PASSED [ 15%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explainer_initialization_with_explicit_key PASSED [ 16%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explain_finding_fallback_mode PASSED [ 17%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explain_finding_with_llm PASSED [ 18%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explain_finding_technical_audience PASSED [ 20%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explain_finding_executive_audience PASSED [ 21%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explain_finding_with_compliance PASSED [ 22%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explain_findings_batch PASSED [ 24%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_explain_finding_error_handling PASSED [ 25%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_parse_explanation_with_sections PASSED [ 26%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_parse_explanation_without_sections PASSED [ 27%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_build_explanation_prompt PASSED [ 29%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_build_explanation_prompt_without_technical PASSED [ 30%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_fallback_explanation_content PASSED [ 31%]
+tests/ib_platform/security/test_explanation.py::TestFindingExplainer::test_is_available_method PASSED [ 32%]
+tests/ib_platform/nlu/test_entities.py::TestEntityExtractor::test_extract_returns_nlu_entities PASSED [ 34%]
+tests/ib_platform/nlu/test_entities.py::TestEntityExtractor::test_extract_empty_string PASSED [ 35%]
+tests/ib_platform/nlu/test_entities.py::TestAWSServiceExtraction::test_extract_single_service PASSED [ 36%]
+tests/ib_platform/nlu/test_entities.py::TestAWSServiceExtraction::test_extract_multiple_services PASSED [ 37%]
+tests/ib_platform/nlu/test_entities.py::TestAWSServiceExtraction::test_case_insensitive_extraction PASSED [ 39%]
+tests/ib_platform/nlu/test_entities.py::TestAWSServiceExtraction::test_extract_lambda PASSED [ 40%]
+tests/ib_platform/nlu/test_entities.py::TestAWSServiceExtraction::test_extract_rds PASSED [ 41%]
+tests/ib_platform/nlu/test_entities.py::TestAWSServiceExtraction::test_extract_cloudwatch PASSED [ 43%]
+tests/ib_platform/nlu/test_entities.py::TestAWSServiceExtraction::test_extract_kms PASSED [ 44%]
+tests/ib_platform/nlu/test_entities.py::TestAWSServiceExtraction::test_no_false_positives PASSED [ 45%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_extract_soc2 PASSED [ 46%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_extract_soc2_with_space PASSED [ 48%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_extract_hipaa PASSED [ 49%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_extract_pci_dss PASSED [ 50%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_extract_pci_dss_with_space PASSED [ 51%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_extract_gdpr PASSED [ 53%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_extract_iso27001 PASSED [ 54%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_extract_multiple_frameworks PASSED [ 55%]
+tests/ib_platform/nlu/test_entities.py::TestComplianceFrameworkExtraction::test_case_insensitive_frameworks PASSED [ 56%]
+tests/ib_platform/nlu/test_entities.py::TestFindingIDExtraction::test_extract_sec_finding PASSED [ 58%]
+tests/ib_platform/nlu/test_entities.py::TestFindingIDExtraction::test_extract_fnd_finding PASSED [ 59%]
+tests/ib_platform/nlu/test_entities.py::TestFindingIDExtraction::test_extract_finding_keyword PASSED [ 60%]
+tests/ib_platform/nlu/test_entities.py::TestFindingIDExtraction::test_extract_cve PASSED [ 62%]
+tests/ib_platform/nlu/test_entities.py::TestFindingIDExtraction::test_extract_multiple_findings PASSED [ 63%]
+tests/ib_platform/nlu/test_entities.py::TestFindingIDExtraction::test_case_insensitive_findings PASSED [ 64%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_extract_arn PASSED [ 65%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_extract_s3_bucket PASSED [ 67%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_extract_s3_with_protocol PASSED [ 68%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_extract_instance_id PASSED [ 69%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_extract_security_group PASSED [ 70%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_extract_vpc_id PASSED [ 72%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_extract_subnet_id PASSED [ 73%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_extract_multiple_resources PASSED [ 74%]
+tests/ib_platform/nlu/test_entities.py::TestResourceIDExtraction::test_complex_arn PASSED [ 75%]
+tests/ib_platform/nlu/test_entities.py::TestNLUEntities::test_has_entities_empty PASSED [ 77%]
+tests/ib_platform/nlu/test_entities.py::TestNLUEntities::test_has_entities_with_services PASSED [ 78%]
+tests/ib_platform/nlu/test_entities.py::TestNLUEntities::test_has_entities_with_frameworks PASSED [ 79%]
+tests/ib_platform/nlu/test_entities.py::TestNLUEntities::test_has_entities_with_findings PASSED [ 81%]
+tests/ib_platform/nlu/test_entities.py::TestNLUEntities::test_has_entities_with_resources PASSED [ 82%]
+tests/ib_platform/nlu/test_entities.py::TestNLUEntities::test_get_all_entities_empty PASSED [ 83%]
+tests/ib_platform/nlu/test_entities.py::TestNLUEntities::test_get_all_entities_combined PASSED [ 84%]
+tests/ib_platform/nlu/test_entities.py::TestComplexQueries::test_complex_security_query PASSED [ 86%]
+tests/ib_platform/nlu/test_entities.py::TestComplexQueries::test_complex_multi_resource_query PASSED [ 87%]
+tests/ib_platform/nlu/test_entities.py::TestComplexQueries::test_compliance_frameworks_query PASSED [ 88%]
+tests/ib_platform/answer/test_service.py::test_answer_service_initialization PASSED [ 89%]
+tests/ib_platform/answer/test_service.py::test_answer_service_custom_model PASSED [ 91%]
+tests/ib_platform/answer/test_service.py::test_generate_streaming PASSED [ 92%]
+tests/ib_platform/answer/test_service.py::test_generate_streaming_with_conversation_history PASSED [ 93%]
+tests/ib_platform/answer/test_service.py::test_generate_non_streaming PASSED [ 94%]
+tests/ib_platform/answer/test_service.py::test_generate_handles_anthropic_error PASSED [ 96%]
+tests/ib_platform/answer/test_service.py::test_build_messages PASSED     [ 97%]
+tests/ib_platform/answer/test_service.py::test_build_messages_with_history PASSED [ 98%]
+tests/ib_platform/answer/test_service.py::test_create_answer_service PASSED [100%]
+
+=================================== FAILURES ===================================
+________________________ test_analyzer_requires_api_key ________________________
+tests/ib_platform/document/test_analysis.py:53: in test_analyzer_requires_api_key
+    with pytest.raises(AnalysisError) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'ib_platform.document.analysis.AnalysisError'>
+=========================== short test summary info ============================
+FAILED tests/ib_platform/document/test_analysis.py::test_analyzer_requires_api_key - Failed: DID NOT RAISE <class 'ib_platform.document.analysis.AnalysisError'>
+========================= 1 failed, 78 passed in 0.39s =========================

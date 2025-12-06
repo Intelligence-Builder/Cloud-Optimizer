@@ -1,0 +1,28 @@
+{
+  "issue_number": 106,
+  "title": "8.2.1 Create answer context assembly service",
+  "body": "## Parent Issue\n#36 - 8.2 Answer Generation Engine\n\n## Objective\nImplement context assembly that gathers relevant KB entries, findings, and documents for answer generation.\n\n## Implementation\n\n```python\n# src/ib_platform/answer/context.py\nfrom dataclasses import dataclass, field\n\n@dataclass\nclass AnswerContext:\n    kb_entries: list[KBEntry] = field(default_factory=list)\n    findings: list[Finding] = field(default_factory=list)\n    documents: list[DocumentContext] = field(default_factory=list)\n\n\nclass ContextAssembler:\n    def __init__(\n        self,\n        kb_service: KnowledgeBaseService,\n        findings_service: FindingsService,\n        document_service: DocumentService,\n    ):\n        self.kb_service = kb_service\n        self.findings_service = findings_service\n        self.document_service = document_service\n\n    async def assemble(\n        self,\n        nlu_result: NLUResult,\n        tenant_id: UUID,\n    ) -> AnswerContext:\n        \"\"\"Assemble context from various sources.\"\"\"\n        context = AnswerContext()\n\n        # Get relevant KB entries based on detected entities\n        if nlu_result.entities.compliance_frameworks:\n            for framework in nlu_result.entities.compliance_frameworks:\n                kb_entries = await self.kb_service.get_for_framework(framework)\n                context.kb_entries.extend(kb_entries)\n\n        if nlu_result.entities.aws_services:\n            for service in nlu_result.entities.aws_services:\n                kb_entries = await self.kb_service.get_for_service(service)\n                context.kb_entries.extend(kb_entries)\n\n        # Get relevant findings\n        if nlu_result.requires_findings:\n            findings = await self._get_relevant_findings(nlu_result, tenant_id)\n            context.findings = findings\n\n        return context\n```\n\n## Files to Create\n- `src/ib_platform/answer/__init__.py`\n- `src/ib_platform/answer/context.py`\n- `tests/ib_platform/answer/test_context_assembly.py`\n\n## Acceptance Criteria\n- [ ] AnswerContext dataclass created\n- [ ] KB entries gathered based on entities\n- [ ] Findings fetched when required\n- [ ] Documents included when uploaded\n- [ ] Context limits enforced (max items)\n- [ ] Unit tests for context assembly\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "answer-generation"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:49:47.115686Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-106-821createanswercontextassembly"
+}

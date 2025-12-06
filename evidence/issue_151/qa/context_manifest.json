@@ -1,0 +1,24 @@
+{
+  "issue": 151,
+  "title": "9.3.2 Rule import/export",
+  "qa_recorded_at": "2025-12-05T06:10:27.405538Z",
+  "summary": "Verified import/export of custom rule packages.",
+  "tests": [
+    {
+      "command": "pytest tests/scanners/test_custom_rules.py -q",
+      "output": "tests/pytest-output.txt"
+    }
+  ],
+  "static_analysis": [
+    {
+      "tool": "ruff",
+      "command": "ruff check --exit-zero src/cloud_optimizer/scanners/custom_rules.py tests/scanners/test_custom_rules.py",
+      "output": "static_analysis/ruff.log"
+    },
+    {
+      "tool": "bandit",
+      "command": "bandit -q -r src/cloud_optimizer/scanners/custom_rules.py tests/scanners/test_custom_rules.py",
+      "output": "static_analysis/bandit.log"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "issue_number": 45,
+  "title": "6.1.6 Create docker-compose for local development",
+  "body": "## Parent Issue\n#23 - 6.1 Container Packaging\n\n## Objective\nCreate docker-compose setup for local development with all dependencies.\n\n## Requirements\n- PostgreSQL database\n- Redis (optional)\n- LocalStack for AWS services\n- Hot reload for development\n- Volume mounts for code\n\n## Files to Create\n- `docker/docker-compose.yml`\n- `docker/docker-compose.dev.yml`\n- `docker/docker-compose.test.yml`\n- `docker/Dockerfile.dev`\n\n## Implementation\n\n```yaml\n# docker/docker-compose.yml\nversion: '3.8'\n\nservices:\n  app:\n    build:\n      context: ..\n      dockerfile: docker/Dockerfile\n    ports:\n      - \"8000:8000\"\n    environment:\n      - DATABASE_URL=postgresql://co:password@postgres:5432/cloud_optimizer\n      - REDIS_URL=redis://redis:6379\n    depends_on:\n      - postgres\n      - redis\n\n  postgres:\n    image: postgres:15\n    environment:\n      POSTGRES_USER: co\n      POSTGRES_PASSWORD: password\n      POSTGRES_DB: cloud_optimizer\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n    ports:\n      - \"5432:5432\"\n\n  redis:\n    image: redis:7-alpine\n    ports:\n      - \"6379:6379\"\n\n  localstack:\n    image: localstack/localstack:latest\n    environment:\n      - SERVICES=s3,sts,iam,ce\n    ports:\n      - \"4566:4566\"\n\nvolumes:\n  postgres_data:\n```\n\n## Acceptance Criteria\n- [ ] docker-compose up starts all services\n- [ ] App connects to database\n- [ ] Hot reload works in dev mode\n- [ ] LocalStack available for AWS testing\n- [ ] Clean shutdown with docker-compose down\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-1",
+    "container",
+    "infrastructure"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:42:34.542478Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-45-616createdocker-composeforloca"
+}

@@ -1,0 +1,35 @@
+{
+  "issue": 161,
+  "title": "Security scanning in CI pipeline",
+  "test_date": "2025-12-06",
+  "security_tools_integrated": true,
+  "components": [
+    "Trivy container vulnerability scanning in docker-build.yml",
+    "CodeQL static analysis (Python) in codeql.yml",
+    "GitHub Security tab integration via SARIF",
+    "Scheduled weekly CodeQL scans",
+    "Pre-push Trivy scanning blocks deployment",
+    "ECR native vulnerability scanning"
+  ],
+  "workflow_files": [
+    ".github/workflows/docker-build.yml",
+    ".github/workflows/codeql.yml"
+  ],
+  "trivy_configuration": {
+    "severity_levels": ["CRITICAL", "HIGH"],
+    "exit_code_on_vulnerabilities": 1,
+    "ignore_unfixed": true,
+    "vuln_types": ["os", "library"],
+    "timeout": "10m"
+  },
+  "codeql_configuration": {
+    "languages": ["python"],
+    "schedule": "weekly (Sunday 01:30 UTC)",
+    "triggers": ["push to main", "pull requests"]
+  },
+  "validation": {
+    "trivy_blocks_on_critical": true,
+    "sarif_upload_enabled": true,
+    "codeql_permissions_set": true
+  }
+}

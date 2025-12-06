@@ -1,0 +1,30 @@
+{
+  "issue_number": 73,
+  "title": "7.1.2 Implement AWSConnectionService with role assumption",
+  "body": "## Parent Issue\n#29 - 7.1 AWS Account Connection\n\n## Objective\nImplement service for connecting AWS accounts via IAM roles.\n\n## Key Methods\n- connect_with_role(tenant_id, role_arn, external_id)\n- connect_with_keys(tenant_id, access_key_id, secret_key)\n- get_session(account_id) - Returns boto3 session\n- disconnect(account_id)\n\n## Files to Create\n- `src/cloud_optimizer/services/aws_connection.py`\n\n## Acceptance Criteria\n- [ ] Role assumption works\n- [ ] Permission verification works\n- [ ] Session creation works\n- [ ] Trial limit enforced (1 account)\n\n## Estimated Time: 3 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "connection"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:11:05.707164Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-73-712implementawsconnectionservi"
+}

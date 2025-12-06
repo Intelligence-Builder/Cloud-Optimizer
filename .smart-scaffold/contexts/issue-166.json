@@ -1,0 +1,28 @@
+{
+  "issue_number": 166,
+  "title": "13.5.2 Application metrics with CloudWatch Metrics",
+  "body": "# Objective\nImplement comprehensive application metrics for monitoring performance, business KPIs, and system health.\n\n## Requirements\n- Define custom metrics for business logic\n- Implement metrics for API endpoints\n- Track resource utilization metrics\n- Monitor background job metrics\n- Set up SLI/SLO metrics\n- Create CloudWatch dashboards\n- Implement metrics aggregation\n- Configure metric alarms\n- Add metrics for cost optimization\n- Track user activity metrics\n- Document metrics catalog\n\n## Acceptance Criteria\n- Custom metrics published to CloudWatch\n- API metrics tracking request rate, latency, errors\n- Business metrics (scans, recommendations, savings)\n- SLI/SLO metrics defined and tracked\n- CloudWatch dashboards created\n- Alarms configured for critical metrics\n- Metrics documentation maintained\n- Historical data available for analysis\n\n## Dependencies\n- Parent: Epic 13 (#131)\n- Requires: #165 (Structured logging)\n- Related: #146 (CloudWatch monitoring)\n\n## Estimated Effort\n**Story Points:** 8\n**Time:** 1.5 weeks\n**Complexity:** Medium",
+  "labels": [
+    "platform",
+    "infrastructure",
+    "production"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-05T10:40:28.170449Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-166-1352applicationmetricswithclou"
+}

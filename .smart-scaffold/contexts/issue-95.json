@@ -1,0 +1,30 @@
+{
+  "issue_number": 95,
+  "title": "7.4.5 Create findings API endpoints and tests",
+  "body": "## Parent Issue\n#32 - 7.4 Findings Management System\n\n## Endpoints\n- GET /api/v1/findings - List with filters\n- GET /api/v1/findings/summary - Aggregated summary\n- GET /api/v1/findings/:id - Get details\n- PUT /api/v1/findings/:id/status - Update status\n- GET /api/v1/findings/for-chat - Chat-formatted results\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/findings.py`\n- `tests/services/test_findings.py`\n- `tests/api/test_findings_api.py`\n\n## Estimated Time: 2.5 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "findings",
+    "data",
+    "api"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:27:57.843544Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-95-745createfindingsapiendpointsa"
+}

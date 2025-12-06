@@ -1,0 +1,28 @@
+{
+  "issue_number": 99,
+  "title": "7.5.4 Implement ComplianceService",
+  "body": "## Parent Issue\n#33 - 7.5 Compliance Framework Mapping\n\n## Objective\nImplement compliance query service.\n\n## Methods\n- get_frameworks() - List all frameworks\n- get_framework_details(id) - Get with domains/controls\n- get_compliance_status(tenant_id, framework) - Calculate compliance %\n- get_findings_by_framework(tenant_id, framework)\n\n## Files to Create\n- `src/cloud_optimizer/services/compliance.py`\n\n## Estimated Time: 3 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "data",
+    "compliance",
+    "regulatory"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:31:09.379929Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-99-754implementcomplianceservice"
+}

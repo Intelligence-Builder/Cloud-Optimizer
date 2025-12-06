@@ -1,0 +1,29 @@
+{
+  "issue_number": 167,
+  "title": "13.5.3 Distributed tracing with X-Ray",
+  "body": "# Objective\nImplement AWS X-Ray distributed tracing to visualize request flows, identify bottlenecks, and troubleshoot performance issues.\n\n## Requirements\n- Integrate X-Ray SDK in application\n- Instrument API endpoints\n- Trace database queries\n- Trace external API calls\n- Capture AWS service calls\n- Implement custom segments and subsegments\n- Configure sampling rules\n- Set up X-Ray service map\n- Create trace search filters\n- Configure X-Ray alarms\n- Document tracing patterns\n\n## Acceptance Criteria\n- X-Ray SDK integrated in all services\n- API requests traced end-to-end\n- Service map showing all dependencies\n- Database queries visible in traces\n- External API calls traced\n- Sampling rules configured (balance cost vs visibility)\n- Trace search working for debugging\n- Performance bottlenecks identified\n- X-Ray alarms for high latency\n\n## Dependencies\n- Parent: Epic 13 (#131)\n- Requires: #165 (Structured logging)\n- Related: #166 (Application metrics)\n\n## Estimated Effort\n**Story Points:** 8\n**Time:** 1.5 weeks\n**Complexity:** Medium-High",
+  "labels": [
+    "platform",
+    "infrastructure",
+    "production"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend",
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-05T20:43:48.041495Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-167-1353distributedtracingwithx-ra"
+}

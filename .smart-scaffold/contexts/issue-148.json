@@ -1,0 +1,27 @@
+{
+  "issue_number": 148,
+  "title": "9.2.2 Cross-account role assumption",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nImplement secure cross-account role assumption to enable Cloud Optimizer to scan resources in other AWS accounts using IAM roles with proper trust relationships.\n\n## Requirements\n- Support AWS STS AssumeRole for cross-account access\n- Implement MFA token support for enhanced security (optional)\n- Support external ID for added security layer\n- Handle session token expiration and automatic renewal\n- Validate trust relationships before attempting assumption\n- Support session duration configuration\n- Implement credential caching for performance\n- Provide clear error messages for permission issues\n- Support both same-organization and external accounts\n\n## Features to Implement\n- AssumeRole wrapper with error handling\n- Session credential caching (with expiration tracking)\n- External ID configuration per account\n- MFA token prompt for sensitive operations\n- Trust relationship validator\n- Session duration management\n- Credential rotation on expiration\n- CloudFormation/Terraform templates for cross-account role setup\n\n## Acceptance Criteria\n- [ ] AssumeRole functionality implemented with retry logic\n- [ ] Session credential caching working with expiration handling\n- [ ] External ID support validated\n- [ ] MFA token support implemented (optional enhancement)\n- [ ] Trust relationship validator detects misconfigurations\n- [ ] CloudFormation template for cross-account role provided\n- [ ] Terraform template for cross-account role provided\n- [ ] Documentation includes step-by-step setup guide\n- [ ] Unit tests cover all AssumeRole scenarios (>80% coverage)\n- [ ] Integration test validates cross-account access\n- [ ] Error messages clearly indicate permission issues\n- [ ] Credential refresh happens automatically before expiration\n\n## Security Considerations\n- External ID should be randomly generated and stored securely\n- MFA enforcement for production accounts (configurable)\n- Least privilege IAM policies in templates\n- Session duration should be configurable but reasonable (1-12 hours)\n- Audit logging for all role assumptions\n\n## Technical Approach\n- Use boto3 STS client for AssumeRole operations\n- Implement credential provider pattern for abstraction\n- Cache credentials in memory with TTL tracking\n- Provide IAC templates with least privilege policies\n- Session refresh: proactive renewal 5 minutes before expiration\n\n## IAM Policy Template\nTemplates should include:\n- ReadOnlyAccess-like scanning permissions\n- Explicit deny for destructive operations\n- Resource-level permissions where possible\n- Condition keys for enhanced security (source IP, MFA)\n\n## Estimated Effort\n20-24 hours\n\n## Dependencies\n- AWS STS API access\n- Multi-account scanning support (issue 9.2.1)\n- Secure credential storage",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:45:10.459368Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-148-922cross-accountroleassumption"
+}

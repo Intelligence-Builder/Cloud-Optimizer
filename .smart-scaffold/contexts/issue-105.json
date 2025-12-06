@@ -1,0 +1,28 @@
+{
+  "issue_number": 105,
+  "title": "8.1.5 Create NLU models and comprehensive tests",
+  "body": "## Parent Issue\n#35 - 8.1 NLU Pipeline\n\n## Objective\nCreate NLU result models and comprehensive test suite covering all NLU pipeline functionality.\n\n## Implementation\n\n```python\n# src/ib_platform/nlu/models.py\nfrom dataclasses import dataclass\n\n@dataclass\nclass NLUResult:\n    intent: Intent\n    confidence: float\n    entities: ExtractedEntities\n    context: ConversationContext\n    requires_findings: bool\n    requires_documents: bool\n\n    @property\n    def is_confident(self) -> bool:\n        return self.confidence >= 0.7\n\n    def to_dict(self) -> dict:\n        return {\n            \"intent\": self.intent.value,\n            \"confidence\": self.confidence,\n            \"entities\": {\n                \"aws_services\": self.entities.aws_services,\n                \"compliance_frameworks\": self.entities.compliance_frameworks,\n                \"finding_ids\": self.entities.finding_ids,\n            },\n            \"requires_findings\": self.requires_findings,\n            \"requires_documents\": self.requires_documents,\n        }\n\n\n# Test data\nTEST_CASES = [\n    {\n        \"message\": \"What security concerns should I have with patient data in S3 going through Glue to Redshift?\",\n        \"expected_intent\": Intent.SECURITY_ADVICE,\n        \"expected_services\": [\"S3\", \"GLUE\", \"REDSHIFT\"],\n        \"expected_frameworks\": [\"HIPAA\"],\n    },\n    {\n        \"message\": \"Explain finding S3_001\",\n        \"expected_intent\": Intent.FINDING_EXPLANATION,\n        \"expected_finding_ids\": [\"S3_001\"],\n    },\n]\n```\n\n## Files to Create\n- `src/ib_platform/nlu/models.py`\n- `tests/ib_platform/nlu/test_intent_classification.py`\n- `tests/ib_platform/nlu/conftest.py`\n\n## Acceptance Criteria\n- [ ] NLUResult dataclass with all fields\n- [ ] to_dict() serialization works\n- [ ] is_confident property works\n- [ ] 10+ test cases covering all intents\n- [ ] Multi-turn conversation tests\n- [ ] 80%+ test coverage across NLU module\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "nlu"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:49:08.378824Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-105-815createnlumodelsandcomprehen"
+}

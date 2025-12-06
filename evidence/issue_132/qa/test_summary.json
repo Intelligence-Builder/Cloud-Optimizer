@@ -1,0 +1,50 @@
+{
+  "issue": 132,
+  "title": "Container image optimization and security hardening",
+  "test_date": "2025-12-06",
+  "security_scan": {
+    "tool": "Trivy",
+    "critical_vulnerabilities": 0,
+    "high_vulnerabilities": 5,
+    "fixable_high": 2,
+    "unfixable_high": 3,
+    "details": [
+      {"package": "libpq5", "cve": "CVE-2025-12818", "status": "no fix available"},
+      {"package": "ecdsa", "cve": "CVE-2024-23342", "status": "no fix available"},
+      {"package": "rsa", "cve": "CVE-2020-25658", "status": "fixed in 4.7"},
+      {"package": "urllib3", "cve": "CVE-2025-66418", "status": "fixed in 2.6.0"},
+      {"package": "urllib3", "cve": "CVE-2025-66471", "status": "fixed in 2.6.0"}
+    ]
+  },
+  "image_metrics": {
+    "size_mb": 404,
+    "target_mb": 500,
+    "meets_target": true
+  },
+  "security_hardening": {
+    "multi_stage_build": true,
+    "non_root_user": true,
+    "non_root_user_name": "appuser",
+    "non_root_uid": 1000,
+    "minimal_base_image": "python:3.11-slim",
+    "health_check": true,
+    "no_dev_dependencies": true,
+    "uses_copy_not_add": true,
+    "explicit_user_directive": true,
+    "pythondontwritebytecode": true,
+    "pythonunbuffered": true
+  },
+  "dockerfile": "docker/Dockerfile",
+  "acceptance_criteria": {
+    "image_size_under_500mb": true,
+    "zero_critical_vulnerabilities": true,
+    "non_root_user": true,
+    "build_time_under_10min": true,
+    "documented": true
+  },
+  "recommendations": [
+    "Update urllib3 to 2.6.0+ to fix CVE-2025-66418 and CVE-2025-66471",
+    "Update rsa to 4.7+ to fix CVE-2020-25658",
+    "Monitor for libpq5 and ecdsa security patches"
+  ]
+}

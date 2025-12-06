@@ -1,0 +1,30 @@
+{
+  "issue_number": 123,
+  "title": "8.5.3 Implement service loading for AWS best practices",
+  "body": "## Parent Issue\n#39 - 8.5 Knowledge Base Integration\n\n## Objective\nLoad AWS service best practices from YAML files for 20 AWS services.\n\n## Implementation\n\n```python\n# src/ib_platform/kb/loader.py (continued)\n\nasync def load_services(self) -> dict[str, list[ServiceBestPractice]]:\n    \"\"\"Load service best practices.\"\"\"\n    services = {}\n    services_dir = self.data_dir / \"services\"\n\n    for service_file in services_dir.glob(\"*.yaml\"):\n        data = yaml.safe_load(service_file.read_text())\n        service = data[\"service\"]\n        services[service] = [\n            ServiceBestPractice(service=service, **bp)\n            for bp in data.get(\"best_practices\", [])\n        ]\n\n    return services\n```\n\n## Sample Data Structure\n\n```yaml\n# data/compliance/services/s3.yaml\nservice: S3\nbest_practices:\n  - category: encryption\n    title: Enable Default Encryption\n    description: |\n      All S3 buckets should have default encryption enabled to ensure\n      data at rest is protected.\n    compliance_frameworks:\n      - HIPAA\n      - SOC2\n      - PCI-DSS\n    implementation: |\n      Enable SSE-S3 (AES-256) or SSE-KMS (customer managed keys) as\n      default encryption for all buckets.\n    terraform_example: |\n      resource \"aws_s3_bucket_server_side_encryption_configuration\" \"example\" {\n        bucket = aws_s3_bucket.example.id\n        rule {\n          apply_server_side_encryption_by_default {\n            sse_algorithm     = \"aws:kms\"\n            kms_master_key_id = aws_kms_key.example.arn\n          }\n        }\n      }\n    cli_example: |\n      aws s3api put-bucket-encryption --bucket my-bucket         --server-side-encryption-configuration '...'\n    console_steps:\n      - Navigate to S3 console\n      - Select the bucket\n      - Go to Properties tab\n      - Under Default encryption, click Edit\n      - Select SSE-KMS and choose your KMS key\n      - Save changes\n\n  - category: access_control\n    title: Block Public Access\n    description: |\n      Enable S3 Block Public Access at account and bucket level.\n    # ...\n```\n\n## Files to Create\n- `data/compliance/services/s3.yaml`\n- `data/compliance/services/ec2.yaml`\n- `data/compliance/services/rds.yaml`\n- `data/compliance/services/iam.yaml`\n- `data/compliance/services/lambda.yaml`\n- `data/compliance/services/vpc.yaml`\n- `data/compliance/services/kms.yaml`\n- (20 services total)\n- `tests/ib_platform/kb/test_service_loading.py`\n\n## Acceptance Criteria\n- [ ] 20 AWS services with best practices\n- [ ] Best practices organized by category\n- [ ] Terraform examples included\n- [ ] CLI examples included\n- [ ] Console steps documented\n- [ ] Compliance frameworks mapped\n- [ ] Unit tests for service loading\n\n## Estimated Time\n4 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "data",
+    "ib",
+    "kb"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:38:41.856891Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-123-853implementserviceloadingfora"
+}

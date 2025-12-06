@@ -1,0 +1,1 @@
+{"issue": 160, "title": "SSL/TLS certificate setup (ACM)", "tests_passed": 44, "tests_failed": 0, "files_created": ["cloudformation/acm-certificate.yaml", "scripts/ssl/check-certificate.sh", "scripts/ssl/deploy-certificate.sh", "tests/unit/cloudformation/test_acm_certificate.py"], "status": "Review"}

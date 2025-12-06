@@ -1,0 +1,31 @@
+{
+  "issue_number": 120,
+  "title": "8.4.3 Build LLM analysis for entities and security concerns",
+  "body": "## Parent Issue\n#38 - 8.4 Document Analysis Service\n\n## Objective\nAnalyze extracted document text using LLM to identify AWS services, data flows, security concerns, and compliance gaps.\n\n## Implementation\n\n```python\n# src/ib_platform/document/analysis.py\nfrom anthropic import Anthropic\nimport json\nimport re\n\nclass DocumentAnalyzer:\n    \"\"\"Analyze document content using LLM.\"\"\"\n\n    def __init__(self, anthropic_client: Anthropic):\n        self.client = anthropic_client\n\n    async def analyze(self, text: str) -> dict:\n        \"\"\"Analyze document text with LLM.\"\"\"\n        # Build prompt for architecture analysis\n        # Request JSON output with:\n        # - summary\n        # - entities (aws_services, data_flows, data_types, external_integrations)\n        # - security_concerns (title, severity, description, affected_components)\n        # - recommendations (title, priority, description, compliance_relevance)\n        # - compliance_gaps (framework, gap, recommendation)\n\n        response = await self.client.messages.create(\n            model=\"claude-3-5-sonnet-20241022\",\n            max_tokens=3000,\n            messages=[{\"role\": \"user\", \"content\": prompt}],\n        )\n\n        # Parse JSON response from LLM output\n        content = response.content[0].text\n        # Extract JSON from markdown code blocks if present\n        return self._parse_json_response(content)\n```\n\n## Database Migration\n\n```sql\nCREATE TABLE document_analyses (\n    analysis_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    document_id UUID NOT NULL REFERENCES documents(document_id),\n    extracted_text TEXT,\n    summary TEXT,\n    entities JSONB,\n    security_concerns JSONB,\n    recommendations JSONB,\n    compliance_gaps JSONB,\n    analyzed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX idx_analyses_document ON document_analyses(document_id);\n```\n\n## Files to Create\n- `src/ib_platform/document/analysis.py`\n- `tests/ib_platform/document/test_analysis.py`\n\n## Acceptance Criteria\n- [ ] AWS services identified from documents\n- [ ] Data flows extracted\n- [ ] Security concerns identified with severity\n- [ ] Recommendations provided with priority\n- [ ] Compliance gaps identified\n- [ ] JSON response parsed correctly\n- [ ] Analysis stored in database\n- [ ] Integration tests with mocked LLM\n\n## Estimated Time\n3 hours\n",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "ai",
+    "analysis",
+    "document"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:36:28.454962Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-120-843buildllmanalysisforentities"
+}

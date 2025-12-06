@@ -1,0 +1,27 @@
+{
+  "issue_number": 134,
+  "title": "9.1.2 API Gateway scanner with rules",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nImplement security scanning for AWS API Gateway (REST and HTTP APIs) with rules checking for authentication, authorization, and common misconfigurations.\n\n## Requirements\n- Scan API Gateway REST APIs and HTTP APIs\n- Check authentication configuration (IAM, Cognito, Lambda authorizers)\n- Verify API key requirements and usage plans\n- Analyze resource policies for overly permissive access\n- Check for missing throttling and rate limiting\n- Validate logging and CloudWatch metrics configuration\n- Detect publicly accessible APIs without authentication\n- Check for missing request validation\n- Verify SSL/TLS certificate configuration\n- Integration with Intelligence-Builder SDK for threat analysis\n\n## Security Rules to Implement\n- API Gateway missing authentication mechanism\n- API Gateway publicly accessible without authorization\n- API Gateway missing CloudWatch logging\n- API Gateway missing throttling/rate limiting\n- API Gateway missing request validation\n- API Gateway using default endpoint without custom domain\n- API Gateway stage missing cache encryption\n- API Gateway missing WAF integration for public APIs\n- API Gateway overly permissive resource policy\n\n## Acceptance Criteria\n- [ ] API Gateway scanner module implemented with all rules\n- [ ] Scanner identifies all REST and HTTP APIs\n- [ ] Each rule produces clear finding with severity and remediation\n- [ ] Integration with Intelligence-Builder SDK for security analysis\n- [ ] Unit tests cover all rules (>80% coverage)\n- [ ] Integration test validates scanning against test APIs\n- [ ] Documentation includes rule descriptions and remediation guidance\n- [ ] Scanner performance: <3s per API\n\n## Technical Approach\n- Use boto3 API Gateway and API Gateway V2 clients\n- Implement separate handlers for REST vs HTTP APIs\n- Cache authorizer configurations to reduce API calls\n- Leverage Intelligence-Builder SDK for threat pattern detection\n\n## Estimated Effort\n18-22 hours\n\n## Dependencies\n- AWS API Gateway API access\n- IAM read permissions\n- Intelligence-Builder SDK integration",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:48:57.260852Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-134-912apigatewayscannerwithrules"
+}

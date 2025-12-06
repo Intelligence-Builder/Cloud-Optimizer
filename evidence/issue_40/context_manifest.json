@@ -1,0 +1,36 @@
+{
+  "issue_number": 40,
+  "title": "6.1.1 Create multi-stage Dockerfile",
+  "status": "completed",
+  "branch": "feature/issue-167-1353distributedtracingwithx-ra",
+  "commit": "75af180",
+  "validation_date": "2025-12-04T14:44:05Z",
+  "files_modified": [
+    "docker/Dockerfile",
+    "src/cloud_optimizer/entrypoint.py",
+    "pyproject.toml"
+  ],
+  "tests": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  "acceptance_criteria": [
+    {
+      "criteria": "Multi-stage Dockerfile with builder and runtime stages",
+      "met": true
+    },
+    {
+      "criteria": "Non-root user for security",
+      "met": true
+    },
+    {
+      "criteria": "Health check endpoint configured",
+      "met": true
+    },
+    {
+      "criteria": "Entrypoint runs application",
+      "met": true
+    }
+  ]
+}

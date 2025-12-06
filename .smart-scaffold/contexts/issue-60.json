@@ -1,0 +1,29 @@
+{
+  "issue_number": 60,
+  "title": "6.4.3 Implement AuthService",
+  "body": "## Parent Issue\n#26 - 6.4 Basic Authentication\n\n## Objective\nImplement authentication service with register/login/refresh/logout.\n\n## Key Methods\n- register(email, password, name)\n- login(email, password) -> TokenPair\n- refresh(refresh_token) -> TokenPair\n- logout(refresh_token)\n- update_profile(user_id, name, email)\n- change_password(user_id, old_password, new_password)\n\n## Files to Create\n- `src/cloud_optimizer/services/auth.py`\n\n## Acceptance Criteria\n- [ ] Registration checks duplicate email\n- [ ] Login validates credentials\n- [ ] Refresh reuses refresh token\n- [ ] Logout revokes session\n- [ ] Password change requires old password\n\n## Estimated Time\n2.5 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-1",
+    "auth"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T10:31:20.564781Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-60-643implementauthservice"
+}

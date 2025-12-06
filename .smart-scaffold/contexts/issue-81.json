@@ -1,0 +1,30 @@
+{
+  "issue_number": 81,
+  "title": "7.2.5 Implement IAMScanner with rules",
+  "body": "## Parent Issue\n#30 - 7.2 Security Scanner Engine\n\n## Objective\nImplement IAM security scanner with password policy, MFA, credential rules.\n\n## Rules\n- IAM_001: Root Account Has Access Keys (Critical)\n- IAM_002: MFA Not Enabled for Users (High)\n- IAM_003: Access Keys Not Rotated >90 days (High)\n- IAM_004: Password Policy Too Weak (Medium)\n- IAM_005: Unused Credentials >90 days (Medium)\n\n## Files to Create\n- `src/cloud_optimizer/scanners/iam.py`\n- `src/cloud_optimizer/scanners/rules/iam_rules.py`\n\n## Estimated Time: 3 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:17:16.931408Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-81-725implementiamscannerwithrule"
+}

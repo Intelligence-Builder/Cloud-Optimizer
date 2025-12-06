@@ -1,0 +1,123 @@
+{
+  "issue": "105",
+  "title": "8.1.5 Create NLU models and tests",
+  "test_date": "2025-12-06",
+  "implementation_status": "COMPLETE",
+  "components": {
+    "nlu_entities_model": {
+      "description": "Data model for extracted entities from user queries",
+      "attributes": [
+        "aws_services (List[str])",
+        "compliance_frameworks (List[str])",
+        "finding_ids (List[str])",
+        "resource_ids (List[str])"
+      ],
+      "methods": [
+        "has_entities() -> bool",
+        "get_all_entities() -> List[str]"
+      ],
+      "status": "implemented"
+    },
+    "nlu_result_model": {
+      "description": "Complete result of NLU processing for a query",
+      "attributes": [
+        "query (str)",
+        "intent (Intent)",
+        "confidence (float, 0.0-1.0)",
+        "entities (NLUEntities)",
+        "requires_findings (bool)",
+        "requires_documents (bool)",
+        "context_aware (bool)",
+        "metadata (dict)"
+      ],
+      "properties": [
+        "is_high_confidence (>= 0.8)",
+        "is_low_confidence (< 0.5)"
+      ],
+      "methods": [
+        "to_dict() -> dict"
+      ],
+      "validation": [
+        "Confidence must be 0.0-1.0",
+        "Auto-sets requires_findings for FINDING_EXPLANATION",
+        "Auto-sets requires_documents for DOCUMENT_ANALYSIS"
+      ],
+      "status": "implemented"
+    },
+    "module_exports": {
+      "description": "Public API exports from nlu module",
+      "exports": [
+        "Intent",
+        "get_intent_examples",
+        "get_all_intent_examples",
+        "get_intent_description",
+        "NLUEntities",
+        "NLUResult",
+        "EntityExtractor",
+        "ConversationContext",
+        "Message",
+        "NLUService"
+      ],
+      "status": "implemented"
+    }
+  },
+  "files_verified": [
+    "src/ib_platform/nlu/models.py",
+    "src/ib_platform/nlu/__init__.py"
+  ],
+  "test_files": [
+    "tests/ib_platform/nlu/test_entities.py (NLUEntities tests)",
+    "tests/ib_platform/nlu/test_service.py (NLUResult tests)",
+    "tests/ib_platform/nlu/test_intents.py",
+    "tests/ib_platform/nlu/test_context.py",
+    "tests/ib_platform/nlu/conftest.py (fixtures)"
+  ],
+  "test_coverage": {
+    "nlu_entities_tests": {
+      "test_classes": 1,
+      "test_methods": 8,
+      "coverage": [
+        "has_entities() with empty/populated entities",
+        "has_entities() for each entity type",
+        "get_all_entities() with empty/combined entities"
+      ]
+    },
+    "nlu_result_tests": {
+      "test_classes": 1,
+      "test_methods": 8,
+      "coverage": [
+        "is_high_confidence property",
+        "is_low_confidence property",
+        "to_dict() conversion",
+        "requires_findings auto-set for FINDING_EXPLANATION",
+        "requires_documents auto-set for DOCUMENT_ANALYSIS",
+        "Confidence validation (bounds checking)"
+      ]
+    },
+    "total_test_files": 4,
+    "total_test_classes": 28,
+    "total_test_methods": 162,
+    "test_infrastructure": [
+      "pytest configuration",
+      "Mock fixtures (entity_extractor, conversation_context, nlu_service)",
+      "Settings fixtures",
+      "Async test support"
+    ]
+  },
+  "validation": {
+    "all_models_implemented": true,
+    "data_validation_working": true,
+    "auto_flag_setting_working": true,
+    "serialization_working": true,
+    "module_exports_complete": true,
+    "comprehensive_test_suite": true,
+    "test_coverage": "comprehensive (162 tests across 4 files)"
+  },
+  "summary": {
+    "total_nlu_files": 6,
+    "total_test_files": 5,
+    "total_tests": 162,
+    "implementation_complete": true,
+    "all_requirements_met": true
+  }
+}

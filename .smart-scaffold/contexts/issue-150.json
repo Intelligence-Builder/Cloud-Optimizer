@@ -1,0 +1,28 @@
+{
+  "issue_number": 150,
+  "title": "9.3.1 Custom rule engine for user-defined checks",
+  "body": "## Parent Epic\nPart of Epic 9: Advanced Security Scanning (#127)\n\n## Objective\nImplement a flexible rule engine allowing users to define custom security checks using a declarative syntax or Python expressions, enabling organization-specific compliance requirements.\n\n## Requirements\n- Define rule specification format (YAML or JSON)\n- Support multiple rule types (configuration, tagging, naming convention, cost)\n- Allow boolean logic and comparison operators\n- Support jmespath or similar for JSON path queries\n- Enable parameterized rules with user-defined values\n- Provide rule validation before execution\n- Support rule metadata (name, description, severity, remediation)\n- Allow rules to be enabled/disabled individually\n- Support rule versioning and history\n- Integrate with Intelligence-Builder SDK for rule recommendations\n\n## Rule Specification Format\n```yaml\nrule:\n  id: custom-001\n  name: \"Require CostCenter tag on all EC2 instances\"\n  description: \"All EC2 instances must have CostCenter tag\"\n  severity: medium\n  enabled: true\n  resource_types:\n    - AWS::EC2::Instance\n  condition:\n    operator: and\n    checks:\n      - field: Tags\n        operator: contains\n        key: CostCenter\n      - field: Tags.CostCenter\n        operator: not_empty\n  remediation: \"Add CostCenter tag to EC2 instance with appropriate value\"\n  compliance_frameworks:\n    - custom\n  metadata:\n    author: user@example.com\n    created_at: 2025-12-02\n    version: 1.0\n```\n\n## Rule Types to Support\n- Configuration rules (check resource attributes)\n- Tag rules (enforce tagging standards)\n- Naming convention rules (enforce naming patterns)\n- Relationship rules (check resource relationships)\n- Cost rules (enforce cost thresholds)\n- Custom Python expressions (advanced users)\n\n## Operators to Support\n- Comparison: equals, not_equals, greater_than, less_than, contains, matches (regex)\n- Logical: and, or, not\n- Existence: exists, not_exists, is_empty, not_empty\n- Collection: in, not_in, all, any\n\n## Acceptance Criteria\n- [ ] Rule specification format defined and documented\n- [ ] Rule parser implemented with validation\n- [ ] Rule engine executes custom rules against resources\n- [ ] Support for all defined operators and rule types\n- [ ] Rule validation prevents invalid rules from running\n- [ ] API endpoints for rule management (CRUD operations)\n- [ ] UI for creating and editing custom rules (form-based)\n- [ ] Rule testing mode (dry-run against resources)\n- [ ] Integration with Intelligence-Builder SDK for rule suggestions\n- [ ] Rule library with common examples provided\n- [ ] Unit tests for rule engine (>80% coverage)\n- [ ] Integration test validates custom rule execution\n- [ ] Documentation includes rule specification guide and examples\n- [ ] Rule engine performance: <100ms per rule per resource\n\n## Technical Approach\n- Rule storage: Database table for rules with JSON/YAML field\n- Parser: YAML/JSON parser with schema validation\n- Engine: Rule evaluation engine with operator implementations\n- JMESPath library for JSON path queries\n- Sandbox Python expressions for advanced rules (use ast module safely)\n- UI: Form builder with live preview and validation\n- Leverage Intelligence-Builder SDK for rule recommendations\n\n## Security Considerations\n- Sanitize Python expressions to prevent code injection\n- Limit expression complexity (timeout after 1 second)\n- Disable dangerous functions (eval, exec, import, file I/O)\n- Audit log all custom rule creation and changes\n\n## Estimated Effort\n32-36 hours\n\n## Dependencies\n- Resource scanning framework\n- Database schema for rules\n- YAML/JSON parser library\n- JMESPath or equivalent library\n- Intelligence-Builder SDK integration",
+  "labels": [
+    "enhancement",
+    "phase-2"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database",
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T18:46:40.386071Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-150-931customruleengineforuser-def"
+}

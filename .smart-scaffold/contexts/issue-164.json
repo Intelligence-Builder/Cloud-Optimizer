@@ -1,0 +1,29 @@
+{
+  "issue_number": 164,
+  "title": "13.4.5 Data encryption at rest and in transit",
+  "body": "# Objective\nEnsure all data is encrypted at rest and in transit using industry-standard encryption algorithms and key management.\n\n## Requirements\n- Enable RDS encryption at rest with KMS\n- Enable EBS volume encryption for all volumes\n- Configure S3 bucket encryption\n- Enable ElastiCache encryption\n- Implement TLS 1.2+ for all communications\n- Encrypt backups and snapshots\n- Use AWS KMS for key management\n- Implement key rotation policies\n- Encrypt application secrets\n- Audit all data flows for encryption\n- Document encryption architecture\n\n## Acceptance Criteria\n- All databases encrypted at rest\n- All storage volumes encrypted\n- All network traffic uses TLS 1.2+\n- KMS keys created with rotation enabled\n- Backups and snapshots encrypted\n- Application data encrypted before storage\n- Encryption verified with security audit\n- Key management procedures documented\n- No plaintext sensitive data found\n\n## Dependencies\n- Parent: Epic 13 (#131)\n- Requires: #141 (RDS), #144 (Redis), #152 (Secrets Manager)\n- Required for: #163 (SOC 2 readiness)\n\n## Estimated Effort\n**Story Points:** 8\n**Time:** 1.5 weeks\n**Complexity:** Medium-High",
+  "labels": [
+    "security",
+    "infrastructure",
+    "production"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database",
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T13:33:31.069371Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-164-1345dataencryptionatrestandint"
+}

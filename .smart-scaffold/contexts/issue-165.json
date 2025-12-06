@@ -1,0 +1,26 @@
+{
+  "issue_number": 165,
+  "title": "13.5.1 Structured logging with CloudWatch Logs",
+  "body": "# Objective\nImplement structured logging across all application components with consistent format, proper log levels, and efficient log aggregation.\n\n## Requirements\n- Implement structured logging (JSON format)\n- Configure log levels (DEBUG, INFO, WARN, ERROR)\n- Add correlation IDs for request tracing\n- Include contextual information in logs\n- Set up CloudWatch Log Groups per service\n- Configure log retention policies\n- Implement log filtering and parsing\n- Add PII redaction in logs\n- Set up log-based metrics\n- Create saved CloudWatch Insights queries\n- Document logging standards\n\n## Acceptance Criteria\n- All services logging in JSON format\n- Consistent log structure across services\n- Correlation IDs linking related logs\n- No PII in log messages\n- Log Groups organized by service\n- Retention policies configured (30-90 days)\n- CloudWatch Insights queries saved\n- Log-based metrics created\n- Logging standards documented\n- Search and analysis working efficiently\n\n## Dependencies\n- Parent: Epic 13 (#131)\n- Required for: #165 (Application metrics), #166 (Distributed tracing)\n\n## Estimated Effort\n**Story Points:** 8\n**Time:** 1.5 weeks\n**Complexity:** Medium",
+  "labels": [
+    "platform",
+    "infrastructure",
+    "production"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T15:55:25.248089Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-165-1351structuredloggingwithcloud"
+}

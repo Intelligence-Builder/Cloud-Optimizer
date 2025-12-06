@@ -1,0 +1,30 @@
+{
+  "issue_number": 90,
+  "title": "7.3.6 Write cost scanner tests",
+  "body": "## Parent Issue\n#31 - 7.3 Cost Analysis Scanner\n\n## Objective\nWrite tests for cost scanning functionality.\n\n## Test Coverage\n- Cost Explorer parsing\n- Unused resource detection\n- Rightsizing recommendations\n- Savings calculations\n- API endpoints\n\n## Files to Create\n- `tests/scanners/cost/test_cost_scanner.py`\n- `tests/scanners/cost/test_unused_analyzer.py`\n- `tests/scanners/cost/test_rightsizing.py`\n\n## Estimated Time: 2.5 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "cost",
+    "optimization",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:24:08.426082Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-90-736writecostscannertests"
+}

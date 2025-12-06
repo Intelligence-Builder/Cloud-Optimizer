@@ -1,0 +1,93 @@
+{
+  "issue": "103",
+  "title": "8.1.3 Build NLU service with LLM",
+  "test_date": "2025-12-06",
+  "implementation_status": "COMPLETE",
+  "components": {
+    "nlu_service_class": {
+      "description": "Main NLU service integrating intent classification and entity extraction",
+      "llm_provider": "Anthropic Claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "status": "implemented"
+    },
+    "intent_classification": {
+      "description": "Classify user queries using Claude LLM",
+      "method": "LLM-based classification with examples",
+      "output": "Intent enum + confidence score (0.0-1.0)",
+      "fallback": "GENERAL_QUESTION with 0.3 confidence on error",
+      "status": "implemented"
+    },
+    "entity_extraction_integration": {
+      "description": "Integrate EntityExtractor with query processing",
+      "extraction_timing": "During process_query()",
+      "status": "implemented"
+    },
+    "conversation_context_integration": {
+      "description": "Track conversation history for follow-up detection",
+      "max_messages": 10,
+      "context_window": "5 recent messages for LLM",
+      "status": "implemented"
+    },
+    "prompt_engineering": {
+      "description": "Build classification prompts with examples and context",
+      "features": [
+        "Intent examples for training",
+        "Conversation context for follow-ups",
+        "JSON response format",
+        "Confidence scoring"
+      ],
+      "status": "implemented"
+    },
+    "query_processing_pipeline": {
+      "description": "Complete NLU processing pipeline",
+      "steps": [
+        "Detect follow-up question",
+        "Classify intent with Claude",
+        "Extract entities",
+        "Add to conversation context",
+        "Return NLUResult"
+      ],
+      "status": "implemented"
+    },
+    "configuration": {
+      "description": "Service configuration and initialization",
+      "api_key_source": "Settings / Environment (ANTHROPIC_API_KEY)",
+      "validation": "Raises error if API key missing",
+      "status": "implemented"
+    }
+  },
+  "files_created": [
+    "src/ib_platform/nlu/service.py"
+  ],
+  "test_files": [
+    "tests/ib_platform/nlu/test_service.py"
+  ],
+  "test_coverage": {
+    "test_classes": 10,
+    "test_methods": 44,
+    "coverage_areas": [
+      "Service initialization (with/without settings, API key validation)",
+      "Query processing pipeline (process_query)",
+      "Entity extraction integration",
+      "Conversation context tracking",
+      "Follow-up detection integration",
+      "Intent classification (all 9 intents tested)",
+      "LLM integration (mocked Claude API)",
+      "Response parsing (valid JSON, invalid JSON, unknown intents)",
+      "Prompt building (query inclusion, examples, context for follow-ups)",
+      "Assistant response tracking",
+      "Context management (get, clear, summary)",
+      "NLUResult properties (high/low confidence, to_dict, validation)",
+      "Error handling and fallback behavior",
+      "Integration scenarios (complete flows)"
+    ]
+  },
+  "validation": {
+    "llm_integration_working": true,
+    "all_intents_classifiable": true,
+    "entity_extraction_integrated": true,
+    "context_tracking_integrated": true,
+    "error_handling_implemented": true,
+    "test_coverage": "comprehensive"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "issue_number": 115,
+  "title": "8.3.5 Create security analysis API endpoints and tests",
+  "body": "## Parent Issue\n#37 - 8.3 Security Analysis Integration\n\n## Objective\nCreate API endpoints for security analysis features and comprehensive integration tests.\n\n## Implementation\n\n```python\n# src/cloud_optimizer/api/routers/analysis.py\nfrom fastapi import APIRouter, Depends\n\nrouter = APIRouter(prefix=\"/api/v1/analysis\", tags=[\"analysis\"])\n\n@router.get(\"/findings/{finding_id}/explain\")\nasync def explain_finding(\n    finding_id: UUID,\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> FindingExplanationResponse:\n    \"\"\"Generate detailed explanation for a finding.\"\"\"\n    explanation = await analysis_service.explain_finding(tenant_id, finding_id)\n    return FindingExplanationResponse(\n        finding_id=finding_id,\n        explanation=explanation.explanation,\n        compliance_controls=[c.to_dict() for c in explanation.compliance_controls],\n    )\n\n\n@router.get(\"/findings/prioritize\")\nasync def prioritize_findings(\n    limit: int = 10,\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> PrioritizedFindingsResponse:\n    \"\"\"Get prioritized list of findings.\"\"\"\n    prioritized = await analysis_service.prioritize_findings(tenant_id, limit)\n    return PrioritizedFindingsResponse(\n        findings=[p.to_dict() for p in prioritized.findings],\n        rationale=prioritized.rationale,\n    )\n\n\n@router.post(\"/remediation-plan\")\nasync def generate_remediation_plan(\n    request: RemediationPlanRequest,\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> RemediationPlanResponse:\n    \"\"\"Generate remediation plan for selected findings.\"\"\"\n    plan = await analysis_service.generate_remediation_plan(\n        tenant_id, request.finding_ids\n    )\n    return RemediationPlanResponse(plan=plan.plan)\n\n\n@router.get(\"/findings/{finding_id}/related\")\nasync def get_related_findings(\n    finding_id: UUID,\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> RelatedFindingsResponse:\n    \"\"\"Get findings related to a specific finding.\"\"\"\n    related = await correlator.find_related_for_finding(tenant_id, finding_id)\n    return RelatedFindingsResponse(findings=[f.to_dict() for f in related])\n```\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/analysis.py`\n- `tests/ib_platform/security/test_api.py`\n\n## Acceptance Criteria\n- [ ] GET /findings/:id/explain returns explanation\n- [ ] GET /findings/prioritize returns ranked list\n- [ ] POST /remediation-plan generates plan\n- [ ] GET /findings/:id/related returns related findings\n- [ ] Tenant isolation enforced\n- [ ] Error handling works\n- [ ] Integration tests for all endpoints\n- [ ] 80%+ test coverage for security module\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "api",
+    "ib",
+    "analysis"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend",
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T11:56:27.190277Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-115-835createsecurityanalysisapien"
+}

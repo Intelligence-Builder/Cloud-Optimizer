@@ -1,0 +1,31 @@
+{
+  "issue": 164,
+  "title": "Data encryption at rest and in transit",
+  "test_date": "2025-12-06",
+  "encryption_implemented": true,
+  "components": [
+    "RDS encryption at rest with AWS KMS",
+    "SSL/TLS for data in transit (ACM)",
+    "HTTPS enforcement on ALB",
+    "TLS 1.2+ security policy"
+  ],
+  "cloudformation_files": [
+    "cloudformation/rds/rds-postgresql.yaml",
+    "cloudformation/acm-certificate.yaml",
+    "cloudformation/nested/alb.yaml"
+  ],
+  "encryption_at_rest": {
+    "rds": "AWS KMS with customer managed key",
+    "storage_encrypted": true,
+    "kms_key_rotation": "enabled"
+  },
+  "encryption_in_transit": {
+    "protocol": "TLS 1.2+",
+    "certificate_provider": "AWS Certificate Manager",
+    "https_redirect": true,
+    "ssl_policies": [
+      "ELBSecurityPolicy-TLS-1-2-2017-01",
+      "ELBSecurityPolicy-FS-1-2-2019-08"
+    ]
+  }
+}

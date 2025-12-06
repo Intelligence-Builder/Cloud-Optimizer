@@ -1,0 +1,30 @@
+{
+  "issue_number": 93,
+  "title": "7.4.3 Create findings summary aggregation",
+  "body": "## Parent Issue\n#32 - 7.4 Findings Management System\n\n## Objective\nImplement summary aggregation for dashboard display.\n\n## Summary Data\n- Total findings count\n- Open findings count\n- Breakdown by severity\n- Breakdown by resource type\n- Breakdown by status\n\n## Files to Create\n- `src/cloud_optimizer/services/findings.py` (get_summary method)\n\n## Estimated Time: 2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "findings",
+    "data",
+    "api"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:26:28.544661Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-93-743createfindingssummaryaggreg"
+}

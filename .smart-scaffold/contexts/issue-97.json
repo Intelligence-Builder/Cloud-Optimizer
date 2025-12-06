@@ -1,0 +1,28 @@
+{
+  "issue_number": 97,
+  "title": "7.5.2 Create YAML data files for 6 frameworks",
+  "body": "## Parent Issue\n#33 - 7.5 Compliance Framework Mapping\n\n## Objective\nCreate YAML data files for all 6 compliance frameworks.\n\n## Frameworks\n- HIPAA\n- SOC 2\n- PCI-DSS\n- GDPR\n- CIS Benchmarks\n- NIST 800-53\n\n## Structure\n```yaml\nframework:\n  id: HIPAA\n  name: Health Insurance Portability and Accountability Act\n  version: \"2013\"\ndomains:\n  - code: \"164.312\"\n    name: Technical Safeguards\n    controls:\n      - control_id: \"164.312(a)(1)\"\n        name: Access Control\n        ...\nmappings:\n  - rule_id: S3_001\n    control: \"164.312(a)(1)\"\n```\n\n## Files to Create\n- `data/compliance/frameworks/hipaa/controls.yaml`\n- `data/compliance/frameworks/soc2/controls.yaml`\n- `data/compliance/frameworks/pci-dss/controls.yaml`\n- `data/compliance/frameworks/gdpr/controls.yaml`\n- `data/compliance/frameworks/cis/controls.yaml`\n- `data/compliance/frameworks/nist/controls.yaml`\n\n## Estimated Time: 4 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "data",
+    "compliance",
+    "regulatory"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:29:39.028493Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-97-752createyamldatafilesfor6fram"
+}

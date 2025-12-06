@@ -1,0 +1,67 @@
+{
+  "issue": 167,
+  "title": "13.5.3 Distributed tracing with X-Ray",
+  "tests_passed": 31,
+  "tests_failed": 0,
+  "cloudformation_valid": true,
+  "implementation_summary": {
+    "tracing_service": {
+      "file": "src/cloud_optimizer/tracing/service.py",
+      "features": [
+        "TracingService with X-Ray SDK integration",
+        "Segment and subsegment management",
+        "Annotations and metadata support",
+        "Context managers for automatic cleanup",
+        "Graceful degradation when SDK unavailable"
+      ]
+    },
+    "tracing_config": {
+      "file": "src/cloud_optimizer/tracing/config.py",
+      "features": [
+        "SamplingRule dataclass with priority, fixed_rate, reservoir_size",
+        "TracingConfig with excluded_paths and default sampling rules",
+        "Environment-based configuration"
+      ]
+    },
+    "middleware": {
+      "file": "src/cloud_optimizer/tracing/middleware.py",
+      "features": [
+        "XRayMiddleware for FastAPI",
+        "X-Amzn-Trace-Id header parsing",
+        "Path-based exclusion for health checks",
+        "Request/response metadata capture"
+      ]
+    },
+    "decorators": {
+      "file": "src/cloud_optimizer/tracing/decorators.py",
+      "features": [
+        "trace_function - sync function tracing",
+        "trace_async_function - async function tracing",
+        "trace_database - database operation tracing",
+        "trace_http_call - external HTTP tracing",
+        "trace_scanner - scanner-specific tracing"
+      ]
+    },
+    "cloudformation": {
+      "file": "cloudformation/xray-tracing.yaml",
+      "features": [
+        "X-Ray Group with insights (production)",
+        "5 sampling rules (default, API, errors, health, scanners)",
+        "4 CloudWatch alarms (latency, error rate, fault rate, throttle rate)",
+        "CloudWatch dashboard for production"
+      ]
+    },
+    "integration": {
+      "file": "src/cloud_optimizer/main.py",
+      "status": "XRayMiddleware registered in FastAPI app"
+    }
+  },
+  "sampling_rates": {
+    "default": "5%",
+    "api_endpoints": "10%",
+    "errors": "100%",
+    "health_checks": "1%",
+    "scanners": "25%"
+  },
+  "status": "Review"
+}

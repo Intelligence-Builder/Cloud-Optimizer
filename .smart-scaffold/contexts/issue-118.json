@@ -1,0 +1,28 @@
+{
+  "issue_number": 118,
+  "title": "8.4.4 Create document context for chat integration",
+  "body": "## Parent Issue\n#38 - 8.4 Document Analysis Service\n\n## Objective\nFormat document analysis results for inclusion in chat prompts.\n\n## Implementation\n\n```python\n# src/ib_platform/document/context.py\nfrom dataclasses import dataclass\nfrom uuid import UUID\n\n@dataclass\nclass DocumentContext:\n    document_id: UUID\n    filename: str\n    summary: str\n    entities: dict\n    security_concerns: list[dict]\n\n    def to_prompt_context(self) -> str:\n        \"\"\"Format for inclusion in chat prompts.\"\"\"\n        lines = [\n            f\"**Document: {self.filename}**\",\n            f\"Summary: {self.summary}\",\n            \"\",\n            \"**AWS Services:**\",\n            \", \".join(self.entities.get(\"aws_services\", [])),\n            \"\",\n            \"**Data Types:**\",\n            \", \".join(self.entities.get(\"data_types\", [])),\n            \"\",\n            \"**Security Concerns:**\",\n        ]\n\n        for concern in self.security_concerns[:5]:\n            severity = concern.get(\"severity\", \"unknown\")\n            title = concern.get(\"title\", \"Unnamed concern\")\n            lines.append(f\"- [{severity.upper()}] {title}\")\n\n        return \"\\n\".join(lines)\n\n\nclass DocumentContextService:\n    \"\"\"Retrieve document context for chat.\"\"\"\n\n    def __init__(self, db: AsyncSession):\n        self.db = db\n\n    async def get_for_conversation(\n        self,\n        tenant_id: UUID,\n        conversation_id: UUID,\n    ) -> list[DocumentContext]:\n        \"\"\"Get document context for a conversation.\"\"\"\n        result = await self.db.execute(\n            select(Document, DocumentAnalysis)\n            .join(DocumentAnalysis)\n            .where(Document.tenant_id == tenant_id)\n            .where(Document.conversation_id == conversation_id)\n            .where(Document.status == \"analyzed\")\n        )\n\n        contexts = []\n        for doc, analysis in result:\n            contexts.append(\n                DocumentContext(\n                    document_id=doc.document_id,\n                    filename=doc.filename,\n                    summary=analysis.summary,\n                    entities=analysis.entities,\n                    security_concerns=analysis.security_concerns,\n                )\n            )\n\n        return contexts\n```\n\n## Files to Create\n- `src/ib_platform/document/context.py`\n- `tests/ib_platform/document/test_context.py`\n\n## Acceptance Criteria\n- [ ] DocumentContext dataclass created\n- [ ] to_prompt_context() formats correctly\n- [ ] AWS services listed\n- [ ] Data types included\n- [ ] Top 5 security concerns shown\n- [ ] Context retrieved by conversation\n- [ ] Unit tests for formatting\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "chat",
+    "ib",
+    "document"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:34:45.788082Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-118-844createdocumentcontextforcha"
+}

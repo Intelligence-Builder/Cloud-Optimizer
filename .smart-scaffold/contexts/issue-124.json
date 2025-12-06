@@ -1,0 +1,27 @@
+{
+  "issue_number": 124,
+  "title": "8.5.4 Build KB query service with caching",
+  "body": "## Parent Issue\n#39 - 8.5 Knowledge Base Integration\n\n## Objective\nImplement the KnowledgeBaseService that loads data at startup and provides query methods.\n\n## Implementation\n\n```python\n# src/ib_platform/kb/service.py\nfrom pathlib import Path\n\nclass KnowledgeBaseService:\n    DATA_DIR = Path(\"data/compliance\")\n\n    def __init__(self):\n        self._frameworks: dict[str, list[ComplianceControl]] = {}\n        self._services: dict[str, list[ServiceBestPractice]] = {}\n        self._patterns: dict[str, SecurityPattern] = {}\n        self._remediation: dict[str, RemediationTemplate] = {}\n        self._loaded = False\n\n    async def load(self):\n        \"\"\"Load all KB data at startup.\"\"\"\n        if self._loaded:\n            return\n\n        loader = KBLoader(self.DATA_DIR)\n        self._frameworks = await loader.load_frameworks()\n        self._services = await loader.load_services()\n        self._patterns = await loader.load_patterns()\n        self._remediation = await loader.load_remediation()\n        self._loaded = True\n\n    def get_framework_controls(\n        self,\n        framework: str,\n    ) -> list[ComplianceControl]:\n        \"\"\"Get all controls for a framework.\"\"\"\n        return self._frameworks.get(framework.upper(), [])\n\n    def get_control(\n        self,\n        framework: str,\n        control_id: str,\n    ) -> ComplianceControl | None:\n        \"\"\"Get specific control.\"\"\"\n        for control in self._frameworks.get(framework.upper(), []):\n            if control.control_id == control_id:\n                return control\n        return None\n\n    def get_service_best_practices(\n        self,\n        service: str,\n        category: str = None,\n    ) -> list[ServiceBestPractice]:\n        \"\"\"Get best practices for a service.\"\"\"\n        practices = self._services.get(service.upper(), [])\n        if category:\n            practices = [p for p in practices if p.category == category]\n        return practices\n\n    def get_for_framework(\n        self,\n        framework: str,\n    ) -> list[KBEntry]:\n        \"\"\"Get KB entries relevant to a framework.\"\"\"\n        entries = []\n\n        for control in self.get_framework_controls(framework):\n            entries.append(\n                KBEntry(\n                    entry_type=\"control\",\n                    framework=framework,\n                    control_name=control.name,\n                    description=control.description,\n                    guidance=control.implementation_guidance,\n                )\n            )\n\n        # Also get service practices that reference this framework\n        for service, practices in self._services.items():\n            for practice in practices:\n                if framework in practice.compliance_frameworks:\n                    entries.append(\n                        KBEntry(\n                            entry_type=\"best_practice\",\n                            framework=framework,\n                            service=service,\n                            control_name=practice.title,\n                            description=practice.description,\n                            guidance=practice.implementation,\n                        )\n                    )\n\n        return entries[:20]  # Limit for context\n\n    def get_for_service(\n        self,\n        service: str,\n    ) -> list[KBEntry]:\n        \"\"\"Get KB entries for a service.\"\"\"\n        entries = []\n\n        for practice in self.get_service_best_practices(service):\n            entries.append(\n                KBEntry(\n                    entry_type=\"best_practice\",\n                    service=service,\n                    control_name=practice.title,\n                    description=practice.description,\n                    guidance=practice.implementation,\n                    terraform=practice.terraform_example,\n                    cli=practice.cli_example,\n                )\n            )\n\n        return entries\n\n    def get_remediation(\n        self,\n        rule_id: str,\n    ) -> RemediationTemplate | None:\n        \"\"\"Get remediation template for a rule.\"\"\"\n        return self._remediation.get(rule_id)\n```\n\n## Files to Create\n- `src/ib_platform/kb/service.py`\n- `tests/ib_platform/kb/test_service.py`\n\n## Acceptance Criteria\n- [ ] KB loads at startup\n- [ ] Data cached in memory\n- [ ] Query by framework returns controls\n- [ ] Query by service returns practices\n- [ ] Remediation templates retrievable\n- [ ] Load time < 5 seconds\n- [ ] Unit tests for all query methods\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "ib",
+    "kb"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:39:26.670561Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-124-854buildkbqueryservicewithcach"
+}

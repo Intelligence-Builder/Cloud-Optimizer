@@ -1,0 +1,30 @@
+{
+  "issue_number": 84,
+  "title": "7.2.8 Write scanner tests with LocalStack",
+  "body": "## Parent Issue\n#30 - 7.2 Security Scanner Engine\n\n## Objective\nWrite integration tests using LocalStack for AWS service mocking.\n\n## Test Coverage\n- S3 scanner rules\n- EC2 scanner rules\n- RDS scanner rules\n- IAM scanner rules\n- Orchestrator flow\n\n## LocalStack Setup\n```yaml\nlocalstack:\n  image: localstack/localstack:latest\n  environment:\n    - SERVICES=s3,ec2,rds,iam,sts\n```\n\n## Files to Create\n- `tests/scanners/test_s3_scanner.py`\n- `tests/scanners/test_ec2_scanner.py`\n- `tests/scanners/test_orchestrator.py`\n\n## Estimated Time: 3 hours",
+  "labels": [
+    "security",
+    "mvp",
+    "phase-2",
+    "aws",
+    "scanner"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "security"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:19:29.275811Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-84-728writescannertestswithlocals"
+}

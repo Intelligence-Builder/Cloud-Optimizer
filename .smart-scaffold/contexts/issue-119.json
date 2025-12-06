@@ -1,0 +1,30 @@
+{
+  "issue_number": 119,
+  "title": "8.4.5 Create document API endpoints and integration tests",
+  "body": "## Parent Issue\n#38 - 8.4 Document Analysis Service\n\n## Objective\nCreate API endpoints for document upload, retrieval, and analysis, plus comprehensive integration tests.\n\n## Implementation\n\n```python\n# src/cloud_optimizer/api/routers/documents.py\nfrom fastapi import APIRouter, Depends, UploadFile, File\n\nrouter = APIRouter(prefix=\"/api/v1/documents\", tags=[\"documents\"])\n\n@router.post(\"/upload\")\nasync def upload_document(\n    file: UploadFile = File(...),\n    conversation_id: Optional[UUID] = None,\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> DocumentResponse:\n    \"\"\"Upload a document for analysis.\"\"\"\n    document = await document_service.upload(tenant_id, file, conversation_id)\n    return DocumentResponse(\n        document_id=document.document_id,\n        filename=document.filename,\n        status=document.status,\n    )\n\n\n@router.get(\"\")\nasync def list_documents(\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> list[DocumentResponse]:\n    \"\"\"List all documents for tenant.\"\"\"\n    documents = await document_service.list_documents(tenant_id)\n    return [DocumentResponse.from_orm(d) for d in documents]\n\n\n@router.get(\"/{document_id}\")\nasync def get_document(\n    document_id: UUID,\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> DocumentResponse:\n    \"\"\"Get document by ID.\"\"\"\n    document = await document_service.get_document(tenant_id, document_id)\n    return DocumentResponse.from_orm(document)\n\n\n@router.get(\"/{document_id}/analysis\")\nasync def get_analysis(\n    document_id: UUID,\n    tenant_id: UUID = Depends(get_tenant_id),\n) -> AnalysisResponse:\n    \"\"\"Get document analysis results.\"\"\"\n    analysis = await document_service.get_analysis(tenant_id, document_id)\n    return AnalysisResponse(\n        summary=analysis.summary,\n        entities=analysis.entities,\n        security_concerns=analysis.security_concerns,\n        recommendations=analysis.recommendations,\n    )\n\n\n@router.delete(\"/{document_id}\")\nasync def delete_document(\n    document_id: UUID,\n    tenant_id: UUID = Depends(get_tenant_id),\n):\n    \"\"\"Delete document and analysis.\"\"\"\n    await document_service.delete_document(tenant_id, document_id)\n    return {\"status\": \"deleted\"}\n```\n\n## Files to Create\n- `src/cloud_optimizer/api/routers/documents.py`\n- `tests/ib_platform/document/test_api.py`\n\n## Acceptance Criteria\n- [ ] POST /documents/upload accepts files\n- [ ] GET /documents lists tenant documents\n- [ ] GET /documents/:id returns document\n- [ ] GET /documents/:id/analysis returns analysis\n- [ ] DELETE /documents/:id removes document\n- [ ] Tenant isolation enforced\n- [ ] Trial limit enforced (if applicable)\n- [ ] Integration tests for all endpoints\n- [ ] 80%+ test coverage for document module\n\n## Estimated Time\n2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "api",
+    "ib",
+    "document"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "backend"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:35:29.202985Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-119-845createdocumentapiendpointsa"
+}

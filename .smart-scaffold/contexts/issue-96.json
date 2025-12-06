@@ -1,0 +1,30 @@
+{
+  "issue_number": 96,
+  "title": "7.5.1 Create compliance database schema",
+  "body": "## Parent Issue\n#33 - 7.5 Compliance Framework Mapping\n\n## Objective\nCreate database schema for compliance frameworks, controls, and mappings.\n\n## Tables\n- compliance_frameworks\n- compliance_domains\n- compliance_controls\n- rule_compliance_mappings\n\n## Files to Create\n- `src/cloud_optimizer/models/compliance_framework.py`\n- `src/cloud_optimizer/models/compliance_control.py`\n- `alembic/versions/xxx_create_compliance_tables.py`\n\n## Estimated Time: 2 hours",
+  "labels": [
+    "mvp",
+    "phase-2",
+    "data",
+    "compliance",
+    "regulatory"
+  ],
+  "assignees": [],
+  "milestone": null,
+  "created_at": null,
+  "updated_at": null,
+  "state": "OPEN",
+  "context": {
+    "complexity": "medium",
+    "effort": "medium",
+    "confidence": 0.8,
+    "required_expertise": [
+      "database"
+    ],
+    "dependencies": [],
+    "related_files": []
+  },
+  "generated_at": "2025-12-04T12:28:52.734222Z",
+  "generated_by": "smart-scaffold-cli",
+  "branch_name": "feature/issue-96-751createcompliancedatabasesch"
+}
